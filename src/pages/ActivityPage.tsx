@@ -1,12 +1,8 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import MobileShell from "@/components/layout/MobileShell";
 import TransactionItem, { Transaction } from "@/components/activity/TransactionItem";
-import { Filter } from "lucide-react";
 
 const ActivityPage = () => {
-  const [filter, setFilter] = useState<"all" | "payments" | "transfers">("all");
-
   const transactions: Transaction[] = [
     {
       id: "1",
@@ -60,52 +56,18 @@ const ActivityPage = () => {
     },
   ];
 
-  const filteredTransactions = transactions.filter((t) => {
-    if (filter === "all") return true;
-    if (filter === "payments") return t.type === "payment";
-    return t.type === "transfer_in" || t.type === "transfer_out";
-  });
-
-  const filterOptions = [
-    { key: "all", label: "All" },
-    { key: "payments", label: "Payments" },
-    { key: "transfers", label: "Transfers" },
-  ] as const;
-
   return (
     <MobileShell>
-      <div className="flex flex-col min-h-full safe-area-top">
-        {/* Header */}
-        <header className="px-6 pt-4 pb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Activity</h1>
-              <p className="text-sm text-muted-foreground">Your recent transactions</p>
-            </div>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex gap-2">
-            {filterOptions.map((option) => (
-              <button
-                key={option.key}
-                onClick={() => setFilter(option.key)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  filter === option.key
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-col min-h-full">
+        {/* Minimal Header */}
+        <header className="px-6 pt-8 pb-6 safe-area-top">
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">Activity</h1>
         </header>
 
-        {/* Transactions List */}
+        {/* Transactions - Clean list, no filters cluttering the view */}
         <div className="flex-1 px-6 pb-6">
-          <div className="space-y-3">
-            {filteredTransactions.map((transaction, index) => (
+          <div className="divide-y divide-border/50">
+            {transactions.map((transaction, index) => (
               <TransactionItem
                 key={transaction.id}
                 transaction={transaction}
@@ -114,16 +76,13 @@ const ActivityPage = () => {
             ))}
           </div>
 
-          {filteredTransactions.length === 0 && (
+          {transactions.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-20 text-center"
+              className="flex items-center justify-center py-20"
             >
-              <div className="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mb-4">
-                <Filter size={24} className="text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground">No transactions found</p>
+              <p className="text-muted-foreground">No activity yet</p>
             </motion.div>
           )}
         </div>
