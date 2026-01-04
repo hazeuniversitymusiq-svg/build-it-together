@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Store, Send, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
 export interface Transaction {
   id: string;
@@ -19,17 +18,6 @@ interface TransactionItemProps {
 
 const TransactionItem = ({ transaction, index }: TransactionItemProps) => {
   const isOutgoing = transaction.type !== "transfer_in";
-  
-  const getIcon = () => {
-    switch (transaction.type) {
-      case "payment":
-        return <Store size={20} />;
-      case "transfer_out":
-        return <ArrowUpRight size={20} />;
-      case "transfer_in":
-        return <ArrowDownLeft size={20} />;
-    }
-  };
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -37,37 +25,30 @@ const TransactionItem = ({ transaction, index }: TransactionItemProps) => {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
 
-    if (hours < 1) return "Just now";
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
+    if (hours < 1) return "Now";
+    if (hours < 24) return `${hours}h`;
+    if (days < 7) return `${days}d`;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="flex items-center gap-4 p-4 bg-card rounded-2xl"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.03, duration: 0.3 }}
+      className="flex items-center gap-4 py-4"
     >
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-        isOutgoing ? "bg-secondary text-foreground" : "bg-success-soft text-success"
-      }`}>
-        {getIcon()}
-      </div>
-
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-foreground truncate">{transaction.merchant}</p>
-        <p className="text-sm text-muted-foreground">{transaction.paymentMethod}</p>
+        <p className="font-medium text-foreground">{transaction.merchant}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{transaction.paymentMethod}</p>
       </div>
 
       <div className="text-right">
-        <p className={`font-semibold ${isOutgoing ? "text-foreground" : "text-success"}`}>
-          {isOutgoing ? "-" : "+"}
-          {transaction.currency}
-          {transaction.amount.toFixed(2)}
+        <p className={`font-medium tabular-nums ${isOutgoing ? "text-foreground" : "text-success"}`}>
+          {isOutgoing ? "−" : "+"}
+          {transaction.currency}{transaction.amount.toFixed(2)}
         </p>
-        <p className="text-xs text-muted-foreground">{formatTime(transaction.timestamp)}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{formatTime(transaction.timestamp)}</p>
       </div>
     </motion.div>
   );
