@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.4f80439d456c47d48afef4444d0b35a2',
+  appId: 'com.flow.app',
   appName: 'FLOW',
   webDir: 'dist',
   server: {
