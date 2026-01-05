@@ -14,7 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      transaction_logs: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          intent_id: string
+          intent_type: string
+          merchant_id: string | null
+          merchant_name: string | null
+          note: string | null
+          rail_used: string | null
+          recipient_id: string | null
+          recipient_name: string | null
+          reference: string | null
+          status: string
+          trigger: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          intent_id: string
+          intent_type: string
+          merchant_id?: string | null
+          merchant_name?: string | null
+          note?: string | null
+          rail_used?: string | null
+          recipient_id?: string | null
+          recipient_name?: string | null
+          reference?: string | null
+          status: string
+          trigger: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          intent_id?: string
+          intent_type?: string
+          merchant_id?: string | null
+          merchant_name?: string | null
+          note?: string | null
+          rail_used?: string | null
+          recipient_id?: string | null
+          recipient_name?: string | null
+          reference?: string | null
+          status?: string
+          trigger?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          flow_paused: boolean
+          id: string
+          paused_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          flow_paused?: boolean
+          id?: string
+          paused_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          flow_paused?: boolean
+          id?: string
+          paused_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

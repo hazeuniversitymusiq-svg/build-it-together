@@ -1,7 +1,7 @@
 /**
  * FLOW Settings Page
  * 
- * Funding sources, guardrails, and security settings.
+ * Funding sources, guardrails, security settings, and kill switch.
  */
 
 import { motion } from "framer-motion";
@@ -11,6 +11,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import { useOrchestration } from "@/contexts/OrchestrationContext";
 import { useSecurity } from "@/contexts/SecurityContext";
 import { useAuth } from "@/hooks/useAuth";
+import { KillSwitch } from "@/components/settings/KillSwitch";
 import { 
   ChevronRight, 
   Wallet, 
@@ -131,6 +132,12 @@ const SettingsPage = () => {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Kill Switch */}
+        <section className="px-6 mb-8">
+          <p className="text-sm text-muted-foreground mb-4">Emergency Controls</p>
+          <KillSwitch />
         </section>
 
         {/* Security */}
