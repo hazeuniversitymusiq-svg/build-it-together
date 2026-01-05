@@ -27,9 +27,9 @@ const BiometricSetupPage = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    // If already registered, go to main app
+    // If already registered, go to funding stack
     if (user && isWebAuthnRegistered) {
-      navigate('/scan', { replace: true });
+      navigate('/funding-stack', { replace: true });
     }
   }, [user, isWebAuthnRegistered, navigate]);
 
@@ -41,7 +41,7 @@ const BiometricSetupPage = () => {
       
       if (success) {
         toast.success('Biometric lock enabled!');
-        navigate('/scan', { replace: true });
+        navigate('/funding-stack', { replace: true });
       } else {
         toast.error('Failed to set up biometrics. Please try again.');
       }
@@ -54,7 +54,7 @@ const BiometricSetupPage = () => {
 
   const handleSkip = () => {
     toast.info('You can set up biometrics later in Settings');
-    navigate('/scan', { replace: true });
+    navigate('/funding-stack', { replace: true });
   };
 
   if (authLoading) {
