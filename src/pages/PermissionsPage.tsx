@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,32 +12,36 @@ interface PermissionItemProps {
   delay: number;
 }
 
-const PermissionItem = ({ icon, title, description, type, delay }: PermissionItemProps) => {
-  const typeStyles = {
-    read: "bg-accent/10 text-accent",
-    link: "bg-success/10 text-success",
-    never: "bg-muted text-muted-foreground",
-  };
+const PermissionItem = forwardRef<HTMLDivElement, PermissionItemProps>(
+  ({ icon, title, description, type, delay }, ref) => {
+    const typeStyles = {
+      read: "bg-accent/10 text-accent",
+      link: "bg-success/10 text-success",
+      never: "bg-muted text-muted-foreground",
+    };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5, delay }}
-      className="flex items-start gap-4 py-4"
-    >
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${typeStyles[type]}`}>
-        {icon}
-      </div>
-      <div className="flex-1">
-        <h3 className="font-medium text-foreground mb-1">{title}</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-      </div>
-    </motion.div>
-  );
-};
+    return (
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay }}
+        className="flex items-start gap-4 py-4"
+      >
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${typeStyles[type]}`}>
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h3 className="font-medium text-foreground mb-1">{title}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+        </div>
+      </motion.div>
+    );
+  }
+);
+PermissionItem.displayName = "PermissionItem";
 
-const PermissionsPage = () => {
+const PermissionsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
 
   const permissions = [
@@ -61,7 +66,7 @@ const PermissionsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
+    <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -128,6 +133,7 @@ const PermissionsPage = () => {
       </motion.div>
     </div>
   );
-};
+});
+PermissionsPage.displayName = "PermissionsPage";
 
 export default PermissionsPage;
