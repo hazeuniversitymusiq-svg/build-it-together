@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Scan, Send, Clock, Settings } from "lucide-react";
 
 const navItems = [
-  { path: "/", icon: Scan, label: "Scan" },
+  { path: "/scan", icon: Scan, label: "Scan" },
   { path: "/send", icon: Send, label: "Send" },
   { path: "/activity", icon: Clock, label: "Activity" },
   { path: "/settings", icon: Settings, label: "Settings" },

@@ -1,83 +1,184 @@
+/**
+ * FLOW Settings Page
+ * 
+ * Funding sources, guardrails, and security settings.
+ */
+
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import MobileShell from "@/components/layout/MobileShell";
-import { ChevronRight } from "lucide-react";
+import BottomNav from "@/components/layout/BottomNav";
+import { useOrchestration } from "@/contexts/OrchestrationContext";
+import { useSecurity } from "@/contexts/SecurityContext";
+import { useAuth } from "@/hooks/useAuth";
+import { 
+  ChevronRight, 
+  Wallet, 
+  Building2, 
+  CreditCard, 
+  Shield, 
+  Bell,
+  DollarSign,
+  LogOut
+} from "lucide-react";
 
 const SettingsPage = () => {
-  const paymentMethods = [
-    { id: "1", name: "Touch 'n Go", connected: true },
-    { id: "2", name: "DuitNow", connected: true },
-    { id: "3", name: "Maybank", connected: true },
-    { id: "4", name: "GrabPay", connected: false },
-  ];
+  const navigate = useNavigate();
+  const { sources, guardrails, walletBalance } = useOrchestration();
+  const { isWebAuthnRegistered } = useSecurity();
+  const { signOut } = useAuth();
 
-  const settings = [
-    { label: "Face ID", value: "On" },
-    { label: "Notifications", value: "On" },
-    { label: "Daily Limit", value: "RM 5,000" },
-  ];
+  const railIcons = {
+    wallet: Wallet,
+    bank: Building2,
+    card: CreditCard,
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <MobileShell>
-      <div className="flex flex-col min-h-full">
-        {/* Minimal Header */}
+      <div className="flex flex-col min-h-full pb-24">
+        {/* Header */}
         <header className="px-6 pt-8 pb-6 safe-area-top">
           <h1 className="text-xl font-semibold text-foreground tracking-tight">Settings</h1>
         </header>
 
-        {/* Payment Methods - Confident list */}
+        {/* Funding Stack */}
         <section className="px-6 mb-8">
-          <p className="text-sm text-muted-foreground mb-4">Payment Methods</p>
+          <p className="text-sm text-muted-foreground mb-4">Funding Stack</p>
           <div className="space-y-0 divide-y divide-border/50">
-            {paymentMethods.map((method, index) => (
-              <motion.div
-                key={method.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.03 }}
-                className="flex items-center justify-between py-4"
-              >
-                <span className="text-foreground">{method.name}</span>
-                <div className={`w-2 h-2 rounded-full ${method.connected ? "bg-success" : "bg-muted-foreground/30"}`} />
-              </motion.div>
-            ))}
+            {sources
+              .sort((a, b) => a.priority - b.priority)
+              .map((source, index) => {
+                const Icon = railIcons[source.type];
+                return (
+                  <motion.div
+                    key={source.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="flex items-center justify-between py-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <span className="text-foreground">{source.name}</span>
+                        {source.type === 'wallet' && (
+                          <p className="text-xs text-muted-foreground">
+                            ${walletBalance.toFixed(2)} balance
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        Priority {source.priority}
+                      </span>
+                      <div className={`w-2 h-2 rounded-full ${
+                        source.isLinked ? "bg-success" : "bg-muted-foreground/30"
+                      }`} />
+                    </div>
+                  </motion.div>
+                );
+              })}
           </div>
         </section>
 
-        {/* Preferences - Simple rows */}
+        {/* Guardrails */}
         <section className="px-6 mb-8">
-          <p className="text-sm text-muted-foreground mb-4">Preferences</p>
+          <p className="text-sm text-muted-foreground mb-4">Guardrails</p>
           <div className="space-y-0 divide-y divide-border/50">
-            {settings.map((setting, index) => (
-              <motion.button
-                key={setting.label}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.03 }}
-                className="w-full flex items-center justify-between py-4"
-              >
-                <span className="text-foreground">{setting.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">{setting.value}</span>
-                  <ChevronRight size={16} className="text-muted-foreground/50" />
-                </div>
-              </motion.button>
-            ))}
+            <div className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <DollarSign className="w-5 h-5 text-muted-foreground" />
+                <span className="text-foreground">Auto-approve limit</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">
+                  ${guardrails.maxSinglePaymentAuto}
+                </span>
+                <ChevronRight size={16} className="text-muted-foreground/50" />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-muted-foreground" />
+                <span className="text-foreground">Max auto top-up</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">
+                  ${guardrails.maxAutoTopUpAmount}
+                </span>
+                <ChevronRight size={16} className="text-muted-foreground/50" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <DollarSign className="w-5 h-5 text-muted-foreground" />
+                <span className="text-foreground">Daily auto limit</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">
+                  ${guardrails.dailyAutoLimit}
+                </span>
+                <ChevronRight size={16} className="text-muted-foreground/50" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Security */}
+        <section className="px-6 mb-8">
+          <p className="text-sm text-muted-foreground mb-4">Security</p>
+          <div className="space-y-0 divide-y divide-border/50">
+            <div className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-muted-foreground" />
+                <span className="text-foreground">Face ID</span>
+              </div>
+              <span className={isWebAuthnRegistered ? "text-success" : "text-muted-foreground"}>
+                {isWebAuthnRegistered ? "Enabled" : "Not set up"}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <Bell className="w-5 h-5 text-muted-foreground" />
+                <span className="text-foreground">Notifications</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">On</span>
+                <ChevronRight size={16} className="text-muted-foreground/50" />
+              </div>
+            </div>
           </div>
         </section>
 
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Sign Out - Minimal */}
+        {/* Sign Out */}
         <div className="px-6 pb-8">
-          <button className="w-full py-4 text-destructive text-center">
-            Sign Out
+          <button 
+            onClick={handleSignOut}
+            className="w-full py-4 flex items-center justify-center gap-2 text-destructive"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Sign Out</span>
           </button>
           <p className="text-center text-xs text-muted-foreground mt-4">
             FLOW 1.0
           </p>
         </div>
       </div>
+      
+      <BottomNav />
     </MobileShell>
   );
 };

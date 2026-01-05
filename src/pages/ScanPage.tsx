@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MobileShell from "@/components/layout/MobileShell";
+import BottomNav from "@/components/layout/BottomNav";
 import ScannerFrame from "@/components/scanner/ScannerFrame";
 import ConfirmationCard from "@/components/payment/ConfirmationCard";
 import { useIntent } from "@/contexts/IntentContext";
@@ -150,7 +151,7 @@ const ScanPage = () => {
 
   return (
     <MobileShell>
-      <div className="flex flex-col min-h-full">
+      <div className="flex flex-col min-h-full pb-24">
         {/* Minimal Header */}
         <header className="px-6 pt-8 pb-4 safe-area-top">
           <h1 className="text-xl font-semibold text-foreground tracking-tight">FLOW</h1>
@@ -200,9 +201,9 @@ const ScanPage = () => {
             )}
           </AnimatePresence>
         </div>
-
-        <div className="h-6" />
       </div>
+      
+      <BottomNav />
     </MobileShell>
   );
 };
