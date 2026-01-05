@@ -3,6 +3,7 @@
  * 
  * Integrates Intent Engine + Orchestration Engine + Security.
  * Scan QR → Intent created → Resolution computed → Confirmation card → Face ID → Done.
+ * Now includes transaction logging and pause check.
  */
 
 import { useState, useEffect } from "react";
@@ -14,6 +15,9 @@ import ConfirmationCard from "@/components/payment/ConfirmationCard";
 import { useIntent } from "@/contexts/IntentContext";
 import { useOrchestration } from "@/contexts/OrchestrationContext";
 import { useSecurity } from "@/contexts/SecurityContext";
+import { useTransactionLogs } from "@/hooks/useTransactionLogs";
+import { useFlowPause } from "@/hooks/useFlowPause";
+import { Pause } from "lucide-react";
 import type { PaymentResolution } from "@/lib/orchestration";
 
 type ScanState = "scanning" | "confirming" | "authenticating" | "processing" | "complete";
@@ -37,6 +41,8 @@ const ScanPage = () => {
   const { currentIntent, handleQRScan, authorizeIntent, completeIntent, clearCurrentIntent } = useIntent();
   const { resolvePaymentRequest, recordPayment, topUpWallet } = useOrchestration();
   const { authorizePayment, clearAuthorization } = useSecurity();
+  const { logTransaction } = useTransactionLogs();
+  const { isPaused } = useFlowPause();
 
   // When intent changes, compute resolution
   useEffect(() => {
@@ -97,7 +103,11 @@ const ScanPage = () => {
     // Step 3: Execute resolution steps (simulate)
     await executePayment(resolution);
 
-    // Step 4: Complete
+    // Step 4: Log transaction to audit trail
+    const railUsed = resolution.steps.find(s => s.action === 'charge')?.sourceId || 'wallet';
+    await logTransaction(currentIntent, railUsed);
+
+    // Step 5: Complete
     const amount = getAmountFromIntent(currentIntent);
     setScanState("complete");
     completeIntent(currentIntent.id);
@@ -160,7 +170,26 @@ const ScanPage = () => {
         {/* Main Content */}
         <div className="flex-1 flex items-center justify-center px-6">
           <AnimatePresence mode="wait">
-            {scanState === "scanning" && (
+            {/* Paused State */}
+            {isPaused && (
+              <motion.div
+                key="paused"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center text-center"
+              >
+                <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
+                  <Pause className="w-10 h-10 text-destructive" />
+                </div>
+                <h2 className="text-xl font-semibold text-foreground mb-2">FLOW is Paused</h2>
+                <p className="text-muted-foreground text-sm max-w-xs">
+                  All payments are currently blocked. Go to Settings to resume.
+                </p>
+              </motion.div>
+            )}
+
+            {!isPaused && scanState === "scanning" && (
               <motion.div
                 key="scanner"
                 initial={{ opacity: 0 }}
@@ -178,7 +207,7 @@ const ScanPage = () => {
               </motion.div>
             )}
 
-            {scanState !== "scanning" && currentIntent && resolution && (
+            {!isPaused && scanState !== "scanning" && currentIntent && resolution && (
               <motion.div
                 key="confirmation"
                 initial={{ opacity: 0 }}
