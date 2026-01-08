@@ -13,6 +13,7 @@ import {
   X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSurfaceAnalytics } from "@/hooks/useSurfaceAnalytics";
 
 interface StatusItem {
   icon: React.ReactNode;
@@ -23,10 +24,18 @@ interface StatusItem {
 
 const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
+  const { logUsage } = useSurfaceAnalytics();
   const [connectionCount, setConnectionCount] = useState(0);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [appMode, setAppMode] = useState("Prototype");
   const [showFlowOptions, setShowFlowOptions] = useState(false);
+
+  // Log identity_card surface usage when "Use Flow" is tapped
+  const handleUseFlow = async () => {
+    // Log surface usage - does not affect any resolution logic
+    await logUsage('identity_card');
+    setShowFlowOptions(true);
+  };
 
   const flowOptions = [
     { 
@@ -205,7 +214,7 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
         className="py-6 space-y-3"
       >
         <Button
-          onClick={() => setShowFlowOptions(true)}
+          onClick={handleUseFlow}
           className="w-full h-14 text-base font-medium rounded-2xl"
         >
           Use Flow
