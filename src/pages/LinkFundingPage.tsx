@@ -1,242 +1,325 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
-  Wallet, 
-  Building2, 
-  CreditCard, 
-  ChevronRight,
+  GripVertical,
   Check,
-  Plus,
-  ArrowRight
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface FundingSourceConfig {
+interface PriorityItem {
   id: string;
-  type: 'wallet' | 'bank' | 'card';
+  type: 'wallet' | 'bank' | 'debit_card' | 'credit_card';
   label: string;
-  description: string;
-  icon: React.ReactNode;
-  linked: boolean;
 }
 
-const sourceConfigs: Record<string, Omit<FundingSourceConfig, 'linked'>> = {
-  wallet: {
-    id: 'wallet',
-    type: 'wallet',
-    label: 'Digital Wallet',
-    description: 'Connect Apple Pay, Google Pay, or PayPal',
-    icon: <Wallet className="w-6 h-6" />,
-  },
-  bank: {
-    id: 'bank',
-    type: 'bank',
-    label: 'Bank Account',
-    description: 'Link your bank for direct payments',
-    icon: <Building2 className="w-6 h-6" />,
-  },
-  card: {
-    id: 'card',
-    type: 'card',
-    label: 'Debit or Credit Card',
-    description: 'Add Visa, Mastercard, or Amex',
-    icon: <CreditCard className="w-6 h-6" />,
-  },
-};
+interface LinkableSource {
+  id: string;
+  label: string;
+  type: 'wallet' | 'bank' | 'debit_card' | 'credit_card';
+}
+
+const priorityItems: PriorityItem[] = [
+  { id: 'wallet', type: 'wallet', label: 'Wallets' },
+  { id: 'bank', type: 'bank', label: 'Bank account' },
+  { id: 'debit_card', type: 'debit_card', label: 'Debit card' },
+  { id: 'credit_card', type: 'credit_card', label: 'Credit card' },
+];
+
+const linkableSources: LinkableSource[] = [
+  { id: 'tng', label: "Link Touch 'n Go", type: 'wallet' },
+  { id: 'grabpay', label: 'Link GrabPay', type: 'wallet' },
+  { id: 'bank', label: 'Link bank', type: 'bank' },
+  { id: 'card', label: 'Link card', type: 'credit_card' },
+];
 
 const LinkFundingPage = () => {
   const navigate = useNavigate();
-  const [fundingOrder, setFundingOrder] = useState<string[]>(['wallet', 'bank', 'card']);
+  const { user, loading: authLoading } = useAuth();
+  
+  const [priority, setPriority] = useState<PriorityItem[]>(priorityItems);
+  const [maxAutoTopUp, setMaxAutoTopUp] = useState('200');
+  const [extraConfirmAbove, setExtraConfirmAbove] = useState('300');
   const [linkedSources, setLinkedSources] = useState<Set<string>>(new Set());
-  const [currentLinking, setCurrentLinking] = useState<string | null>(null);
+  const [linkingSource, setLinkingSource] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    // Load the user's preferred funding order
-    const savedOrder = localStorage.getItem('flow_funding_stack');
-    if (savedOrder) {
-      try {
-        setFundingOrder(JSON.parse(savedOrder));
-      } catch {
-        // Use default order
-      }
+    if (!authLoading && !user) {
+      navigate('/auth', { replace: true });
     }
-  }, []);
+  }, [user, authLoading, navigate]);
 
-  const handleLinkSource = async (sourceId: string) => {
-    setCurrentLinking(sourceId);
-    
-    // Simulate linking process
-    // In production, this would open the appropriate linking flow
-    // (Plaid for banks, Stripe for cards, etc.)
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setLinkedSources(prev => new Set([...prev, sourceId]));
-    setCurrentLinking(null);
-    
-    const sourceLabel = sourceConfigs[sourceId]?.label || 'Source';
-    toast.success(`${sourceLabel} linked successfully`);
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
   };
 
-  const handleContinue = () => {
-    // Store linked sources
-    localStorage.setItem('flow_linked_sources', JSON.stringify([...linkedSources]));
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newPriority = [...priority];
+    const draggedItem = newPriority[draggedIndex];
+    newPriority.splice(draggedIndex, 1);
+    newPriority.splice(index, 0, draggedItem);
+    setPriority(newPriority);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  const handleLink = async (source: LinkableSource) => {
+    setLinkingSource(source.id);
     
-    // Navigate to main app
-    navigate('/scan');
+    // Simulate linking in Prototype mode
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setLinkedSources(prev => new Set([...prev, source.id]));
+    setLinkingSource(null);
+    toast.success(`${source.label.replace('Link ', '')} linked`);
+  };
+
+  const handleContinue = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    
+    try {
+      // Update funding sources with new priority and limits
+      const updates = priority.map((item, index) => ({
+        user_id: user.id,
+        type: item.type,
+        priority: index + 1,
+        max_auto_topup_amount: parseFloat(maxAutoTopUp) || 200,
+        require_extra_confirm_amount: parseFloat(extraConfirmAbove) || 300,
+      }));
+
+      // Update each funding source
+      for (const update of updates) {
+        await supabase
+          .from('funding_sources')
+          .update({
+            priority: update.priority,
+            max_auto_topup_amount: update.max_auto_topup_amount,
+            require_extra_confirm_amount: update.require_extra_confirm_amount,
+          })
+          .eq('user_id', user.id)
+          .eq('type', update.type);
+      }
+
+      // In Prototype mode, mark linked sources
+      if (linkedSources.size > 0) {
+        // Map linkable source IDs to funding source types
+        const typeMapping: Record<string, 'wallet' | 'bank' | 'debit_card' | 'credit_card'> = {
+          tng: 'wallet',
+          grabpay: 'wallet',
+          bank: 'bank',
+          card: 'credit_card',
+        };
+
+        for (const sourceId of linkedSources) {
+          const type = typeMapping[sourceId];
+          if (type) {
+            await supabase
+              .from('funding_sources')
+              .update({ linked_status: 'linked' })
+              .eq('user_id', user.id)
+              .eq('type', type);
+          }
+        }
+      }
+
+      navigate('/permissions', { replace: true });
+    } catch (error) {
+      toast.error('Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSkip = () => {
-    toast.info('You can link payment methods later in Settings');
-    navigate('/scan');
+    toast.info('You can set up funding sources later');
+    navigate('/permissions', { replace: true });
   };
 
-  const hasLinkedAtLeastOne = linkedSources.size > 0;
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="pt-16 pb-6"
-      >
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2">
-          Link your payment methods
-        </h1>
-        <p className="text-muted-foreground">
-          Connect at least one to start paying with FLOW.
-        </p>
-      </motion.div>
+      {/* Main content */}
+      <div className="flex-1 pt-12 pb-6 max-w-md mx-auto w-full overflow-y-auto">
+        {/* Title */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-3xl font-bold text-foreground tracking-tight mb-4"
+        >
+          Your payment order
+        </motion.h1>
 
-      {/* Funding Sources to Link */}
-      <div className="flex-1 py-4 space-y-3">
-        {fundingOrder.map((sourceId, index) => {
-          const config = sourceConfigs[sourceId];
-          if (!config) return null;
+        {/* Body */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-base text-muted-foreground mb-8"
+        >
+          FLOW will use this order to resolve payments automatically.
+        </motion.p>
 
-          const isLinked = linkedSources.has(sourceId);
-          const isLinking = currentLinking === sourceId;
-
-          return (
-            <motion.div
-              key={sourceId}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-            >
-              <button
-                onClick={() => !isLinked && !isLinking && handleLinkSource(sourceId)}
-                disabled={isLinked || isLinking}
-                className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                  isLinked 
-                    ? 'bg-success/5 border-success/20' 
-                    : 'bg-card border-border hover:border-primary/30 hover:bg-primary/5'
-                } ${isLinking ? 'opacity-70' : ''}`}
+        {/* Priority Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-8"
+        >
+          <p className="text-sm font-medium text-foreground mb-4">Priority</p>
+          <div className="space-y-2">
+            {priority.map((item, index) => (
+              <div
+                key={item.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`flex items-center gap-3 bg-secondary rounded-2xl p-4 cursor-grab active:cursor-grabbing transition-opacity ${
+                  draggedIndex === index ? 'opacity-50' : ''
+                }`}
               >
-                {/* Priority Badge */}
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                  isLinked 
-                    ? 'bg-success text-success-foreground' 
-                    : 'bg-muted text-muted-foreground'
-                }`}>
-                  {isLinked ? <Check className="w-3.5 h-3.5" /> : index + 1}
-                </div>
+                <GripVertical className="w-5 h-5 text-muted-foreground" />
+                <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
+                  {index + 1}
+                </span>
+                <span className="text-base text-foreground">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
-                {/* Icon */}
-                <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
-                  isLinked 
-                    ? 'bg-success/10 text-success' 
-                    : 'bg-primary/5 text-primary'
-                }`}>
-                  {config.icon}
-                </div>
+        {/* Limits Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mb-8 space-y-6"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="max-topup" className="text-sm font-medium">
+              Max auto top up
+            </Label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                RM
+              </span>
+              <Input
+                id="max-topup"
+                type="number"
+                value={maxAutoTopUp}
+                onChange={(e) => setMaxAutoTopUp(e.target.value)}
+                className="pl-12 h-14 rounded-2xl"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              FLOW will not top up more than this without asking.
+            </p>
+          </div>
 
-                {/* Content */}
-                <div className="flex-1 text-left min-w-0">
-                  <h3 className="font-medium text-foreground">{config.label}</h3>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {isLinked ? 'Connected' : config.description}
-                  </p>
-                </div>
+          <div className="space-y-2">
+            <Label htmlFor="extra-confirm" className="text-sm font-medium">
+              Extra confirmation above
+            </Label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                RM
+              </span>
+              <Input
+                id="extra-confirm"
+                type="number"
+                value={extraConfirmAbove}
+                onChange={(e) => setExtraConfirmAbove(e.target.value)}
+                className="pl-12 h-14 rounded-2xl"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              For larger amounts, FLOW adds an extra confirmation step.
+            </p>
+          </div>
+        </motion.div>
 
-                {/* Action */}
-                <div className="text-muted-foreground">
+        {/* Links Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mb-8"
+        >
+          <div className="space-y-2">
+            {linkableSources.map((source) => {
+              const isLinked = linkedSources.has(source.id);
+              const isLinking = linkingSource === source.id;
+
+              return (
+                <button
+                  key={source.id}
+                  onClick={() => !isLinked && !isLinking && handleLink(source)}
+                  disabled={isLinked || isLinking}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                    isLinked
+                      ? 'bg-success/5 border-success/20'
+                      : 'bg-card border-border hover:border-primary/30'
+                  }`}
+                >
+                  <span className={`text-base ${isLinked ? 'text-success' : 'text-foreground'}`}>
+                    {source.label}
+                  </span>
                   {isLinking ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                      className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
-                    />
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   ) : isLinked ? (
                     <Check className="w-5 h-5 text-success" />
-                  ) : (
-                    <Plus className="w-5 h-5" />
-                  )}
-                </div>
-              </button>
-            </motion.div>
-          );
-        })}
-
-        {/* Trust Statement */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="mt-6 p-4 rounded-2xl bg-muted/50"
-        >
-          <p className="text-sm text-muted-foreground text-center leading-relaxed">
-            FLOW connects to your payment methods securely.
-            <br />
-            We never store your credentials or balances.
-          </p>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </motion.div>
       </div>
 
-      {/* Actions */}
+      {/* Bottom section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.7 }}
-        className="py-8 space-y-3"
+        transition={{ duration: 0.6, delay: 0.5 }}
+        className="pb-6 max-w-md mx-auto w-full space-y-3"
       >
-        <AnimatePresence mode="wait">
-          {hasLinkedAtLeastOne ? (
-            <motion.div
-              key="continue"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <Button
-                onClick={handleContinue}
-                className="w-full h-14 text-base font-medium rounded-2xl bg-success hover:bg-success/90"
-              >
-                Start using FLOW
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </motion.div>
+        <Button
+          onClick={handleContinue}
+          disabled={isSaving}
+          className="w-full h-14 text-base font-medium rounded-2xl"
+        >
+          {isSaving ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
-            <motion.div
-              key="skip"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <Button
-                onClick={handleContinue}
-                disabled={true}
-                className="w-full h-14 text-base font-medium rounded-2xl"
-              >
-                Link at least one method to continue
-              </Button>
-            </motion.div>
+            'Continue'
           )}
-        </AnimatePresence>
-        
+        </Button>
+
         <button
           onClick={handleSkip}
           className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
