@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useSecurity } from '@/contexts/SecurityContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Fingerprint, Shield, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+
+type SessionRule = 'every_payment' | 'after_inactivity';
 
 const BiometricSetupPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { 
-    isWebAuthnSupported, 
-    isWebAuthnRegistered, 
-    registerWebAuthn,
-    isAuthenticating 
-  } = useSecurity();
   
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(true);
+  const [sessionRule, setSessionRule] = useState<SessionRule>('after_inactivity');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -26,35 +26,35 @@ const BiometricSetupPage = () => {
     }
   }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    // If already registered, go to funding stack
-    if (user && isWebAuthnRegistered) {
-      navigate('/funding-stack', { replace: true });
-    }
-  }, [user, isWebAuthnRegistered, navigate]);
-
-  const handleSetupBiometrics = async () => {
-    setIsRegistering(true);
+  const handleSave = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
     
     try {
-      const success = await registerWebAuthn();
+      // session_timeout_minutes: 0 = every payment, 15 = after inactivity
+      const sessionTimeoutMinutes = sessionRule === 'every_payment' ? 0 : 15;
       
-      if (success) {
-        toast.success('Biometric lock enabled!');
-        navigate('/funding-stack', { replace: true });
-      } else {
-        toast.error('Failed to set up biometrics. Please try again.');
-      }
-    } catch (error) {
-      toast.error('Biometric setup failed.');
-    } finally {
-      setIsRegistering(false);
-    }
-  };
+      const { error } = await supabase
+        .from('users')
+        .update({
+          biometric_enabled: biometricEnabled,
+          session_timeout_minutes: sessionTimeoutMinutes,
+        })
+        .eq('id', user.id);
 
-  const handleSkip = () => {
-    toast.info('You can set up biometrics later in Settings');
-    navigate('/funding-stack', { replace: true });
+      if (error) {
+        toast.error('Failed to save settings');
+        return;
+      }
+
+      toast.success('Security settings saved');
+      navigate('/link-funding', { replace: true });
+    } catch (error) {
+      toast.error('Something went wrong');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (authLoading) {
@@ -66,109 +66,119 @@ const BiometricSetupPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
+        {/* Title */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-3xl font-bold text-foreground tracking-tight mb-4"
+        >
+          Security
+        </motion.h1>
+
+        {/* Body */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="space-y-2 mb-8"
+        >
+          <p className="text-base text-muted-foreground">
+            FLOW uses your device security.
+          </p>
+          <p className="text-base text-muted-foreground">
+            Payments always require confirmation.
+          </p>
+        </motion.div>
+
+        {/* Toggle - Enable biometrics */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="bg-secondary rounded-2xl p-4 mb-6"
+        >
+          <div className="flex items-center justify-between">
+            <Label 
+              htmlFor="biometric-toggle" 
+              className="text-base font-medium text-foreground cursor-pointer"
+            >
+              Enable Face ID or fingerprint
+            </Label>
+            <Switch
+              id="biometric-toggle"
+              checked={biometricEnabled}
+              onCheckedChange={setBiometricEnabled}
+            />
+          </div>
+        </motion.div>
+
+        {/* Session rules */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mb-8"
+        >
+          <p className="text-sm font-medium text-foreground mb-4">Session rules</p>
+          <RadioGroup
+            value={sessionRule}
+            onValueChange={(value) => setSessionRule(value as SessionRule)}
+            className="space-y-3"
+          >
+            <div className="flex items-center space-x-3 bg-secondary rounded-2xl p-4">
+              <RadioGroupItem value="every_payment" id="every_payment" />
+              <Label 
+                htmlFor="every_payment" 
+                className="text-base text-foreground cursor-pointer flex-1"
+              >
+                Require biometrics for every payment
+              </Label>
+            </div>
+            <div className="flex items-center space-x-3 bg-secondary rounded-2xl p-4">
+              <RadioGroupItem value="after_inactivity" id="after_inactivity" />
+              <Label 
+                htmlFor="after_inactivity" 
+                className="text-base text-foreground cursor-pointer flex-1"
+              >
+                Ask again after inactivity
+              </Label>
+            </div>
+          </RadioGroup>
+        </motion.div>
+
+        {/* Helper */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-sm text-muted-foreground mb-8"
+        >
+          You can change this later.
+        </motion.p>
+      </div>
+
+      {/* Bottom section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.6, delay: 0.5 }}
+        className="pb-6 max-w-md mx-auto w-full"
       >
-        <Card className="flow-card-shadow border-0">
-          <CardHeader className="text-center space-y-4 pb-2">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="mx-auto w-20 h-20 rounded-full bg-success/10 flex items-center justify-center flow-biometric-ring"
-            >
-              <Fingerprint className="w-10 h-10 text-success" />
-            </motion.div>
-            <div>
-              <CardTitle className="text-2xl font-semibold">
-                Secure your payments
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Use Face ID or fingerprint to confirm every payment
-              </CardDescription>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="pt-6 space-y-6">
-            {/* Security benefits */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="space-y-3"
-            >
-              {[
-                'Confirm payments with your face or fingerprint',
-                'No one can pay without your explicit authorization',
-                'Your biometric data never leaves your device',
-              ].map((benefit, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-muted-foreground">{benefit}</p>
-                </div>
-              ))}
-            </motion.div>
-
-            {!isWebAuthnSupported ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="p-4 rounded-xl bg-warning/10 border border-warning/20"
-              >
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Biometrics not available
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Your device doesn't support biometric authentication. 
-                      You can still use FLOW, but payments won't have biometric confirmation.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <Button
-                onClick={handleSetupBiometrics}
-                disabled={isRegistering || isAuthenticating}
-                className="w-full h-14 text-base font-medium rounded-xl gap-2 bg-success hover:bg-success/90"
-              >
-                {isRegistering || isAuthenticating ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Fingerprint className="w-5 h-5" />
-                    Enable Biometric Lock
-                  </>
-                )}
-              </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              onClick={handleSkip}
-              className="w-full text-muted-foreground"
-            >
-              {isWebAuthnSupported ? 'Set up later' : 'Continue without biometrics'}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* FLOW product truth */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center text-sm text-muted-foreground mt-6"
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full h-14 text-base font-medium rounded-2xl"
         >
-          FLOW acts only with your explicit authorization
-        </motion.p>
+          {isSaving ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            'Save and continue'
+          )}
+        </Button>
       </motion.div>
     </div>
   );
