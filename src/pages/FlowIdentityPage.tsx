@@ -180,8 +180,8 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
         className="py-6 space-y-3"
       >
         <Button
-          disabled
-          className="w-full h-14 text-base font-medium rounded-2xl opacity-50"
+          onClick={() => navigate("/home")}
+          className="w-full h-14 text-base font-medium rounded-2xl"
         >
           Continue to Home
           <ChevronRight className="w-5 h-5 ml-2" />
