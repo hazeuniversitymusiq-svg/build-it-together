@@ -40,3 +40,17 @@ export {
   cancelTransaction,
   type ExecutionResult,
 } from './execute-plan';
+
+// Security Service
+export {
+  checkRateLimit,
+  recordRateLimitAction,
+  signTransaction,
+  verifyTransactionSignature,
+  createAuditLog,
+  prePaymentSecurityCheck,
+  postPaymentAuditLog,
+  type RateLimitResult,
+  type TransactionSignature,
+  type AuditLogResult,
+} from './security-service';
