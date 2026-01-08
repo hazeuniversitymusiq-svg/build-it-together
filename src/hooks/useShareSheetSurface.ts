@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { App } from '@capacitor/app';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logSurfaceUsage } from '@/hooks/useSurfaceAnalytics';
 
 interface SharedContent {
   type: 'payment_link' | 'qr_image' | 'payment_request' | 'contact' | 'unknown';
@@ -139,34 +140,10 @@ export const useShareSheetSurface = () => {
     };
   }, []);
 
-  // Log share sheet usage to PaymentSurfaces
+  // Log share sheet usage using centralized analytics
   const logShareSheetUsage = useCallback(async (userId: string) => {
-    try {
-      const { data: existing } = await supabase
-        .from('payment_surfaces')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('surface_type', 'share_sheet')
-        .single();
-
-      if (existing) {
-        await supabase
-          .from('payment_surfaces')
-          .update({ last_used_at: new Date().toISOString() })
-          .eq('id', existing.id);
-      } else {
-        await supabase
-          .from('payment_surfaces')
-          .insert({
-            user_id: userId,
-            surface_type: 'share_sheet',
-            enabled: true,
-            last_used_at: new Date().toISOString(),
-          });
-      }
-    } catch (error) {
-      console.error('Failed to log share sheet usage:', error);
-    }
+    // Use centralized analytics - does not affect resolution logic
+    await logSurfaceUsage(userId, 'share_sheet');
   }, []);
 
   // Create intent from parsed shared content

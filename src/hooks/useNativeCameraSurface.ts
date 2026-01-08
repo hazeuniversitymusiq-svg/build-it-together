@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { App, URLOpenListenerEvent } from "@capacitor/app";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logSurfaceUsage } from "@/hooks/useSurfaceAnalytics";
 
 interface NativeCameraState {
   isInitialized: boolean;
@@ -115,19 +116,11 @@ const checkUserOnboarded = async (): Promise<{ isOnboarded: boolean; userId?: st
 };
 
 /**
- * Update payment surface usage tracking
+ * Update payment surface usage tracking using centralized analytics
  */
 const trackSurfaceUsage = async (userId: string) => {
-  await supabase
-    .from("payment_surfaces")
-    .upsert({
-      user_id: userId,
-      surface_type: "camera",
-      enabled: true,
-      last_used_at: new Date().toISOString(),
-    }, {
-      onConflict: "user_id,surface_type",
-    });
+  // Use centralized analytics - does not affect resolution logic
+  await logSurfaceUsage(userId, 'camera');
 };
 
 export const useNativeCameraSurface = () => {
