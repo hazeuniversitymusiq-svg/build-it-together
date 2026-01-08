@@ -1,341 +1,277 @@
 /**
- * FLOW Scan Page
+ * FLOW Scan Page - Phase 3
  * 
- * Integrates Intent Engine + Orchestration Engine + Security.
- * Scan QR → Intent created → Resolution computed → Confirmation card → Face ID → Done.
- * Now includes transaction logging and pause check.
+ * Scan → Add to Queue → Resolve
  */
 
-import { useState, useEffect } from "react";
+import { forwardRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import MobileShell from "@/components/layout/MobileShell";
-import BottomNav from "@/components/layout/BottomNav";
-import ScannerFrame from "@/components/scanner/ScannerFrame";
-import ConfirmationCard from "@/components/payment/ConfirmationCard";
-import { useIntent } from "@/contexts/IntentContext";
-import { useOrchestration } from "@/contexts/OrchestrationContext";
-import { useSecurity } from "@/contexts/SecurityContext";
-import { useTransactionLogs } from "@/hooks/useTransactionLogs";
-import { useFlowPause } from "@/hooks/useFlowPause";
-import { Pause, FlaskConical, Store, User, Link2, X } from "lucide-react";
-import type { PaymentResolution } from "@/lib/orchestration";
+import { useNavigate } from "react-router-dom";
+import { QrCode, Camera, Trash2, ChevronRight, Store } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { createIntentFromQR } from "@/lib/core/intent-creators";
 
-type ScanState = "scanning" | "confirming" | "authenticating" | "processing" | "complete";
-
-// Test QR scenarios
-const TEST_QR_SCENARIOS = [
-  {
-    id: 'merchant',
-    label: 'Merchant QR',
-    icon: Store,
-    description: 'Starbucks $18.90',
-    data: JSON.stringify({
-      type: 'merchant',
-      merchantId: 'starbucks_klcc_001',
-      merchantName: 'Starbucks KLCC',
-      amount: 18.90,
-      currency: '$',
-      reference: `TXN-${Date.now()}`,
-    }),
-  },
-  {
-    id: 'merchant_large',
-    label: 'Large Payment',
-    icon: Store,
-    description: 'Apple Store $299',
-    data: JSON.stringify({
-      type: 'merchant',
-      merchantId: 'apple_store_001',
-      merchantName: 'Apple Store',
-      amount: 299.00,
-      currency: '$',
-      reference: `TXN-${Date.now()}`,
-    }),
-  },
-  {
-    id: 'personal',
-    label: 'Personal QR',
-    icon: User,
-    description: 'Send to Sarah $25',
-    data: JSON.stringify({
-      type: 'personal',
-      userId: 'user_sarah_001',
-      name: 'Sarah',
-      phone: '+1234567890',
-      amount: 25.00,
-      currency: '$',
-    }),
-  },
-  {
-    id: 'payment_link',
-    label: 'Payment Link',
-    icon: Link2,
-    description: 'Grab Food $12.50',
-    data: 'flow://pay/Grab%20Food?id=grab_001&amount=12.50&currency=$',
-  },
-];
-
-// Helper to extract amount from any intent type
-function getAmountFromIntent(intent: NonNullable<ReturnType<typeof useIntent>['currentIntent']>): { value: number; currency: string } {
-  if (intent.type === 'PAY_MERCHANT') {
-    return intent.amount;
-  } else if (intent.type === 'SEND_MONEY') {
-    return intent.amount;
-  } else if (intent.type === 'RECEIVE_MONEY') {
-    return intent.amount ?? { value: 0, currency: '$' };
-  }
-  return { value: 0, currency: '$' };
+interface QRPayload {
+  id: string;
+  merchant_name: string | null;
+  amount: number | null;
+  reference_id: string | null;
+  rails_available: string[];
 }
 
-const ScanPage = () => {
-  const [scanState, setScanState] = useState<ScanState>("scanning");
-  const [resolution, setResolution] = useState<PaymentResolution | null>(null);
-  const [showTestMode, setShowTestMode] = useState(false);
-  
-  const { currentIntent, handleQRScan, authorizeIntent, completeIntent, clearCurrentIntent } = useIntent();
-  const { resolvePaymentRequest, recordPayment, topUpWallet } = useOrchestration();
-  const { authorizePayment, clearAuthorization } = useSecurity();
-  const { logTransaction } = useTransactionLogs();
-  const { isPaused } = useFlowPause();
+const ScanPage = forwardRef<HTMLDivElement>((_, ref) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [qrPayloads, setQrPayloads] = useState<QRPayload[]>([]);
+  const [queue, setQueue] = useState<QRPayload[]>([]);
+  const [isResolving, setIsResolving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // When intent changes, compute resolution
   useEffect(() => {
-    if (currentIntent && scanState === "confirming") {
-      const amount = getAmountFromIntent(currentIntent);
-      
-      const paymentResolution = resolvePaymentRequest({
-        amount: amount.value,
-        currency: amount.currency,
-        intentId: currentIntent.id,
-        merchantId: currentIntent.type === 'PAY_MERCHANT' ? currentIntent.merchant.id : undefined,
-        recipientId: currentIntent.type === 'SEND_MONEY' ? currentIntent.recipient.id : undefined,
-      });
-      setResolution(paymentResolution);
-    }
-  }, [currentIntent, scanState, resolvePaymentRequest]);
-
-  // Handle test QR scan
-  const handleTestScan = (qrData: string) => {
-    setShowTestMode(false);
-    handleQRScan(qrData);
-    setScanState("confirming");
-  };
-
-  // Simulate QR scan - opens test mode in dev
-  const handleScan = () => {
-    setShowTestMode(true);
-  };
-
-  // Handle biometric confirmation
-  const handleConfirm = async () => {
-    if (!currentIntent || !resolution) return;
-
-    // Check if blocked
-    if (resolution.action === 'BLOCKED' || resolution.action === 'INSUFFICIENT_FUNDS') {
-      console.error(resolution.blockedReason);
-      return;
-    }
-
-    setScanState("authenticating");
-
-    // Step 1: Biometric auth
-    const authSuccess = await authorizePayment();
-    
-    if (!authSuccess) {
-      setScanState("confirming");
-      return;
-    }
-
-    // Step 2: Authorize intent
-    authorizeIntent(currentIntent.id);
-    setScanState("processing");
-
-    // Step 3: Execute resolution steps (simulate)
-    await executePayment(resolution);
-
-    // Step 4: Log transaction to audit trail
-    const railUsed = resolution.steps.find(s => s.action === 'charge')?.sourceId || 'wallet';
-    await logTransaction(currentIntent, railUsed);
-
-    // Step 5: Complete
-    const amount = getAmountFromIntent(currentIntent);
-    setScanState("complete");
-    completeIntent(currentIntent.id);
-    recordPayment(amount.value);
-
-    // Reset after animation
-    setTimeout(() => {
-      clearCurrentIntent();
-      clearAuthorization();
-      setResolution(null);
-      setScanState("scanning");
-    }, 2000);
-  };
-
-  // Simulate payment execution
-  const executePayment = async (res: PaymentResolution): Promise<void> => {
-    for (const step of res.steps) {
-      if (step.action === 'top_up') {
-        await new Promise(r => setTimeout(r, 400));
-        topUpWallet(step.amount);
-      } else if (step.action === 'charge') {
-        await new Promise(r => setTimeout(r, 600));
+    const loadQRPayloads = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
       }
+      setUserId(user.id);
+
+      // Fetch seeded QR payloads for prototype mode
+      const { data } = await supabase
+        .from("qr_payloads")
+        .select("id, merchant_name, amount, reference_id, rails_available")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setQrPayloads(data.map(qr => ({
+          ...qr,
+          rails_available: Array.isArray(qr.rails_available) 
+            ? qr.rails_available as string[]
+            : []
+        })));
+      }
+    };
+
+    loadQRPayloads();
+  }, [navigate]);
+
+  const addToQueue = (qr: QRPayload) => {
+    // Check if already in queue
+    if (queue.some(q => q.id === qr.id)) {
+      toast({ title: "Already in queue" });
+      return;
     }
+    setQueue(prev => [...prev, qr]);
   };
 
-  // Get display data from current intent
-  const getRecipientName = (): string => {
-    if (!currentIntent) return '';
-    
-    switch (currentIntent.type) {
-      case 'PAY_MERCHANT':
-        return currentIntent.merchant.name;
-      case 'SEND_MONEY':
-        return currentIntent.recipient.name;
-      default:
-        return 'Unknown';
+  const clearQueue = () => {
+    setQueue([]);
+  };
+
+  const handleResolve = async () => {
+    if (queue.length === 0 || !userId) return;
+
+    setIsResolving(true);
+
+    // Take the latest (last added) QR from queue
+    const latestQR = queue[queue.length - 1];
+
+    // Create intent from QR
+    const result = await createIntentFromQR(userId, latestQR.id);
+
+    if (!result.success || !result.intentId) {
+      toast({ 
+        title: "Failed to create payment", 
+        description: result.error,
+        variant: "destructive" 
+      });
+      setIsResolving(false);
+      return;
     }
+
+    // Remove from queue
+    setQueue(prev => prev.filter(q => q.id !== latestQR.id));
+
+    // Navigate to resolve screen with intent ID
+    navigate(`/resolve/${result.intentId}`);
   };
 
-  const getRecipientType = (): 'merchant' | 'person' => {
-    return currentIntent?.type === 'PAY_MERCHANT' ? 'merchant' : 'person';
-  };
-
-  const getDisplayAmount = () => {
-    if (!currentIntent) return { value: 0, currency: '$' };
-    return getAmountFromIntent(currentIntent);
-  };
-
-  const displayAmount = getDisplayAmount();
+  const isInQueue = (qrId: string) => queue.some(q => q.id === qrId);
 
   return (
-    <MobileShell>
-      <div className="flex flex-col min-h-full pb-24">
-        {/* Minimal Header */}
-        <header className="px-6 pt-8 pb-4 safe-area-top">
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">FLOW</h1>
-        </header>
+    <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-24">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="pt-16 pb-2"
+      >
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+          Scan to Pay
+        </h1>
+      </motion.div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center px-6">
-          <AnimatePresence mode="wait">
-            {/* Paused State */}
-            {isPaused && (
-              <motion.div
-                key="paused"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center text-center"
-              >
-                <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-                  <Pause className="w-10 h-10 text-destructive" />
-                </div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">FLOW is Paused</h2>
-                <p className="text-muted-foreground text-sm max-w-xs">
-                  All payments are currently blocked. Go to Settings to resume.
-                </p>
-              </motion.div>
-            )}
+      {/* Helper */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="text-muted-foreground mb-6"
+      >
+        Scan a QR code or choose one from your gallery.
+      </motion.p>
 
-            {!isPaused && scanState === "scanning" && (
-              <motion.div
-                key="scanner"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col items-center"
-              >
-                <button onClick={handleScan} className="mb-10">
-                  <ScannerFrame />
-                </button>
-                <p className="text-muted-foreground text-center text-sm">
-                  Tap to test scan
-                </p>
-              </motion.div>
-            )}
+      {/* Open Camera Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="mb-8"
+      >
+        <Button
+          variant="outline"
+          className="w-full h-14 rounded-2xl border-dashed border-2"
+          disabled
+        >
+          <Camera className="w-5 h-5 mr-2" />
+          Open camera
+        </Button>
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          No camera available. Choose a QR to simulate a scan.
+        </p>
+      </motion.div>
 
-            {!isPaused && scanState !== "scanning" && currentIntent && resolution && (
-              <motion.div
-                key="confirmation"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ConfirmationCard
-                  recipient={getRecipientName()}
-                  recipientType={getRecipientType()}
-                  amount={displayAmount.value}
-                  currency={displayAmount.currency}
-                  resolution={resolution}
-                  onConfirm={handleConfirm}
-                  isAuthenticating={scanState === "authenticating"}
-                  isProcessing={scanState === "processing"}
-                  isComplete={scanState === "complete"}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {/* QR Gallery Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="mb-8"
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-medium text-foreground">QR gallery</h2>
+          <Badge variant="secondary" className="text-xs">Prototype only</Badge>
         </div>
 
-        {/* Test Mode Panel */}
-        <AnimatePresence>
-          {showTestMode && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col"
+        <div className="grid grid-cols-2 gap-3">
+          {qrPayloads.map((qr, index) => (
+            <motion.button
+              key={qr.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: 0.4 + index * 0.05 }}
+              onClick={() => addToQueue(qr)}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                isInQueue(qr.id)
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-card hover:border-primary/30"
+              }`}
             >
-              <div className="px-6 pt-8 pb-4 safe-area-top flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FlaskConical className="w-5 h-5 text-accent" />
-                  <h2 className="text-lg font-semibold text-foreground">Test Mode</h2>
-                </div>
-                <button 
-                  onClick={() => setShowTestMode(false)}
-                  className="p-2 text-muted-foreground hover:text-foreground"
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
+                <Store className="w-5 h-5 text-accent" />
+              </div>
+              <p className="font-medium text-foreground text-sm truncate">
+                {qr.merchant_name || "Unknown"}
+              </p>
+              <p className="text-lg font-semibold text-foreground">
+                RM {qr.amount?.toFixed(2) || "0.00"}
+              </p>
+            </motion.button>
+          ))}
+        </div>
+
+        {qrPayloads.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <QrCode className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No QR codes available</p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Queue Section */}
+      <AnimatePresence>
+        {queue.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="flex-1"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-foreground">Queue</h2>
+              <Badge variant="outline">{queue.length}</Badge>
+            </div>
+
+            <p className="text-xs text-muted-foreground mb-4">
+              You can scan multiple codes, then resolve one by one.
+            </p>
+
+            <div className="space-y-2 mb-6">
+              {queue.map((qr, index) => (
+                <motion.div
+                  key={qr.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                  className="flex items-center justify-between p-3 rounded-xl bg-card border border-border"
                 >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="flex-1 px-6 py-4 space-y-3">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select a QR scenario to test the payment flow:
-                </p>
-                
-                {TEST_QR_SCENARIOS.map((scenario) => {
-                  const Icon = scenario.icon;
-                  return (
-                    <motion.button
-                      key={scenario.id}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleTestScan(scenario.data)}
-                      className="w-full p-4 bg-card rounded-2xl flex items-center gap-4 text-left flow-card-shadow"
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                        <Icon className="w-6 h-6 text-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{scenario.label}</p>
-                        <p className="text-sm text-muted-foreground">{scenario.description}</p>
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-      
-      <BottomNav />
-    </MobileShell>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Store className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {qr.merchant_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        RM {qr.amount?.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    #{index + 1}
+                  </Badge>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+        className="py-6 space-y-3 mt-auto"
+      >
+        <Button
+          onClick={handleResolve}
+          disabled={queue.length === 0 || isResolving}
+          className="w-full h-14 text-base font-medium rounded-2xl"
+        >
+          Resolve now
+          <ChevronRight className="w-5 h-5 ml-2" />
+        </Button>
+
+        {queue.length > 0 && (
+          <button
+            onClick={clearQueue}
+            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear queue
+          </button>
+        )}
+      </motion.div>
+    </div>
   );
-};
+});
+ScanPage.displayName = "ScanPage";
 
 export default ScanPage;
