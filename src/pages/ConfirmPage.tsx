@@ -6,7 +6,7 @@
  */
 
 import { forwardRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   Fingerprint, 
@@ -28,7 +28,10 @@ import { executePlan } from "@/lib/core/execute-plan";
 import { useSecurity } from "@/contexts/SecurityContext";
 import { useFlowPause } from "@/hooks/useFlowPause";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useFlowIntelligence } from "@/hooks/useFlowIntelligence";
 import { useToast } from "@/hooks/use-toast";
+import RiskIndicator from "@/components/intelligence/RiskIndicator";
+import SmartSuggestion from "@/components/intelligence/SmartSuggestion";
 import type { Database } from "@/integrations/supabase/types";
 
 type ResolutionPlan = Database['public']['Tables']['resolution_plans']['Row'];
@@ -51,6 +54,22 @@ interface ConfirmState {
   error: string | null;
 }
 
+// AI Intelligence types
+interface PaymentAnalysis {
+  riskScore: number;
+  riskFactors: string[];
+  recommendation: string | null;
+  suggestedSource: string;
+  isAnomalous: boolean;
+}
+
+interface FundingRecommendation {
+  recommended: string;
+  reason: string;
+  needsTopup: boolean;
+  topupAmount: number;
+}
+
 const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { planId } = useParams<{ planId: string }>();
@@ -58,6 +77,7 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const { authorizePayment, isAuthenticating, clearAuthorization } = useSecurity();
   const { isPaused, isLoading: isPauseLoading } = useFlowPause();
   const haptics = useHaptics();
+  const { analyzePayment, getFundingRecommendation, isAnalyzing } = useFlowIntelligence();
 
   const [state, setState] = useState<ConfirmState>({
     plan: null,
@@ -69,6 +89,11 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [isComplete, setIsComplete] = useState(false);
   const [recoveryRail, setRecoveryRail] = useState<string | null>(null);
   const [showRecovery, setShowRecovery] = useState(false);
+  
+  // AI Intelligence state
+  const [paymentAnalysis, setPaymentAnalysis] = useState<PaymentAnalysis | null>(null);
+  const [fundingRec, setFundingRec] = useState<FundingRecommendation | null>(null);
+  const [showFundingSuggestion, setShowFundingSuggestion] = useState(true);
 
   // Load plan and intent data
   useEffect(() => {
@@ -121,10 +146,25 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         isLoading: false,
         error: null,
       });
+
+      // Run AI analysis in background (quiet intelligence)
+      analyzePayment(
+        Number(intent.amount),
+        intent.payee_name,
+        intent.payee_identifier,
+        intent.type
+      ).then(analysis => {
+        if (analysis) setPaymentAnalysis(analysis);
+      });
+
+      // Get smart funding recommendation
+      getFundingRecommendation(Number(intent.amount)).then(rec => {
+        if (rec) setFundingRec(rec);
+      });
     };
 
     loadData();
-  }, [planId, navigate]);
+  }, [planId, navigate, analyzePayment, getFundingRecommendation]);
 
   // Check identity status
   const [identityBlocked, setIdentityBlocked] = useState(false);
@@ -360,6 +400,48 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         </motion.div>
       )}
 
+      {/* AI Risk Indicator - Quiet Intelligence */}
+      <AnimatePresence>
+        {paymentAnalysis && !isPaused && !identityBlocked && !showRecovery && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="mb-4"
+          >
+            <RiskIndicator
+              riskScore={paymentAnalysis.riskScore}
+              riskFactors={paymentAnalysis.riskFactors}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Smart Funding Suggestion - Shows only when AI has a better recommendation */}
+      <AnimatePresence>
+        {fundingRec && 
+         showFundingSuggestion && 
+         fundingRec.recommended !== plan.chosen_rail && 
+         !isPaused && 
+         !identityBlocked && 
+         !showRecovery && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="mb-4"
+          >
+            <SmartSuggestion
+              text={`Consider using ${fundingRec.recommended}`}
+              subtext={fundingRec.reason}
+              onDismiss={() => setShowFundingSuggestion(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Summary Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -370,7 +452,16 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         {/* Pay to */}
         <div className="flex justify-between items-center py-3 border-b border-border">
           <span className="text-muted-foreground">Pay to</span>
-          <span className="font-medium text-foreground">{intent.payee_name}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">{intent.payee_name}</span>
+            {/* Inline risk badge for high risk */}
+            {paymentAnalysis && paymentAnalysis.riskScore >= 70 && (
+              <RiskIndicator 
+                riskScore={paymentAnalysis.riskScore} 
+                compact 
+              />
+            )}
+          </div>
         </div>
 
         {/* Amount */}
@@ -412,8 +503,26 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         )}
       </motion.div>
 
-      {/* Risk Message */}
-      {isHighRisk && !isPaused && !identityBlocked && !showRecovery && (
+      {/* AI Anomaly Warning - Only shows for anomalous payments */}
+      <AnimatePresence>
+        {paymentAnalysis?.isAnomalous && !isPaused && !identityBlocked && !showRecovery && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center gap-3 bg-warning/10 border border-warning/20 rounded-xl px-4 py-3 mb-4"
+          >
+            <AlertTriangle className="w-5 h-5 text-warning shrink-0" />
+            <p className="text-sm text-foreground">
+              {paymentAnalysis.recommendation || "This payment is unusual for your spending pattern."}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Risk Message for high risk plans */}
+      {isHighRisk && !paymentAnalysis?.isAnomalous && !isPaused && !identityBlocked && !showRecovery && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
