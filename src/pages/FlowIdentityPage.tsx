@@ -1,5 +1,5 @@
 import { forwardRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -7,7 +7,10 @@ import {
   Fingerprint, 
   Link2, 
   Layers,
-  ChevronRight
+  Scan,
+  Send,
+  Receipt,
+  X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,6 +26,28 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [connectionCount, setConnectionCount] = useState(0);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [appMode, setAppMode] = useState("Prototype");
+  const [showFlowOptions, setShowFlowOptions] = useState(false);
+
+  const flowOptions = [
+    { 
+      icon: <Scan className="w-6 h-6" />, 
+      label: "Scan", 
+      description: "Scan QR to pay",
+      action: () => navigate("/scan") 
+    },
+    { 
+      icon: <Send className="w-6 h-6" />, 
+      label: "Send Money", 
+      description: "Send to contacts",
+      action: () => navigate("/send") 
+    },
+    { 
+      icon: <Receipt className="w-6 h-6" />, 
+      label: "Bills", 
+      description: "Pay your bills",
+      action: () => navigate("/bills") 
+    },
+  ];
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -180,11 +205,10 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
         className="py-6 space-y-3"
       >
         <Button
-          onClick={() => navigate("/home")}
+          onClick={() => setShowFlowOptions(true)}
           className="w-full h-14 text-base font-medium rounded-2xl"
         >
-          Continue to Home
-          <ChevronRight className="w-5 h-5 ml-2" />
+          Use Flow
         </Button>
         
         <button
@@ -194,6 +218,62 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
           View connections
         </button>
       </motion.div>
+
+      {/* Flow Options Modal */}
+      <AnimatePresence>
+        {showFlowOptions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end justify-center"
+            onClick={() => setShowFlowOptions(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="w-full max-w-lg bg-card rounded-t-3xl p-6 pb-10 safe-area-bottom"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-foreground">Use Flow</h2>
+                <button
+                  onClick={() => setShowFlowOptions(false)}
+                  className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {flowOptions.map((option, index) => (
+                  <motion.button
+                    key={option.label}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={() => {
+                      setShowFlowOptions(false);
+                      option.action();
+                    }}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-background border border-border hover:border-primary/50 transition-colors text-left"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      {option.icon}
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{option.label}</p>
+                      <p className="text-sm text-muted-foreground">{option.description}</p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
