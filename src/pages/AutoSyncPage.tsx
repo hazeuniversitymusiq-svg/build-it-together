@@ -213,7 +213,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
     });
     
     setIsSyncing(false);
-    navigate("/scan"); // Navigate to Flow Identity / main app
+    navigate("/flow-identity"); // Navigate to Flow Identity
   };
 
   const getFilteredApps = (type?: string) => {
@@ -383,7 +383,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
               Sync recommended {selectedCount > 0 && `(${selectedCount})`}
             </Button>
             <button
-              onClick={() => navigate("/scan")}
+              onClick={() => navigate("/flow-identity")}
               className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Choose manually
@@ -391,7 +391,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
           </>
         ) : !isScanning && (
           <button
-            onClick={() => navigate("/scan")}
+            onClick={() => navigate("/flow-identity")}
             className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Skip for now

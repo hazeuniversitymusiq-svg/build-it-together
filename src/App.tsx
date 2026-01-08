@@ -13,6 +13,7 @@ import BiometricSetupPage from "./pages/BiometricSetupPage";
 import FundingStackPage from "./pages/FundingStackPage";
 import LinkFundingPage from "./pages/LinkFundingPage";
 import AutoSyncPage from "./pages/AutoSyncPage";
+import FlowIdentityPage from "./pages/FlowIdentityPage";
 import ScanPage from "./pages/ScanPage";
 import SendPage from "./pages/SendPage";
 import ActivityPage from "./pages/ActivityPage";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/funding-stack" element={<FundingStackPage />} />
                 <Route path="/link-funding" element={<LinkFundingPage />} />
                 <Route path="/auto-sync" element={<AutoSyncPage />} />
+                <Route path="/flow-identity" element={<FlowIdentityPage />} />
                 
                 {/* Phase 4+: Authenticated App with Intent Engine */}
                 <Route path="/scan" element={<ScanPage />} />
