@@ -7,12 +7,14 @@
 import { forwardRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Camera, Trash2, ChevronRight, Store } from "lucide-react";
+import { QrCode, Camera, Trash2, ChevronRight, Store, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { createIntentFromQR } from "@/lib/core/intent-creators";
+import { useNativeCameraSurface } from "@/hooks/useNativeCameraSurface";
 
 interface QRPayload {
   id: string;
@@ -25,9 +27,13 @@ interface QRPayload {
 const ScanPage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { simulateNativeScan, isPending: isNativePending } = useNativeCameraSurface();
+  
   const [qrPayloads, setQrPayloads] = useState<QRPayload[]>([]);
   const [queue, setQueue] = useState<QRPayload[]>([]);
   const [isResolving, setIsResolving] = useState(false);
+  const [showSimulator, setShowSimulator] = useState(false);
+  const [simulatorUrl, setSimulatorUrl] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -126,24 +132,81 @@ const ScanPage = forwardRef<HTMLDivElement>((_, ref) => {
         Scan a QR code or choose one from your gallery.
       </motion.p>
 
-      {/* Open Camera Button */}
+      {/* Native Camera Surface Info */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
+        className="mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Camera className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="font-medium text-foreground text-sm">Native Camera Ready</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Scan any FLOW QR with your device camera. FLOW will open automatically.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Simulate Native Scan (Prototype) */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.25 }}
         className="mb-8"
       >
-        <Button
-          variant="outline"
-          className="w-full h-14 rounded-2xl border-dashed border-2"
-          disabled
+        <button
+          onClick={() => setShowSimulator(!showSimulator)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
         >
-          <Camera className="w-5 h-5 mr-2" />
-          Open camera
-        </Button>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          No camera available. Choose a QR to simulate a scan.
-        </p>
+          <ExternalLink className="w-4 h-4" />
+          Simulate native camera scan
+        </button>
+        
+        <AnimatePresence>
+          {showSimulator && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-3"
+            >
+              <Input
+                placeholder="flow://pay/merchant-name/12.50"
+                value={simulatorUrl}
+                onChange={(e) => setSimulatorUrl(e.target.value)}
+                className="h-12 rounded-xl"
+              />
+              <Button
+                onClick={() => {
+                  if (simulatorUrl) {
+                    simulateNativeScan(simulatorUrl);
+                    setSimulatorUrl("");
+                    setShowSimulator(false);
+                  }
+                }}
+                disabled={!simulatorUrl || isNativePending}
+                className="w-full rounded-xl"
+              >
+                {isNativePending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Simulate Scan"
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Example: flow://pay/kopi-corner/6.50/KC-001
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* QR Gallery Section */}
