@@ -17,6 +17,7 @@ import FlowIdentityPage from "./pages/FlowIdentityPage";
 import HomePage from "./pages/HomePage";
 import ScanPage from "./pages/ScanPage";
 import ResolvePage from "./pages/ResolvePage";
+import ConfirmPage from "./pages/ConfirmPage";
 import SendPage from "./pages/SendPage";
 import ActivityPage from "./pages/ActivityPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -52,6 +53,7 @@ const App = () => (
                 {/* Phase 4+: Authenticated App with Intent Engine */}
                 <Route path="/scan" element={<ScanPage />} />
                 <Route path="/resolve/:intentId" element={<ResolvePage />} />
+                <Route path="/confirm/:planId" element={<ConfirmPage />} />
                 <Route path="/send" element={<SendPage />} />
                 <Route path="/activity" element={<ActivityPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
