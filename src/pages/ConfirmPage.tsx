@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { executePlan } from "@/lib/core/execute-plan";
 import { useSecurity } from "@/contexts/SecurityContext";
 import { useFlowPause } from "@/hooks/useFlowPause";
+import { useHaptics } from "@/hooks/useHaptics";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -56,6 +57,7 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const { toast } = useToast();
   const { authorizePayment, isAuthenticating, clearAuthorization } = useSecurity();
   const { isPaused, isLoading: isPauseLoading } = useFlowPause();
+  const haptics = useHaptics();
 
   const [state, setState] = useState<ConfirmState>({
     plan: null,
@@ -147,9 +149,13 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const handleConfirm = async () => {
     if (!state.plan || !state.intent) return;
 
+    // Haptic feedback on button press
+    await haptics.confirm();
+
     // Authorize with biometrics
-    const authorized = await authorizePayment();
+    const authorized = await authorizePayment('Confirm payment to ' + state.intent.payee_name);
     if (!authorized) {
+      await haptics.error();
       toast({
         title: "Authentication failed",
         description: "Please try again",
@@ -187,10 +193,13 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
           description: result.error || "Unable to complete payment",
           variant: "destructive",
         });
+        await haptics.error();
         setIsProcessing(false);
         return;
       }
 
+      // Success haptic feedback
+      await haptics.success();
       setIsComplete(true);
       clearAuthorization();
 
@@ -200,6 +209,7 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
       }, 800);
     } catch (error) {
       console.error("Execution error:", error);
+      await haptics.error();
       toast({
         title: "Payment failed",
         description: "An unexpected error occurred",
