@@ -12,6 +12,7 @@ import AuthPage from "./pages/AuthPage";
 import BiometricSetupPage from "./pages/BiometricSetupPage";
 import FundingStackPage from "./pages/FundingStackPage";
 import LinkFundingPage from "./pages/LinkFundingPage";
+import AutoSyncPage from "./pages/AutoSyncPage";
 import ScanPage from "./pages/ScanPage";
 import SendPage from "./pages/SendPage";
 import ActivityPage from "./pages/ActivityPage";
@@ -41,6 +42,7 @@ const App = () => (
                 {/* Phase 3: Funding Stack Declaration */}
                 <Route path="/funding-stack" element={<FundingStackPage />} />
                 <Route path="/link-funding" element={<LinkFundingPage />} />
+                <Route path="/auto-sync" element={<AutoSyncPage />} />
                 
                 {/* Phase 4+: Authenticated App with Intent Engine */}
                 <Route path="/scan" element={<ScanPage />} />

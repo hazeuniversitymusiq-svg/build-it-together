@@ -138,7 +138,7 @@ const LinkFundingPage = () => {
         }
       }
 
-      navigate('/permissions', { replace: true });
+      navigate('/auto-sync', { replace: true });
     } catch (error) {
       toast.error('Failed to save settings');
     } finally {
@@ -148,7 +148,7 @@ const LinkFundingPage = () => {
 
   const handleSkip = () => {
     toast.info('You can set up funding sources later');
-    navigate('/permissions', { replace: true });
+    navigate('/auto-sync', { replace: true });
   };
 
   if (authLoading) {
