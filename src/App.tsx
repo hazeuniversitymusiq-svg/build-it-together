@@ -18,6 +18,7 @@ import HomePage from "./pages/HomePage";
 import ScanPage from "./pages/ScanPage";
 import ResolvePage from "./pages/ResolvePage";
 import ConfirmPage from "./pages/ConfirmPage";
+import DonePage from "./pages/DonePage";
 import SendPage from "./pages/SendPage";
 import ActivityPage from "./pages/ActivityPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/scan" element={<ScanPage />} />
                 <Route path="/resolve/:intentId" element={<ResolvePage />} />
                 <Route path="/confirm/:planId" element={<ConfirmPage />} />
+                <Route path="/done/:transactionId" element={<DonePage />} />
                 <Route path="/send" element={<SendPage />} />
                 <Route path="/activity" element={<ActivityPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
