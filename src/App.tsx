@@ -23,6 +23,7 @@ import SendPage from "./pages/SendPage";
 import BillsPage from "./pages/BillsPage";
 import ActivityPage from "./pages/ActivityPage";
 import SettingsPage from "./pages/SettingsPage";
+import RequestMoneySurface from "./components/surfaces/RequestMoneySurface";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="/confirm/:planId" element={<ConfirmPage />} />
                 <Route path="/done/:transactionId" element={<DonePage />} />
                 <Route path="/send" element={<SendPage />} />
+                <Route path="/request" element={<RequestMoneySurface />} />
                 <Route path="/bills" element={<BillsPage />} />
                 <Route path="/activity" element={<ActivityPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
