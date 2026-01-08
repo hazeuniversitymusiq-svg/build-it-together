@@ -14,6 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          description: string
+          dismissed: boolean | null
+          dismissed_at: string | null
+          expires_at: string | null
+          id: string
+          insight_type: string
+          metadata: Json | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          description: string
+          dismissed?: boolean | null
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          insight_type: string
+          metadata?: Json | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          description?: string
+          dismissed?: boolean | null
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          insight_type?: string
+          metadata?: Json | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          current_hash: string
+          device_id: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          payload: Json
+          previous_hash: string | null
+          risk_score: number | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          current_hash: string
+          device_id?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          payload?: Json
+          previous_hash?: string | null
+          risk_score?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          current_hash?: string
+          device_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          payload?: Json
+          previous_hash?: string | null
+          risk_score?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       biller_accounts: {
         Row: {
           account_reference: string
@@ -427,6 +533,38 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          action_type: string
+          id: string
+          request_count: number
+          user_id: string | null
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          id?: string
+          request_count?: number
+          user_id?: string | null
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          id?: string
+          request_count?: number
+          user_id?: string | null
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resolution_plans: {
         Row: {
           chosen_rail: string
@@ -490,6 +628,60 @@ export type Database = {
           },
         ]
       }
+      risk_events: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          intent_id: string | null
+          resolution_notes: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          severity: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          intent_id?: string | null
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          intent_id?: string | null
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_events_intent_id_fkey"
+            columns: ["intent_id"]
+            isOneToOne: false
+            referencedRelation: "intents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_logs: {
         Row: {
           amount: number
@@ -546,6 +738,67 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      transaction_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          intent_id: string | null
+          payload_hash: string
+          plan_id: string | null
+          signature: string
+          signature_type: string
+          transaction_id: string | null
+          verified: boolean | null
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intent_id?: string | null
+          payload_hash: string
+          plan_id?: string | null
+          signature: string
+          signature_type: string
+          transaction_id?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intent_id?: string | null
+          payload_hash?: string
+          plan_id?: string | null
+          signature?: string
+          signature_type?: string
+          transaction_id?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_signatures_intent_id_fkey"
+            columns: ["intent_id"]
+            isOneToOne: false
+            referencedRelation: "intents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_signatures_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "resolution_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_signatures_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
