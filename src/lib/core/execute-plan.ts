@@ -3,11 +3,18 @@
  * 
  * Executes a resolution plan and creates transaction records.
  * Handles both sync and async execution modes.
+ * 
+ * SECURITY: Integrates rate limiting, transaction signing, and audit logging.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { checkResolutionGates, type GateResult } from './gates';
-import type { Database, Json } from '@/integrations/supabase/types';
+import { 
+  prePaymentSecurityCheck, 
+  postPaymentAuditLog,
+  type TransactionSignature 
+} from './security-service';
+import type { Database } from '@/integrations/supabase/types';
 
 type TransactionStatus = Database['public']['Enums']['transaction_status'];
 type FailureType = Database['public']['Enums']['failure_type'];
@@ -19,12 +26,14 @@ export interface ExecutionResult {
   error?: string;
   failureType?: FailureType;
   gateResult?: GateResult;
+  signature?: TransactionSignature;
 }
 
 interface ExecutionContext {
   userId: string;
   deviceId: string;
   planId: string;
+  signature?: TransactionSignature;
 }
 
 /**
@@ -88,17 +97,32 @@ async function logExecution(
 
 /**
  * Simulate connector call (for prototype mode)
- * In production, this would call actual connector APIs
+ * In production, this would call actual connector APIs via edge functions
+ * 
+ * Realistic simulation: 95% success rate, occasional failures
  */
 async function simulateConnectorCall(
   connectorName: string,
   action: string,
   amount: number
 ): Promise<{ success: boolean; error?: string }> {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // Simulate network delay (realistic: 100-500ms)
+  await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 400));
 
-  // In prototype mode, always succeed
+  // Simulate realistic failure rate (5%)
+  const shouldFail = Math.random() < 0.05;
+  if (shouldFail) {
+    const errors = [
+      'Connection timeout',
+      'Insufficient balance on connector',
+      'Connector temporarily unavailable',
+    ];
+    return { 
+      success: false, 
+      error: errors[Math.floor(Math.random() * errors.length)] 
+    };
+  }
+
   return { success: true };
 }
 
@@ -165,7 +189,7 @@ async function executeSyncPlan(
     }
   }
 
-  // Create successful transaction
+  // Create successful transaction with signature reference
   const { data: transaction, error: txError } = await supabase
     .from('transactions')
     .insert({
@@ -179,12 +203,23 @@ async function executeSyncPlan(
         payee: intent.payee_name,
         rail: plan.chosen_rail,
         completedAt: new Date().toISOString(),
+        signatureId: context.signature?.id,
       },
     })
     .select('id')
     .single();
 
   if (txError || !transaction) {
+    // Log failure
+    await postPaymentAuditLog(
+      'unknown',
+      plan.intent_id,
+      false,
+      Number(intent.amount),
+      intent.payee_name,
+      plan.chosen_rail,
+      'Failed to record transaction'
+    );
     return {
       success: false,
       error: 'Failed to record transaction',
@@ -199,13 +234,24 @@ async function executeSyncPlan(
     intent as unknown as Record<string, unknown>,
     plan as unknown as Record<string, unknown>,
     connectorCalls,
-    { success: true }
+    { success: true, signatureId: context.signature?.id }
+  );
+
+  // Post-payment audit log
+  await postPaymentAuditLog(
+    transaction.id,
+    plan.intent_id,
+    true,
+    Number(intent.amount),
+    intent.payee_name,
+    plan.chosen_rail
   );
 
   return {
     success: true,
     transactionId: transaction.id,
     status: 'success',
+    signature: context.signature,
   };
 }
 
@@ -282,6 +328,8 @@ async function executeAsyncPlan(
 /**
  * ExecutePlan
  * Main execution function - runs a resolution plan
+ * 
+ * SECURITY: Now includes rate limiting, transaction signing, and audit logging
  */
 export async function executePlan(
   userId: string,
@@ -338,10 +386,28 @@ export async function executePlan(
     };
   }
 
+  // === SECURITY: Pre-payment checks ===
+  const securityCheck = await prePaymentSecurityCheck(
+    plan.intent_id,
+    planId,
+    Number(intent.amount),
+    intent.payee_name,
+    plan.chosen_rail
+  );
+
+  if (!securityCheck.approved) {
+    return {
+      success: false,
+      error: securityCheck.error || 'Security check failed',
+      failureType: 'risk_blocked',
+    };
+  }
+
   const context: ExecutionContext = {
     userId,
     deviceId,
     planId,
+    signature: securityCheck.signature,
   };
 
   // Execute based on mode
