@@ -4,10 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, ArrowRight, Shield, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 
 // Phone validation - supports international formats
@@ -18,8 +17,8 @@ const phoneSchema = z.string()
 
 // OTP validation
 const otpSchema = z.string()
-  .length(6, 'OTP must be 6 digits')
-  .regex(/^\d{6}$/, 'OTP must be 6 digits');
+  .length(6, 'Code must be 6 digits')
+  .regex(/^\d{6}$/, 'Code must be 6 digits');
 
 type AuthStep = 'phone' | 'otp';
 
@@ -35,17 +34,16 @@ const AuthPage = () => {
 
   useEffect(() => {
     if (user && !loading) {
-      // After auth, go to biometric setup
+      // After auth, navigate to Security Setup (biometric)
       navigate('/biometric-setup', { replace: true });
     }
   }, [user, loading, navigate]);
 
   const formatPhoneForSupabase = (phoneNumber: string): string => {
-    // Ensure phone starts with + for international format
     let formatted = phoneNumber.trim().replace(/\s/g, '');
     if (!formatted.startsWith('+')) {
-      // Default to US if no country code
-      formatted = '+1' + formatted;
+      // Default to Malaysia if no country code
+      formatted = '+60' + formatted;
     }
     return formatted;
   };
@@ -54,7 +52,6 @@ const AuthPage = () => {
     e.preventDefault();
     setErrors({});
 
-    // Validate phone
     const result = phoneSchema.safeParse(phone.replace(/\s/g, ''));
     if (!result.success) {
       setErrors({ phone: result.error.errors[0].message });
@@ -71,7 +68,6 @@ const AuthPage = () => {
       });
 
       if (error) {
-        // Handle specific error cases
         if (error.message.includes('rate limit')) {
           toast.error('Too many attempts. Please wait a moment.');
         } else {
@@ -93,7 +89,6 @@ const AuthPage = () => {
     e.preventDefault();
     setErrors({});
 
-    // Validate OTP
     const result = otpSchema.safeParse(otp);
     if (!result.success) {
       setErrors({ otp: result.error.errors[0].message });
@@ -129,27 +124,10 @@ const AuthPage = () => {
     }
   };
 
-  const handleResendOtp = async () => {
-    setIsSubmitting(true);
-    
-    try {
-      const formattedPhone = formatPhoneForSupabase(phone);
-      
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
-      });
-
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-
-      toast.success('New code sent!');
-    } catch (error) {
-      toast.error('Failed to resend code.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleChangeNumber = () => {
+    setStep('phone');
+    setOtp('');
+    setErrors({});
   };
 
   if (loading) {
@@ -161,177 +139,169 @@ const AuthPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <Card className="flow-card-shadow border-0">
-          <CardHeader className="text-center space-y-4 pb-2">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="mx-auto w-16 h-16 rounded-2xl bg-primary flex items-center justify-center"
+    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
+      <AnimatePresence mode="wait">
+        {step === 'phone' ? (
+          <motion.div
+            key="phone-step"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full"
+          >
+            {/* Title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-3xl font-bold text-foreground tracking-tight mb-4"
             >
-              <Shield className="w-8 h-8 text-primary-foreground" />
-            </motion.div>
-            <div>
-              <CardTitle className="text-2xl font-semibold">
-                {step === 'phone' ? 'Enter your phone' : 'Verify your number'}
-              </CardTitle>
-              <CardDescription className="mt-2">
-                {step === 'phone' 
-                  ? 'We\'ll send you a verification code'
-                  : `Code sent to ${phone}`
-                }
-              </CardDescription>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="pt-6">
-            <AnimatePresence mode="wait">
-              {step === 'phone' ? (
-                <motion.form
-                  key="phone-form"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  onSubmit={handlePhoneSubmit}
-                  className="space-y-6"
-                >
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input
-                        type="tel"
-                        placeholder="+1 234 567 8900"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="pl-12 h-14 text-lg rounded-xl border-border"
-                        autoComplete="tel"
-                        autoFocus
-                      />
-                    </div>
-                    {errors.phone && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-sm text-destructive"
-                      >
-                        {errors.phone}
-                      </motion.p>
-                    )}
-                  </div>
+              Sign in
+            </motion.h1>
 
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || !phone}
-                    className="w-full h-14 text-base font-medium rounded-xl gap-2"
+            {/* Body */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-base text-muted-foreground mb-8"
+            >
+              Use your phone number to secure your FLOW account.
+            </motion.p>
+
+            {/* Phone form */}
+            <motion.form
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              onSubmit={handlePhoneSubmit}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Phone number
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="+60 12 345 6789"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="h-14 text-lg rounded-2xl border-border"
+                  autoComplete="tel"
+                  autoFocus
+                />
+                {errors.phone && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-destructive"
                   >
-                    {isSubmitting ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        Continue
-                        <ArrowRight className="w-5 h-5" />
-                      </>
-                    )}
-                  </Button>
-                </motion.form>
-              ) : (
-                <motion.form
-                  key="otp-form"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  onSubmit={handleOtpSubmit}
-                  className="space-y-6"
-                >
-                  <div className="space-y-2">
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      placeholder="000000"
-                      value={otp}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                        setOtp(value);
-                      }}
-                      className="h-14 text-2xl text-center tracking-[0.5em] font-mono rounded-xl border-border"
-                      autoComplete="one-time-code"
-                      autoFocus
-                    />
-                    {errors.otp && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-sm text-destructive text-center"
-                      >
-                        {errors.otp}
-                      </motion.p>
-                    )}
-                  </div>
+                    {errors.phone}
+                  </motion.p>
+                )}
+              </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || otp.length !== 6}
-                    className="w-full h-14 text-base font-medium rounded-xl gap-2"
+              <Button
+                type="submit"
+                disabled={isSubmitting || !phone}
+                className="w-full h-14 text-base font-medium rounded-2xl"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Send code'
+                )}
+              </Button>
+            </motion.form>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="otp-step"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full"
+          >
+            {/* Title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-3xl font-bold text-foreground tracking-tight mb-4"
+            >
+              Enter code
+            </motion.h1>
+
+            {/* Helper */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-base text-muted-foreground mb-8"
+            >
+              We sent a 6 digit code to your phone.
+            </motion.p>
+
+            {/* OTP form */}
+            <motion.form
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              onSubmit={handleOtpSubmit}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="000000"
+                  value={otp}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setOtp(value);
+                  }}
+                  className="h-14 text-2xl text-center tracking-[0.5em] font-mono rounded-2xl border-border"
+                  autoComplete="one-time-code"
+                  autoFocus
+                />
+                {errors.otp && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-destructive text-center"
                   >
-                    {isSubmitting ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        Verify
-                        <ArrowRight className="w-5 h-5" />
-                      </>
-                    )}
-                  </Button>
+                    {errors.otp}
+                  </motion.p>
+                )}
+              </div>
 
-                  <div className="flex items-center justify-center gap-4">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        setStep('phone');
-                        setOtp('');
-                      }}
-                      className="text-muted-foreground"
-                    >
-                      Change number
-                    </Button>
-                    <span className="text-muted-foreground">•</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={handleResendOtp}
-                      disabled={isSubmitting}
-                      className="text-muted-foreground"
-                    >
-                      Resend code
-                    </Button>
-                  </div>
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
+              <Button
+                type="submit"
+                disabled={isSubmitting || otp.length !== 6}
+                className="w-full h-14 text-base font-medium rounded-2xl"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Verify'
+                )}
+              </Button>
 
-        {/* Trust indicator */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center text-sm text-muted-foreground mt-6"
-        >
-          Your phone number is used only for verification.
-          <br />
-          FLOW never stores or shares your data.
-        </motion.p>
-      </motion.div>
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleChangeNumber}
+                  className="text-muted-foreground"
+                >
+                  Change number
+                </Button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
