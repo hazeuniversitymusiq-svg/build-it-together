@@ -1,271 +1,363 @@
 /**
- * FLOW Send Page
+ * FLOW Send Money Page - Screen 10
  * 
- * Contact selection + amount entry → Intent Engine SEND_MONEY flow
- * Uses same confirmation card as scan.
- * Includes transaction logging and pause check.
+ * Contact selection + amount entry → Navigate to Resolve screen
  */
 
-import { useState } from "react";
+import { forwardRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import MobileShell from "@/components/layout/MobileShell";
-import BottomNav from "@/components/layout/BottomNav";
-import ConfirmationCard from "@/components/payment/ConfirmationCard";
-import { useIntent } from "@/contexts/IntentContext";
-import { useOrchestration } from "@/contexts/OrchestrationContext";
-import { useSecurity } from "@/contexts/SecurityContext";
-import { useTransactionLogs } from "@/hooks/useTransactionLogs";
-import { useFlowPause } from "@/hooks/useFlowPause";
-import { Delete, Plus, Pause } from "lucide-react";
-import type { PaymentResolution } from "@/lib/orchestration";
+import { useNavigate } from "react-router-dom";
+import { 
+  Search, 
+  ArrowRight, 
+  Users, 
+  ChevronLeft,
+  Loader2
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
 
-type SendState = "input" | "confirming" | "authenticating" | "processing" | "complete";
+type Contact = Database['public']['Tables']['contacts']['Row'];
 
-const SendPage = () => {
+interface ContactDisplayItem {
+  id: string;
+  name: string;
+  phone: string;
+  initial: string;
+}
+
+const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [contacts, setContacts] = useState<ContactDisplayItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedContact, setSelectedContact] = useState<ContactDisplayItem | null>(null);
   const [amount, setAmount] = useState("");
-  const [selectedContact, setSelectedContact] = useState<{ id: string; name: string; phone?: string } | null>(null);
-  const [sendState, setSendState] = useState<SendState>("input");
-  const [resolution, setResolution] = useState<PaymentResolution | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasContactsPermission, setHasContactsPermission] = useState(false);
+  const [isCreatingIntent, setIsCreatingIntent] = useState(false);
 
-  const { currentIntent, sendMoney, authorizeIntent, completeIntent, clearCurrentIntent } = useIntent();
-  const { resolvePaymentRequest, recordPayment, topUpWallet } = useOrchestration();
-  const { authorizePayment, clearAuthorization } = useSecurity();
-  const { logTransaction } = useTransactionLogs();
-  const { isPaused } = useFlowPause();
+  // Load contacts from database
+  useEffect(() => {
+    const loadContacts = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
 
-  const recentContacts = [
-    { id: "1", name: "Sarah", initial: "S", phone: "+1234567890" },
-    { id: "2", name: "Ahmad", initial: "A", phone: "+1234567891" },
-    { id: "3", name: "Wei Ming", initial: "W", phone: "+1234567892" },
-  ];
+      // Check if contacts connector is available
+      const { data: connector } = await supabase
+        .from("connectors")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("name", "Contacts")
+        .eq("status", "available")
+        .maybeSingle();
 
-  const handleNumberPress = (num: string) => {
-    if (num === "." && amount.includes(".")) return;
-    if (amount.includes(".") && amount.split(".")[1]?.length >= 2) return;
-    setAmount((prev) => prev + num);
-  };
+      if (connector) {
+        setHasContactsPermission(true);
 
-  const handleDelete = () => {
-    setAmount((prev) => prev.slice(0, -1));
-  };
+        // Load contacts
+        const { data: contactsData } = await supabase
+          .from("contacts")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("name");
 
-  const handleSend = () => {
-    if (!selectedContact || !amount || parseFloat(amount) <= 0) return;
+        if (contactsData && contactsData.length > 0) {
+          setContacts(contactsData.map(c => ({
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+            initial: c.name.charAt(0).toUpperCase(),
+          })));
+        } else {
+          // Sample contacts for prototype
+          setContacts([
+            { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
+            { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
+            { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W" },
+            { id: "4", name: "Nurul", phone: "+60123456792", initial: "N" },
+            { id: "5", name: "Raj", phone: "+60123456793", initial: "R" },
+          ]);
+        }
+      } else {
+        setHasContactsPermission(false);
+      }
 
-    // Create SEND_MONEY intent
-    const intent = sendMoney(
-      { name: selectedContact.name, phone: selectedContact.phone },
-      parseFloat(amount),
-      '$'
-    );
+      setIsLoading(false);
+    };
 
-    // Resolve payment
-    const paymentResolution = resolvePaymentRequest({
-      amount: parseFloat(amount),
-      currency: '$',
-      intentId: intent.id,
-      recipientId: selectedContact.id,
+    loadContacts();
+  }, [navigate]);
+
+  const handleAllowContacts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Create contacts connector
+    await supabase.from("connectors").insert({
+      user_id: user.id,
+      name: "Contacts",
+      type: "contacts",
+      status: "available",
+      capabilities: { can_p2p: true },
     });
 
-    setResolution(paymentResolution);
-    setSendState("confirming");
+    setHasContactsPermission(true);
+
+    // Load sample contacts for prototype
+    setContacts([
+      { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
+      { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
+      { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W" },
+      { id: "4", name: "Nurul", phone: "+60123456792", initial: "N" },
+      { id: "5", name: "Raj", phone: "+60123456793", initial: "R" },
+    ]);
+
+    toast({
+      title: "Contacts enabled",
+      description: "You can now send money to your contacts",
+    });
   };
 
-  const handleConfirm = async () => {
-    if (!currentIntent || !resolution) return;
-
-    if (resolution.action === 'BLOCKED' || resolution.action === 'INSUFFICIENT_FUNDS') {
-      console.error(resolution.blockedReason);
+  const handleResolveAndSend = async () => {
+    if (!selectedContact || !amount || parseFloat(amount) <= 0) {
+      toast({
+        title: "Missing details",
+        description: "Please select a contact and enter an amount",
+        variant: "destructive",
+      });
       return;
     }
 
-    setSendState("authenticating");
+    setIsCreatingIntent(true);
 
-    const authSuccess = await authorizePayment();
-    if (!authSuccess) {
-      setSendState("confirming");
-      return;
-    }
-
-    authorizeIntent(currentIntent.id);
-    setSendState("processing");
-
-    // Execute payment
-    for (const step of resolution.steps) {
-      if (step.action === 'top_up') {
-        await new Promise(r => setTimeout(r, 400));
-        topUpWallet(step.amount);
-      } else if (step.action === 'charge') {
-        await new Promise(r => setTimeout(r, 600));
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
       }
+
+      // Create intent in database
+      const { data: intent, error } = await supabase
+        .from("intents")
+        .insert({
+          user_id: user.id,
+          type: "SendMoney",
+          amount: parseFloat(amount),
+          currency: "MYR",
+          payee_name: selectedContact.name,
+          payee_identifier: selectedContact.phone,
+          metadata: {
+            recipientId: selectedContact.id,
+            railsAvailable: ["TouchNGo", "GrabPay", "DuitNow"],
+          },
+        })
+        .select("id")
+        .single();
+
+      if (error || !intent) {
+        throw new Error("Failed to create payment request");
+      }
+
+      // Navigate to resolve screen
+      navigate(`/resolve/${intent.id}`);
+    } catch (error) {
+      console.error("Error creating intent:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create payment request",
+        variant: "destructive",
+      });
+      setIsCreatingIntent(false);
     }
-
-    // Log transaction to audit trail
-    const railUsed = resolution.steps.find(s => s.action === 'charge')?.sourceId || 'wallet';
-    await logTransaction(currentIntent, railUsed);
-
-    setSendState("complete");
-    completeIntent(currentIntent.id);
-    recordPayment(parseFloat(amount));
-
-    // Reset after animation
-    setTimeout(() => {
-      clearCurrentIntent();
-      clearAuthorization();
-      setResolution(null);
-      setAmount("");
-      setSelectedContact(null);
-      setSendState("input");
-    }, 2000);
   };
 
-  const displayAmount = amount || "0";
+  // Filter contacts by search
+  const filteredContacts = contacts.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.phone.includes(searchQuery)
+  );
+
+  if (isLoading) {
+    return (
+      <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <MobileShell>
-      <div className="flex flex-col min-h-full pb-24">
-        {/* Minimal Header */}
-        <header className="px-6 pt-8 pb-4 safe-area-top">
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">Send</h1>
-        </header>
-
-        <AnimatePresence mode="wait">
-          {/* Paused State */}
-          {isPaused && (
-            <motion.div
-              key="paused"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex-1 flex flex-col items-center justify-center text-center px-6"
-            >
-              <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-                <Pause className="w-10 h-10 text-destructive" />
-              </div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">FLOW is Paused</h2>
-              <p className="text-muted-foreground text-sm max-w-xs">
-                All payments are currently blocked. Go to Settings to resume.
-              </p>
-            </motion.div>
-          )}
-
-          {!isPaused && sendState === "input" && (
-            <motion.div
-              key="input"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col flex-1"
-            >
-              {/* Recent Contacts */}
-              <div className="px-6 py-4">
-                <div className="flex gap-5">
-                  {recentContacts.map((contact) => (
-                    <button
-                      key={contact.id}
-                      onClick={() => setSelectedContact(contact)}
-                      className="flex flex-col items-center"
-                    >
-                      <motion.div
-                        animate={{ 
-                          scale: selectedContact?.id === contact.id ? 1.05 : 1,
-                          opacity: selectedContact?.id === contact.id ? 1 : 0.6
-                        }}
-                        className={`w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-foreground font-medium text-lg ${
-                          selectedContact?.id === contact.id ? "ring-2 ring-foreground" : ""
-                        }`}
-                      >
-                        {contact.initial}
-                      </motion.div>
-                      <span className={`text-xs mt-2 transition-opacity ${
-                        selectedContact?.id === contact.id ? "text-foreground" : "text-muted-foreground"
-                      }`}>
-                        {contact.name}
-                      </span>
-                    </button>
-                  ))}
-                  
-                  {/* Add new contact */}
-                  <button className="flex flex-col items-center opacity-40">
-                    <div className="w-14 h-14 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                      <Plus className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <span className="text-xs mt-2 text-muted-foreground">Add</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Amount Display */}
-              <div className="flex-1 flex items-center justify-center px-6">
-                <motion.p
-                  key={amount}
-                  initial={{ scale: 1.02 }}
-                  animate={{ scale: 1 }}
-                  className="text-5xl font-semibold text-foreground tabular-nums"
-                >
-                  ${displayAmount}
-                </motion.p>
-              </div>
-
-              {/* Keypad */}
-              <div className="px-8 pb-6">
-                <div className="grid grid-cols-3 gap-1 mb-4">
-                  {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => handleNumberPress(num)}
-                      className="h-16 text-2xl font-medium text-foreground active:text-muted-foreground transition-colors"
-                    >
-                      {num}
-                    </button>
-                  ))}
-                  <button
-                    onClick={handleDelete}
-                    className="h-16 flex items-center justify-center text-muted-foreground active:text-foreground transition-colors"
-                  >
-                    <Delete size={24} />
-                  </button>
-                </div>
-
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleSend}
-                  disabled={!amount || !selectedContact || parseFloat(amount) <= 0}
-                  className="w-full py-5 bg-primary text-primary-foreground rounded-2xl font-medium text-lg disabled:opacity-30 transition-opacity"
-                >
-                  Send
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-          {!isPaused && sendState !== "input" && currentIntent && resolution && (
-            <motion.div
-              key="confirmation"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex-1 flex items-center justify-center px-6"
-            >
-              <ConfirmationCard
-                recipient={selectedContact?.name || ''}
-                recipientType="person"
-                amount={parseFloat(amount)}
-                currency="$"
-                resolution={resolution}
-                onConfirm={handleConfirm}
-                isAuthenticating={sendState === "authenticating"}
-                isProcessing={sendState === "processing"}
-                isComplete={sendState === "complete"}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom">
+      {/* Header */}
+      <div className="px-6 pt-16 pb-2">
+        <div className="flex items-center gap-4 mb-2">
+          <button 
+            onClick={() => navigate("/home")}
+            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+          >
+            <ChevronLeft className="w-5 h-5 text-foreground" />
+          </button>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            Send Money
+          </h1>
+        </div>
       </div>
-      
-      <BottomNav />
-    </MobileShell>
+
+      {/* Helper Text */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1 }}
+        className="px-6 pb-6"
+      >
+        <p className="text-muted-foreground">
+          Choose a person.
+        </p>
+        <p className="text-muted-foreground">
+          FLOW will deliver to the best supported wallet.
+        </p>
+      </motion.div>
+
+      <AnimatePresence mode="wait">
+        {/* No Contacts Permission State */}
+        {!hasContactsPermission ? (
+          <motion.div
+            key="no-permission"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center px-6 text-center"
+          >
+            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
+              <Users className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <p className="text-foreground font-medium mb-2">
+              Allow contacts to send faster.
+            </p>
+            <p className="text-muted-foreground text-sm mb-8 max-w-xs">
+              FLOW needs access to your contacts to help you send money quickly.
+            </p>
+            <Button onClick={handleAllowContacts} size="lg" className="rounded-2xl px-8">
+              Allow contacts access
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="with-permission"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col px-6"
+          >
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Contacts"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-12 rounded-xl bg-muted border-0"
+              />
+            </div>
+
+            {/* Contacts List */}
+            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+              {filteredContacts.map((contact) => (
+                <motion.button
+                  key={contact.id}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedContact(
+                    selectedContact?.id === contact.id ? null : contact
+                  )}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                    selectedContact?.id === contact.id
+                      ? "bg-primary/10 border-2 border-primary"
+                      : "bg-muted/50 border-2 border-transparent hover:bg-muted"
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-medium ${
+                    selectedContact?.id === contact.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}>
+                    {contact.initial}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-foreground">{contact.name}</p>
+                    <p className="text-sm text-muted-foreground">{contact.phone}</p>
+                  </div>
+                  {selectedContact?.id === contact.id && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-6 h-6 rounded-full bg-primary flex items-center justify-center"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                    </motion.div>
+                  )}
+                </motion.button>
+              ))}
+
+              {filteredContacts.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No contacts found</p>
+                </div>
+              )}
+            </div>
+
+            {/* Amount Field */}
+            <div className="mb-4">
+              <label className="block text-sm text-muted-foreground mb-2">Amount</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
+                  RM
+                </span>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="pl-14 h-14 text-xl font-semibold rounded-xl bg-muted border-0"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            {/* Primary Button */}
+            <Button
+              onClick={handleResolveAndSend}
+              disabled={!selectedContact || !amount || parseFloat(amount) <= 0 || isCreatingIntent}
+              size="lg"
+              className="w-full h-14 text-base font-medium rounded-2xl mb-8"
+            >
+              {isCreatingIntent ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  Resolve and send
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
+              )}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
-};
+});
+SendPage.displayName = "SendPage";
 
 export default SendPage;
