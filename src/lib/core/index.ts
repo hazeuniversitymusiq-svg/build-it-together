@@ -1,0 +1,42 @@
+/**
+ * FLOW Core System
+ * 
+ * Central export for all core system rules and functions.
+ * Phase 1: Foundation Only
+ */
+
+// Gates
+export {
+  checkIdentityGate,
+  checkDeviceTrustGate,
+  checkConsentGate,
+  checkIntentCreationGates,
+  checkResolutionGates,
+  type GateResult,
+} from './gates';
+
+// Intent Creators
+export {
+  createIntentFromQR,
+  createIntentSendMoney,
+  createIntentPayBill,
+  createIntentRequestMoney,
+  type IntentInput,
+  type IntentResult,
+} from './intent-creators';
+
+// Resolve Engine
+export {
+  resolveIntent,
+  explainPlan,
+  type ResolutionStep,
+  type ResolutionPlan,
+  type ResolveResult,
+} from './resolve-engine';
+
+// Execute Plan
+export {
+  executePlan,
+  cancelTransaction,
+  type ExecutionResult,
+} from './execute-plan';
