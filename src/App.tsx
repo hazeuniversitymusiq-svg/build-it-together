@@ -20,6 +20,7 @@ import ResolvePage from "./pages/ResolvePage";
 import ConfirmPage from "./pages/ConfirmPage";
 import DonePage from "./pages/DonePage";
 import SendPage from "./pages/SendPage";
+import BillsPage from "./pages/BillsPage";
 import ActivityPage from "./pages/ActivityPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
@@ -57,6 +58,7 @@ const App = () => (
                 <Route path="/confirm/:planId" element={<ConfirmPage />} />
                 <Route path="/done/:transactionId" element={<DonePage />} />
                 <Route path="/send" element={<SendPage />} />
+                <Route path="/bills" element={<BillsPage />} />
                 <Route path="/activity" element={<ActivityPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 
