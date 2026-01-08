@@ -359,6 +359,33 @@ export type Database = {
           },
         ]
       }
+      payment_surfaces: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          last_used_at: string | null
+          surface_type: Database["public"]["Enums"]["payment_surface_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_used_at?: string | null
+          surface_type: Database["public"]["Enums"]["payment_surface_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_used_at?: string | null
+          surface_type?: Database["public"]["Enums"]["payment_surface_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       qr_payloads: {
         Row: {
           amount: number | null
@@ -710,6 +737,7 @@ export type Database = {
       identity_status: "pending" | "active" | "suspended" | "revoked"
       intent_type: "PayMerchant" | "SendMoney" | "RequestMoney" | "PayBill"
       linked_status: "unlinked" | "linked" | "error"
+      payment_surface_type: "camera" | "share_sheet" | "identity_card"
       risk_level: "low" | "medium" | "high"
       transaction_status: "success" | "failed" | "cancelled" | "pending"
     }
@@ -873,6 +901,7 @@ export const Constants = {
       identity_status: ["pending", "active", "suspended", "revoked"],
       intent_type: ["PayMerchant", "SendMoney", "RequestMoney", "PayBill"],
       linked_status: ["unlinked", "linked", "error"],
+      payment_surface_type: ["camera", "share_sheet", "identity_card"],
       risk_level: ["low", "medium", "high"],
       transaction_status: ["success", "failed", "cancelled", "pending"],
     },
