@@ -1,8 +1,8 @@
 /**
  * FLOW Scan Page
  * 
- * REAL QR scanning with camera access.
- * Supports: DuitNow, Touch'n'Go, GrabPay, Boost, and FLOW URLs
+ * iOS 26 Liquid Glass design - frosted surfaces, aurora accents
+ * Real QR scanning with camera access.
  */
 
 import { useState, useEffect } from "react";
@@ -54,9 +54,6 @@ const ScanPage = () => {
     setIsScannerOpen(false);
     await haptics.impact();
     
-    console.log('Scanned QR:', rawData);
-    
-    // Parse the QR code
     const parsed = parseQRToIntent(rawData);
     setScannedData(parsed);
     
@@ -83,7 +80,6 @@ const ScanPage = () => {
     setIsProcessing(true);
     await haptics.confirm();
     
-    // Create intent in database
     const result = await createIntentFromParsedQR(userId, scannedData);
     
     if (!result.success || !result.intentId) {
@@ -96,7 +92,6 @@ const ScanPage = () => {
       return;
     }
     
-    // Navigate to resolve
     navigate(`/resolve/${result.intentId}`);
   };
 
@@ -106,41 +101,29 @@ const ScanPage = () => {
   };
 
   const railIcons: Record<string, React.ReactNode> = {
-    TouchNGo: <Wallet className="w-4 h-4" />,
-    GrabPay: <Wallet className="w-4 h-4" />,
-    Boost: <Wallet className="w-4 h-4" />,
-    DuitNow: <Store className="w-4 h-4" />,
+    TouchNGo: <Wallet className="w-3.5 h-3.5" />,
+    GrabPay: <Wallet className="w-3.5 h-3.5" />,
+    Boost: <Wallet className="w-3.5 h-3.5" />,
+    DuitNow: <Store className="w-3.5 h-3.5" />,
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-24">
+    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-16 pb-2 flex items-center justify-between"
+        className="pt-14 pb-2"
       >
+        <p className="text-muted-foreground text-sm mb-1">Pay merchants instantly</p>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">
           Scan to Pay
         </h1>
-        <Badge variant={isFieldTest ? "default" : "secondary"} className="text-xs">
-          {isFieldTest ? "Field Test" : "Prototype"}
-        </Badge>
       </motion.div>
 
-      {/* Helper */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="text-muted-foreground mb-8"
-      >
-        Scan any Malaysian payment QR code.
-      </motion.p>
-
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col mt-6">
         <AnimatePresence mode="wait">
           {scannedData ? (
             /* Scanned Result */
@@ -158,7 +141,7 @@ const ScanPage = () => {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                    className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center"
+                    className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center shadow-glow-success"
                   >
                     <CheckCircle2 className="w-8 h-8 text-success" />
                   </motion.div>
@@ -179,12 +162,12 @@ const ScanPage = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-card border border-border rounded-3xl p-6 mb-6"
+                  className="glass-card rounded-3xl p-6 mb-6 shadow-float-lg"
                 >
                   {/* Merchant */}
                   <div className="text-center mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3">
-                      <Store className="w-7 h-7 text-accent" />
+                    <div className="w-14 h-14 rounded-2xl aurora-gradient-soft flex items-center justify-center mx-auto mb-3 shadow-float">
+                      <Store className="w-7 h-7 text-aurora-blue" />
                     </div>
                     <h2 className="text-xl font-semibold text-foreground">
                       {scannedData.merchantName}
@@ -197,9 +180,9 @@ const ScanPage = () => {
                   </div>
 
                   {/* Amount */}
-                  <div className="text-center py-4 border-t border-b border-border">
+                  <div className="text-center py-5 border-t border-b border-border/50">
                     {scannedData.amount ? (
-                      <p className="text-4xl font-semibold text-foreground">
+                      <p className="text-4xl font-semibold text-foreground tracking-tight">
                         {scannedData.currency} {scannedData.amount.toFixed(2)}
                       </p>
                     ) : (
@@ -210,14 +193,16 @@ const ScanPage = () => {
                   </div>
 
                   {/* Available Rails */}
-                  <div className="mt-4">
+                  <div className="mt-5">
                     <p className="text-xs text-muted-foreground mb-2">Pay via</p>
                     <div className="flex flex-wrap gap-2">
                       {scannedData.availableRails.map((rail, i) => (
                         <Badge 
                           key={rail} 
-                          variant={i === 0 ? "default" : "secondary"}
-                          className="flex items-center gap-1"
+                          variant="secondary"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 ${
+                            i === 0 ? "aurora-gradient text-white border-0" : "glass-card"
+                          }`}
                         >
                           {railIcons[rail]}
                           {rail}
@@ -231,7 +216,7 @@ const ScanPage = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="bg-destructive/5 border border-destructive/20 rounded-2xl p-6 mb-6"
+                  className="glass-card border-destructive/20 rounded-3xl p-6 mb-6"
                 >
                   <p className="text-center text-destructive">
                     {scannedData.error}
@@ -245,7 +230,7 @@ const ScanPage = () => {
                   <Button
                     onClick={handleProceed}
                     disabled={isProcessing}
-                    className="w-full h-14 text-base font-medium rounded-2xl"
+                    className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white border-0 shadow-glow-aurora"
                   >
                     {isProcessing ? (
                       <>
@@ -264,7 +249,7 @@ const ScanPage = () => {
                 <Button
                   variant="outline"
                   onClick={handleScanAnother}
-                  className="w-full h-12 rounded-2xl"
+                  className="w-full h-12 rounded-2xl glass-card border-0"
                 >
                   <Camera className="w-5 h-5 mr-2" />
                   Scan Another
@@ -283,13 +268,22 @@ const ScanPage = () => {
               {/* Large Scan Button */}
               <motion.button
                 onClick={() => setIsScannerOpen(true)}
-                className="w-48 h-48 rounded-3xl bg-primary/10 border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-4 hover:bg-primary/20 transition-colors"
+                className="relative w-52 h-52 rounded-[2.5rem] aurora-gradient-soft glass-card flex flex-col items-center justify-center gap-4 shadow-float-lg"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
-                  <Camera className="w-8 h-8 text-primary-foreground" />
-                </div>
+                {/* Aurora glow ring */}
+                <div className="absolute inset-0 rounded-[2.5rem] aurora-border opacity-50" />
+                
+                {/* Icon */}
+                <motion.div 
+                  className="w-20 h-20 rounded-2xl aurora-gradient flex items-center justify-center shadow-glow-aurora"
+                  animate={{ scale: [1, 1.03, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Camera className="w-9 h-9 text-white" />
+                </motion.div>
+                
                 <span className="text-lg font-medium text-foreground">
                   Open Scanner
                 </span>
@@ -300,14 +294,14 @@ const ScanPage = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="mt-8 text-center"
+                className="mt-10 text-center"
               >
                 <p className="text-sm text-muted-foreground mb-3">Supports</p>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline">DuitNow</Badge>
-                  <Badge variant="outline">Touch'n'Go</Badge>
-                  <Badge variant="outline">GrabPay</Badge>
-                  <Badge variant="outline">Boost</Badge>
+                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">DuitNow</Badge>
+                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">Touch'n'Go</Badge>
+                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">GrabPay</Badge>
+                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">Boost</Badge>
                 </div>
               </motion.div>
             </motion.div>
