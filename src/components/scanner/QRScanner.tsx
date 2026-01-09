@@ -1,14 +1,14 @@
 /**
  * QR Scanner Component
  * 
+ * iOS 26 Liquid Glass design - aurora gradient frame, frosted overlays
  * Real camera-based QR code scanner using html5-qrcode.
- * Works on mobile browsers and desktop with webcam.
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, X, FlashlightOff, Flashlight, SwitchCamera, AlertCircle } from 'lucide-react';
+import { X, FlashlightOff, Flashlight, SwitchCamera, AlertCircle, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface QRScannerProps {
@@ -28,7 +28,7 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
     if (scannerRef.current) {
       try {
         const state = scannerRef.current.getState();
-        if (state === 2) { // SCANNING
+        if (state === 2) {
           await scannerRef.current.stop();
         }
       } catch (e) {
@@ -42,7 +42,6 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
     setError(null);
 
     try {
-      // Create scanner instance
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode('qr-reader', {
           formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
@@ -50,10 +49,8 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
         });
       }
 
-      // Stop any existing scan
       await stopScanner();
 
-      // Start scanning
       await scannerRef.current.start(
         { facingMode },
         {
@@ -62,13 +59,10 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
           aspectRatio: 1,
         },
         (decodedText) => {
-          // Success callback
           onScan(decodedText);
           stopScanner();
         },
-        () => {
-          // Error callback (scan failures, not errors)
-        }
+        () => {}
       );
 
       setIsInitializing(false);
@@ -86,31 +80,27 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
     }
   }, [facingMode, onScan, stopScanner]);
 
-  // Initialize scanner when opened
   useEffect(() => {
     if (isOpen) {
       startScanner();
     }
-
     return () => {
       stopScanner();
     };
   }, [isOpen, startScanner, stopScanner]);
 
-  // Handle camera switch
   const switchCamera = async () => {
     await stopScanner();
     setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
   };
 
-  // Toggle torch (if supported)
   const toggleTorch = async () => {
     if (scannerRef.current) {
       try {
         const capabilities = await scannerRef.current.getRunningTrackCapabilities();
         if ('torch' in capabilities) {
           await scannerRef.current.applyVideoConstraints({
-            // @ts-ignore - torch is valid but not in types
+            // @ts-ignore
             advanced: [{ torch: !torchOn }]
           });
           setTorchOn(!torchOn);
@@ -134,100 +124,162 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black"
+        className="fixed inset-0 z-50 bg-black/95"
       >
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="text-white hover:bg-white/20"
-          >
-            <X className="w-6 h-6" />
-          </Button>
-          
-          <span className="text-white font-medium">Scan QR Code</span>
-          
-          <div className="flex gap-2">
+        {/* Header with glass effect */}
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="absolute top-0 left-0 right-0 z-10 safe-area-top"
+        >
+          <div className="flex items-center justify-between p-4">
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleTorch}
-              className="text-white hover:bg-white/20"
+              onClick={handleClose}
+              className="w-10 h-10 rounded-full glass-dark text-white hover:bg-white/10"
             >
-              {torchOn ? <Flashlight className="w-5 h-5" /> : <FlashlightOff className="w-5 h-5" />}
+              <X className="w-5 h-5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={switchCamera}
-              className="text-white hover:bg-white/20"
-            >
-              <SwitchCamera className="w-5 h-5" />
-            </Button>
+            
+            <span className="text-white font-medium text-lg">Scan QR Code</span>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTorch}
+                className="w-10 h-10 rounded-full glass-dark text-white hover:bg-white/10"
+              >
+                {torchOn ? <Flashlight className="w-5 h-5" /> : <FlashlightOff className="w-5 h-5" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={switchCamera}
+                className="w-10 h-10 rounded-full glass-dark text-white hover:bg-white/10"
+              >
+                <SwitchCamera className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Scanner viewport */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div id="qr-reader" className="w-full max-w-md" />
           
-          {/* Scanning overlay */}
+          {/* Aurora gradient scanner frame */}
           {!error && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative w-64 h-64">
-                {/* Corner markers */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="relative w-72 h-72"
+              >
+                {/* Aurora gradient border */}
+                <div className="absolute inset-0 rounded-3xl scanner-frame" />
                 
-                {/* Scanning line animation */}
+                {/* Corner accents with glow */}
+                <div className="absolute -top-1 -left-1 w-16 h-16">
+                  <div className="absolute top-0 left-0 w-full h-1 aurora-gradient rounded-full shadow-glow-blue" />
+                  <div className="absolute top-0 left-0 w-1 h-full aurora-gradient rounded-full shadow-glow-blue" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-16 h-16">
+                  <div className="absolute top-0 right-0 w-full h-1 aurora-gradient rounded-full shadow-glow-purple" />
+                  <div className="absolute top-0 right-0 w-1 h-full aurora-gradient rounded-full shadow-glow-purple" />
+                </div>
+                <div className="absolute -bottom-1 -left-1 w-16 h-16">
+                  <div className="absolute bottom-0 left-0 w-full h-1 aurora-gradient rounded-full shadow-glow-purple" />
+                  <div className="absolute bottom-0 left-0 w-1 h-full aurora-gradient rounded-full shadow-glow-purple" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-16 h-16">
+                  <div className="absolute bottom-0 right-0 w-full h-1 aurora-gradient rounded-full shadow-glow-blue" />
+                  <div className="absolute bottom-0 right-0 w-1 h-full aurora-gradient rounded-full shadow-glow-blue" />
+                </div>
+                
+                {/* Animated scan line with aurora gradient */}
                 <motion.div
-                  className="absolute left-4 right-4 h-0.5 bg-primary"
-                  initial={{ top: '10%' }}
-                  animate={{ top: ['10%', '90%', '10%'] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute left-4 right-4 h-0.5 aurora-gradient rounded-full shadow-glow-blue"
+                  initial={{ top: '8%' }}
+                  animate={{ top: ['8%', '88%', '8%'] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 />
-              </div>
+                
+                {/* Subtle inner glow */}
+                <div className="absolute inset-8 rounded-2xl border border-white/5" />
+              </motion.div>
             </div>
           )}
         </div>
 
-        {/* Loading state */}
+        {/* Loading state with glass effect */}
         {isInitializing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex items-center justify-center glass-dark"
+          >
             <div className="text-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"
-              />
-              <p className="text-white">Starting camera...</p>
+              {/* Aurora loading ring */}
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-0 rounded-full aurora-gradient opacity-30"
+                />
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-1 rounded-full border-2 border-transparent border-t-white"
+                />
+              </div>
+              <p className="text-white/80 font-medium">Starting camera...</p>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Error state */}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/90 px-8">
-            <div className="text-center">
-              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-              <p className="text-white mb-4">{error}</p>
-              <Button onClick={startScanner} variant="outline">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="absolute inset-0 flex items-center justify-center glass-dark px-8"
+          >
+            <div className="text-center max-w-sm">
+              <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-destructive" />
+              </div>
+              <p className="text-white mb-6">{error}</p>
+              <Button 
+                onClick={startScanner} 
+                className="aurora-gradient text-white border-0 shadow-glow-aurora"
+              >
                 Try Again
               </Button>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Footer hint */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 safe-area-bottom text-center">
-          <p className="text-white/70 text-sm">
-            Point at any DuitNow, Touch'n'Go, or payment QR code
+        {/* Footer with My Payment Code button */}
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="absolute bottom-0 left-0 right-0 p-6 safe-area-bottom"
+        >
+          <p className="text-white/50 text-sm text-center mb-4">
+            Position QR code within the frame
           </p>
-        </div>
+          
+          {/* My Payment Code button */}
+          <button className="w-full py-4 glass-dark rounded-2xl flex items-center justify-center gap-3 text-white/90 hover:bg-white/10 transition-colors">
+            <QrCode className="w-5 h-5" />
+            <span className="font-medium">My Payment Code</span>
+          </button>
+        </motion.div>
       </motion.div>
     </AnimatePresence>
   );
