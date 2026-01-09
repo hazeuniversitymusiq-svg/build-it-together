@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import QuickPayWidget from "@/components/surfaces/QuickPayWidget";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import NotificationSurface from "@/components/surfaces/NotificationSurface";
+import FlowIdentityCard from "@/components/identity/FlowIdentityCard";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { useTestMode } from "@/hooks/useTestMode";
 
@@ -64,8 +65,10 @@ ActionCard.displayName = "ActionCard";
 const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
-  const [appMode, setAppMode] = useState("Prototype");
+  const [appMode, setAppMode] = useState<"Prototype" | "Pilot" | "Production">("Prototype");
   const [notificationCount, setNotificationCount] = useState(0);
+  const [connectionsCount, setConnectionsCount] = useState(0);
+  const [hasBiometric, setHasBiometric] = useState(false);
   const { isFieldTest } = useTestMode();
   
   useDeepLink();
@@ -80,13 +83,23 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
 
       const { data: userData } = await supabase
         .from("users")
-        .select("app_mode")
+        .select("app_mode, biometric_enabled")
         .eq("id", user.id)
         .single();
 
       if (userData) {
         setAppMode(userData.app_mode);
+        setHasBiometric(userData.biometric_enabled);
       }
+
+      // Get connections count
+      const { count } = await supabase
+        .from("connectors")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "available");
+
+      setConnectionsCount(count || 0);
 
       const { data: transactions } = await supabase
         .from("transaction_logs")
@@ -161,6 +174,14 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
           </div>
         </div>
       </motion.div>
+
+      {/* Flow Identity Card */}
+      <FlowIdentityCard 
+        className="mb-6"
+        securityLevel={hasBiometric ? "Biometric" : "PIN only"}
+        connectionsCount={connectionsCount}
+        mode={appMode}
+      />
 
       {/* Primary Actions - 2x2 grid */}
       <motion.div 
