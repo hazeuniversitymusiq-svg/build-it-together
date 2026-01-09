@@ -27,6 +27,12 @@ import { useTestMode } from "@/hooks/useTestMode";
 import QRScanner from "@/components/scanner/QRScanner";
 import { parseQRToIntent, createIntentFromParsedQR, type ParsedQRIntent } from "@/lib/qr";
 
+// Test QR codes for simulation
+const TEST_QR_CODES = {
+  merchant: "00020101021226580011com.duitnow0127DUITNOW://PAY?ref=TEST00015204599953031585802MY5913MAMAK CORNER6012KUALA LUMPUR540512.506304ABCD",
+  flow: "flow://pay/Kedai%20Kopi/8.50/INV-2024-001",
+};
+
 const ScanPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,6 +43,11 @@ const ScanPage = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scannedData, setScannedData] = useState<ParsedQRIntent | null>(null);
+
+  // Simulate a test QR scan
+  const simulateTestScan = (type: 'merchant' | 'flow') => {
+    handleScan(TEST_QR_CODES[type]);
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -304,6 +315,38 @@ const ScanPage = () => {
                   <Badge variant="secondary" className="glass-card border-0 px-3 py-1">Boost</Badge>
                 </div>
               </motion.div>
+
+              {/* Test Mode Buttons */}
+              {isFieldTest && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-8 space-y-2"
+                >
+                  <p className="text-xs text-muted-foreground text-center mb-3">Test Mode</p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => simulateTestScan('merchant')}
+                      className="glass-card border-0 text-xs"
+                    >
+                      <QrCode className="w-3 h-3 mr-1.5" />
+                      Test DuitNow
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => simulateTestScan('flow')}
+                      className="glass-card border-0 text-xs"
+                    >
+                      <QrCode className="w-3 h-3 mr-1.5" />
+                      Test FLOW
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
