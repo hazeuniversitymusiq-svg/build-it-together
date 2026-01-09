@@ -20,6 +20,218 @@ FLOW is a unified payment orchestration layer that enables seamless "Scan → Au
 
 ---
 
+## System Architecture
+
+### High-Level Integration Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                   USER DEVICE                                    │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │                           FLOW Mobile App                                  │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │  │
+│  │  │  QR Scan    │  │  Balance    │  │  Payments   │  │  History    │      │  │
+│  │  │  Surface    │  │  Display    │  │  Engine     │  │  & Insights │      │  │
+│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘      │  │
+│  │         │                │                │                │              │  │
+│  │         └────────────────┴────────────────┴────────────────┘              │  │
+│  │                                   │                                        │  │
+│  │                    ┌──────────────▼──────────────┐                        │  │
+│  │                    │   FLOW Orchestration Layer   │                        │  │
+│  │                    │  • Intent Parser             │                        │  │
+│  │                    │  • Rule Engine               │                        │  │
+│  │                    │  • Security Gates            │                        │  │
+│  │                    └──────────────┬──────────────┘                        │  │
+│  └───────────────────────────────────┼───────────────────────────────────────┘  │
+└──────────────────────────────────────┼──────────────────────────────────────────┘
+                                       │
+                              HTTPS/TLS 1.3
+                                       │
+┌──────────────────────────────────────▼──────────────────────────────────────────┐
+│                              FLOW BACKEND (Cloud)                                │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                         API Gateway & Security                           │    │
+│  │  • Rate Limiting  • JWT Validation  • Request Signing  • Audit Logging  │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                                       │                                          │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐     │
+│  │ Token Manager │  │ Intent Store  │  │ Transaction   │  │  Webhook      │     │
+│  │ (OAuth Cache) │  │ (State)       │  │ Signatures    │  │  Handler      │     │
+│  └───────┬───────┘  └───────────────┘  └───────────────┘  └───────┬───────┘     │
+│          │                                                         │             │
+└──────────┼─────────────────────────────────────────────────────────┼─────────────┘
+           │                                                         │
+           │              OAuth 2.0 / Open Banking API               │
+           │                                                         │
+┌──────────▼─────────────────────────────────────────────────────────▼─────────────┐
+│                              BANK PARTNER SYSTEMS                                 │
+│                                                                                   │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐              │
+│  │   OAuth 2.0     │    │   Core Banking   │    │    Webhook      │              │
+│  │   Auth Server   │    │      APIs        │    │    Dispatcher   │              │
+│  │                 │    │                  │    │                 │              │
+│  │  • /authorize   │    │  • /balance      │    │  • payment.*    │              │
+│  │  • /token       │    │  • /payments     │    │  • balance.*    │              │
+│  │  • /revoke      │    │  • /transactions │    │  • consent.*    │              │
+│  └────────┬────────┘    └────────┬─────────┘    └─────────────────┘              │
+│           │                      │                                               │
+│  ┌────────▼──────────────────────▼─────────┐                                    │
+│  │           Bank Core Systems              │                                    │
+│  │  ┌─────────────┐  ┌─────────────────┐   │                                    │
+│  │  │  Account    │  │  Payment        │   │                                    │
+│  │  │  Ledger     │  │  Gateway        │   │                                    │
+│  │  └─────────────┘  └────────┬────────┘   │                                    │
+│  └────────────────────────────┼────────────┘                                    │
+│                               │                                                  │
+└───────────────────────────────┼──────────────────────────────────────────────────┘
+                                │
+┌───────────────────────────────▼──────────────────────────────────────────────────┐
+│                           NATIONAL PAYMENT RAILS                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │   DuitNow   │  │   DuitNow   │  │    IBG/     │  │   JomPAY    │             │
+│  │     QR      │  │   Transfer  │  │    IBFT     │  │   (Bills)   │             │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘             │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Payment Flow Sequence
+
+```
+┌──────┐          ┌──────┐          ┌──────┐          ┌──────┐          ┌──────┐
+│ User │          │ FLOW │          │ FLOW │          │ Bank │          │DuitNow│
+│      │          │ App  │          │Backend│         │ API  │          │  QR  │
+└──┬───┘          └──┬───┘          └──┬───┘          └──┬───┘          └──┬───┘
+   │                 │                 │                 │                 │
+   │  1. Scan QR     │                 │                 │                 │
+   │────────────────>│                 │                 │                 │
+   │                 │                 │                 │                 │
+   │                 │  2. Parse QR    │                 │                 │
+   │                 │  (EMVCo decode) │                 │                 │
+   │                 │─────────────────│                 │                 │
+   │                 │                 │                 │                 │
+   │                 │  3. Check Balance                 │                 │
+   │                 │────────────────>│                 │                 │
+   │                 │                 │  4. GET /balance│                 │
+   │                 │                 │────────────────>│                 │
+   │                 │                 │                 │                 │
+   │                 │                 │  5. Balance: RM1200               │
+   │                 │                 │<────────────────│                 │
+   │                 │                 │                 │                 │
+   │  6. Show: "Pay RM12 to Ah Seng?" │                 │                 │
+   │<─ ─ ─ ─ ─ ─ ─ ─ │                 │                 │                 │
+   │                 │                 │                 │                 │
+   │  7. Authorize   │                 │                 │                 │
+   │  (Biometric)    │                 │                 │                 │
+   │────────────────>│                 │                 │                 │
+   │                 │                 │                 │                 │
+   │                 │  8. Execute Payment               │                 │
+   │                 │────────────────>│                 │                 │
+   │                 │                 │  9. POST /payments/initiate       │
+   │                 │                 │────────────────>│                 │
+   │                 │                 │                 │                 │
+   │                 │                 │                 │ 10. DuitNow     │
+   │                 │                 │                 │     Transfer    │
+   │                 │                 │                 │────────────────>│
+   │                 │                 │                 │                 │
+   │                 │                 │                 │ 11. Confirmed   │
+   │                 │                 │                 │<────────────────│
+   │                 │                 │                 │                 │
+   │                 │                 │ 12. Success + Receipt             │
+   │                 │                 │<────────────────│                 │
+   │                 │                 │                 │                 │
+   │                 │ 13. Done ✓      │                 │                 │
+   │                 │<────────────────│                 │                 │
+   │                 │                 │                 │                 │
+   │  14. "Paid! ✓"  │                 │                 │                 │
+   │<────────────────│                 │                 │                 │
+   │                 │                 │                 │                 │
+   ▼                 ▼                 ▼                 ▼                 ▼
+          Total Time: ~2 seconds from scan to confirmation
+```
+
+### Data Flow & Security Layers
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                          SECURITY ARCHITECTURE                          │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   LAYER 1: Device Security                                             │
+│   ┌─────────────────────────────────────────────────────────────┐      │
+│   │  • Biometric authentication (Face ID / Fingerprint)         │      │
+│   │  • Device attestation & trusted device registry             │      │
+│   │  • Secure enclave for token storage                         │      │
+│   └─────────────────────────────────────────────────────────────┘      │
+│                               │                                         │
+│                               ▼                                         │
+│   LAYER 2: Transport Security                                          │
+│   ┌─────────────────────────────────────────────────────────────┐      │
+│   │  • TLS 1.3 with certificate pinning                         │      │
+│   │  • Request signing (RS256 JWT)                              │      │
+│   │  • Payload encryption (AES-256)                             │      │
+│   └─────────────────────────────────────────────────────────────┘      │
+│                               │                                         │
+│                               ▼                                         │
+│   LAYER 3: Application Security                                        │
+│   ┌─────────────────────────────────────────────────────────────┐      │
+│   │  • OAuth 2.0 + PKCE for authorization                       │      │
+│   │  • Short-lived access tokens (15 min)                       │      │
+│   │  • Idempotency keys prevent duplicate payments              │      │
+│   │  • Rate limiting per user/endpoint                          │      │
+│   └─────────────────────────────────────────────────────────────┘      │
+│                               │                                         │
+│                               ▼                                         │
+│   LAYER 4: Transaction Security                                        │
+│   ┌─────────────────────────────────────────────────────────────┐      │
+│   │  • HMAC transaction signing (intent → plan → execution)    │      │
+│   │  • Immutable audit log with hash chain                      │      │
+│   │  • Real-time fraud detection & risk scoring                 │      │
+│   │  • Daily transaction limits & velocity checks               │      │
+│   └─────────────────────────────────────────────────────────────┘      │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Integration Touchpoints Summary
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    BANK ←→ FLOW INTEGRATION POINTS                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────────────┐         ┌─────────────────────┐            │
+│  │     BANK PROVIDES   │         │    FLOW PROVIDES    │            │
+│  ├─────────────────────┤         ├─────────────────────┤            │
+│  │                     │         │                     │            │
+│  │  OAuth 2.0 Server   │◄───────►│  OAuth Client       │            │
+│  │                     │         │                     │            │
+│  │  Balance API        │◄───────►│  Balance Display    │            │
+│  │  GET /balance       │         │  Real-time UI       │            │
+│  │                     │         │                     │            │
+│  │  Payment API        │◄───────►│  Payment Engine     │            │
+│  │  POST /payments     │         │  Intent → Execution │            │
+│  │                     │         │                     │            │
+│  │  Authorization API  │◄───────►│  Biometric Handler  │            │
+│  │  POST /authorize    │         │  FIDO2 / WebAuthn   │            │
+│  │                     │         │                     │            │
+│  │  Transaction API    │◄───────►│  History & Insights │            │
+│  │  GET /transactions  │         │  Spending Analytics │            │
+│  │                     │         │                     │            │
+│  │  Webhook Sender     │────────►│  Webhook Receiver   │            │
+│  │  payment.completed  │         │  Real-time Updates  │            │
+│  │                     │         │                     │            │
+│  └─────────────────────┘         └─────────────────────┘            │
+│                                                                      │
+│  ═══════════════════════════════════════════════════════════════    │
+│                                                                      │
+│  NETWORK: HTTPS (TLS 1.3) | AUTHENTICATION: OAuth 2.0 + PKCE        │
+│  DATA FORMAT: JSON | SIGNING: RS256 JWT | ENCRYPTION: AES-256       │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 1. Authentication & Security
 
 ### 1.1 OAuth 2.0 Flow
