@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTestMode } from "@/hooks/useTestMode";
 import { KillSwitch } from "@/components/settings/KillSwitch";
 import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
+import PaymentRailsManager from "@/components/settings/PaymentRailsManager";
 import { BankPartnerDemo } from "@/components/demo/BankPartnerDemo";
 import { Switch } from "@/components/ui/switch";
 import { 
@@ -27,7 +28,8 @@ import {
   FlaskConical,
   Smartphone,
   CreditCard,
-  Building2
+  Building2,
+  Route
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -38,6 +40,7 @@ const SettingsPage = () => {
   const { toggleMode, isFieldTest } = useTestMode();
   const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
   const [isBankDemoExpanded, setIsBankDemoExpanded] = useState(true);
+  const [isRailsExpanded, setIsRailsExpanded] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -82,6 +85,37 @@ const SettingsPage = () => {
           <div className="glass-card rounded-2xl p-4 shadow-float">
             <BankPartnerDemo />
           </div>
+        </motion.div>
+      </section>
+
+      {/* Payment Rails - NEW */}
+      <section className="px-6 mb-6">
+        <button
+          onClick={() => setIsRailsExpanded(!isRailsExpanded)}
+          className="flex items-center justify-between w-full mb-4 group"
+        >
+          <div className="flex items-center gap-2">
+            <Route className="w-4 h-4 text-aurora-purple" />
+            <p className="text-sm font-medium text-muted-foreground">Payment Rails</p>
+          </div>
+          <motion.div
+            animate={{ rotate: isRailsExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.div>
+        </button>
+        
+        <motion.div
+          initial={false}
+          animate={{ 
+            height: isRailsExpanded ? "auto" : 0,
+            opacity: isRailsExpanded ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden"
+        >
+          <PaymentRailsManager />
         </motion.div>
       </section>
 
