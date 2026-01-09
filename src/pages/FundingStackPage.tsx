@@ -58,8 +58,8 @@ const FundingStackPage = () => {
     const fundingOrder = sources.map(s => s.id);
     localStorage.setItem('flow_funding_stack', JSON.stringify(fundingOrder));
     
-    // Navigate to link funding sources
-    navigate('/link-funding');
+    // Navigate to auto-sync (skip manual balance entry)
+    navigate('/auto-sync');
   };
 
   return (
