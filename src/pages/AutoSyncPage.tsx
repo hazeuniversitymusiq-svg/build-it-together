@@ -1,18 +1,18 @@
 import { forwardRef, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Wallet, Building2, Receipt, Landmark, Check, ShieldCheck } from "lucide-react";
+import { Wallet, Building2, Receipt, Landmark, Check, ShieldCheck, Link2, Info, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
-interface DiscoveredApp {
+interface AvailableApp {
   id: string;
   app_name: string;
   app_type: "wallet" | "bank" | "biller";
-  confidence: number;
-  detected: boolean;
+  description: string;
   selected: boolean;
 }
 
@@ -27,12 +27,32 @@ const appIcons: Record<string, React.ReactNode> = {
   "Maxis": <Receipt className="w-5 h-5" />,
 };
 
+const appDescriptions: Record<string, string> = {
+  "TouchNGo": "Pay QR codes and send money to friends",
+  "GrabPay": "Pay at merchants and split bills",
+  "Boost": "Cashback rewards and payments",
+  "Maybank": "Direct bank transfers and payments",
+  "TNB": "Electricity bill payments",
+  "Unifi": "Internet and TV bill payments",
+  "Maxis": "Mobile phone bill payments",
+};
+
+// All available apps that users can connect
+const availableApps: Omit<AvailableApp, "id" | "selected">[] = [
+  { app_name: "TouchNGo", app_type: "wallet", description: appDescriptions["TouchNGo"] },
+  { app_name: "GrabPay", app_type: "wallet", description: appDescriptions["GrabPay"] },
+  { app_name: "Boost", app_type: "wallet", description: appDescriptions["Boost"] },
+  { app_name: "Maybank", app_type: "bank", description: appDescriptions["Maybank"] },
+  { app_name: "TNB", app_type: "biller", description: appDescriptions["TNB"] },
+  { app_name: "Unifi", app_type: "biller", description: appDescriptions["Unifi"] },
+  { app_name: "Maxis", app_type: "biller", description: appDescriptions["Maxis"] },
+];
+
 const AppCard = forwardRef<HTMLDivElement, {
-  app: DiscoveredApp;
+  app: AvailableApp;
   onToggle: () => void;
-  recommended?: boolean;
   delay: number;
-}>(({ app, onToggle, recommended, delay }, ref) => {
+}>(({ app, onToggle, delay }, ref) => {
   return (
     <motion.div
       ref={ref}
@@ -59,17 +79,17 @@ const AppCard = forwardRef<HTMLDivElement, {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <h3 className="font-medium text-foreground">{app.app_name}</h3>
-            {app.selected && (
+            {app.selected ? (
               <div className="w-5 h-5 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
                 <Check className="w-3 h-3 text-white" />
               </div>
+            ) : (
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
-          {recommended && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Recommended because you'll use this often. Tap to link.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {app.description}
+          </p>
         </div>
       </div>
     </motion.div>
@@ -80,84 +100,50 @@ AppCard.displayName = "AppCard";
 const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isScanning, setIsScanning] = useState(false);
-  const [hasScanned, setHasScanned] = useState(false);
-  const [discoveredApps, setDiscoveredApps] = useState<DiscoveredApp[]>([]);
+  const [apps, setApps] = useState<AvailableApp[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState("recommended");
+  const [activeTab, setActiveTab] = useState("popular");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate auto-sync discovery
-  const runAutoSync = async () => {
-    setIsScanning(true);
-    
-    // Simulate scanning delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({ title: "Please sign in first", variant: "destructive" });
-      setIsScanning(false);
-      return;
-    }
+  // Initialize apps on mount
+  useEffect(() => {
+    const initApps = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Check which apps are already connected
+      let connectedNames: string[] = [];
+      if (user) {
+        const { data: existingConnectors } = await supabase
+          .from("connectors")
+          .select("name")
+          .eq("user_id", user.id);
+        connectedNames = existingConnectors?.map(c => c.name) || [];
+      }
 
-    // Check existing connectors to populate discovered apps
-    const { data: existingConnectors } = await supabase
-      .from("connectors")
-      .select("*")
-      .eq("user_id", user.id);
+      // Initialize apps with pre-selected popular ones (not already connected)
+      const popularApps = ["TouchNGo", "Maybank"];
+      const initialApps: AvailableApp[] = availableApps.map((app, index) => ({
+        ...app,
+        id: `app-${index}`,
+        selected: popularApps.includes(app.app_name) && !connectedNames.includes(app.app_name),
+      }));
 
-    // Simulated discovered apps based on connector_name enum
-    const simulatedApps: Omit<DiscoveredApp, "id" | "selected">[] = [
-      { app_name: "TouchNGo", app_type: "wallet", confidence: 0.95, detected: true },
-      { app_name: "GrabPay", app_type: "wallet", confidence: 0.88, detected: true },
-      { app_name: "Boost", app_type: "wallet", confidence: 0.72, detected: false },
-      { app_name: "Maybank", app_type: "bank", confidence: 0.91, detected: true },
-      { app_name: "TNB", app_type: "biller", confidence: 0.85, detected: true },
-      { app_name: "Unifi", app_type: "biller", confidence: 0.78, detected: true },
-      { app_name: "Maxis", app_type: "biller", confidence: 0.65, detected: false },
-    ];
+      setApps(initialApps);
+      setIsLoading(false);
+    };
 
-    // Mark as linked if already exists in connectors
-    const existingNames = new Set(existingConnectors?.map(c => c.name) || []);
-    
-    const apps: DiscoveredApp[] = simulatedApps.map((app, index) => ({
-      ...app,
-      id: `app-${index}`,
-      selected: app.confidence >= 0.8 && app.detected, // Auto-select high confidence detected apps
-    }));
-
-    // Save to discovered_apps table
-    const { error } = await supabase.from("discovered_apps").upsert(
-      apps.map(app => ({
-        user_id: user.id,
-        app_name: app.app_name,
-        app_type: app.app_type,
-        confidence: app.confidence,
-        detected: app.detected,
-        discovery_source: "simulated" as const,
-      })),
-      { onConflict: "user_id,app_name", ignoreDuplicates: false }
-    );
-
-    if (error) {
-      console.error("Error saving discovered apps:", error);
-    }
-
-    setDiscoveredApps(apps);
-    setHasScanned(true);
-    setIsScanning(false);
-  };
+    initApps();
+  }, []);
 
   const toggleApp = (appId: string) => {
-    setDiscoveredApps(prev => 
+    setApps(prev => 
       prev.map(app => 
         app.id === appId ? { ...app, selected: !app.selected } : app
       )
     );
   };
 
-  const syncRecommended = async () => {
+  const connectSelectedApps = async () => {
     setIsSyncing(true);
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -167,7 +153,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
       return;
     }
 
-    const selectedApps = discoveredApps.filter(app => app.selected);
+    const selectedApps = apps.filter(app => app.selected);
 
     // Default balances for simulation
     const defaultBalances: Record<string, number> = {
@@ -241,7 +227,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
           const { error: billerError } = await supabase.from("biller_accounts").upsert({
             user_id: user.id,
             biller_name: app.app_name,
-            account_reference: `AUTO-${Date.now()}`,
+            account_reference: `ACC-${Date.now()}`,
             status: "linked",
           }, { onConflict: "user_id,biller_name" });
 
@@ -253,27 +239,35 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
     }
 
     toast({ 
-      title: "Sync complete", 
-      description: `${selectedApps.length} apps connected successfully` 
+      title: "Connected!", 
+      description: `${selectedApps.length} app${selectedApps.length !== 1 ? 's' : ''} linked to FLOW` 
     });
     
     setIsSyncing(false);
-    navigate("/home"); // Navigate directly to Home
+    navigate("/home");
   };
 
   const getFilteredApps = (type?: string) => {
-    if (!type || type === "recommended") {
-      return discoveredApps.filter(app => app.confidence >= 0.8);
+    if (!type || type === "popular") {
+      return apps.filter(app => ["TouchNGo", "Maybank", "GrabPay"].includes(app.app_name));
     }
     const typeMap: Record<string, string> = {
       wallets: "wallet",
       bills: "biller",
       banks: "bank",
     };
-    return discoveredApps.filter(app => app.app_type === typeMap[type]);
+    return apps.filter(app => app.app_type === typeMap[type]);
   };
 
-  const selectedCount = discoveredApps.filter(app => app.selected).length;
+  const selectedCount = apps.filter(app => app.selected).length;
+
+  if (isLoading) {
+    return (
+      <div ref={ref} className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
@@ -286,129 +280,128 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-16 pb-6 relative z-10"
+        className="pt-16 pb-4 relative z-10"
       >
         <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2">
-          Auto Sync
+          Connect Your Apps
         </h1>
         <p className="text-muted-foreground">
-          FLOW can find your payment and bill apps and recommend what to connect.
+          Choose which payment apps and bills you want FLOW to manage for you.
         </p>
       </motion.div>
 
-      {/* Main Content */}
+      {/* How it works hint */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="glass-card p-3 mb-4 relative z-10"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-aurora-blue/10 flex items-center justify-center shrink-0">
+            <Link2 className="w-4 h-4 text-aurora-blue" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">How linking works</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Tap to select apps → Connect them → FLOW will help you pay using these apps when you scan QR codes.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Main Content - App List */}
       <div className="flex-1 flex flex-col relative z-10">
-        <AnimatePresence mode="wait">
-          {!hasScanned ? (
-            <motion.div
-              key="scan-prompt"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex-1 flex flex-col items-center justify-center gap-6"
-            >
-              {isScanning ? (
-                <>
-                  <div className="w-20 h-20 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
-                    <Loader2 className="w-10 h-10 text-white animate-spin" />
-                  </div>
-                  <p className="text-muted-foreground">Scanning your device...</p>
-                </>
-              ) : (
-                <Button
-                  onClick={runAutoSync}
-                  className="h-14 px-8 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity"
-                >
-                  Run Auto Sync
-                </Button>
-              )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="results"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex-1 flex flex-col"
-            >
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="grid w-full grid-cols-4 h-12 mb-4 glass rounded-xl p-1">
-                  <TabsTrigger value="recommended" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Recommended</TabsTrigger>
-                  <TabsTrigger value="wallets" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Wallets</TabsTrigger>
-                  <TabsTrigger value="bills" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Bills</TabsTrigger>
-                  <TabsTrigger value="banks" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Banks</TabsTrigger>
-                </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <TabsList className="grid w-full grid-cols-4 h-12 mb-4 glass rounded-xl p-1">
+            <TabsTrigger value="popular" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Popular</TabsTrigger>
+            <TabsTrigger value="wallets" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Wallets</TabsTrigger>
+            <TabsTrigger value="bills" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Bills</TabsTrigger>
+            <TabsTrigger value="banks" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Banks</TabsTrigger>
+          </TabsList>
 
-                <TabsContent value="recommended" className="flex-1 mt-0">
-                  <p className="text-sm font-medium text-foreground mb-3">
-                    Best connections to start with
-                  </p>
-                  <div className="space-y-3">
-                    {getFilteredApps("recommended").map((app, index) => (
-                      <AppCard
-                        key={app.id}
-                        app={app}
-                        onToggle={() => toggleApp(app.id)}
-                        recommended
-                        delay={index * 0.1}
-                      />
-                    ))}
-                  </div>
-                </TabsContent>
+          <TabsContent value="popular" className="flex-1 mt-0">
+            <p className="text-sm font-medium text-foreground mb-3">
+              Most used in Malaysia
+            </p>
+            <div className="space-y-3">
+              {getFilteredApps("popular").map((app, index) => (
+                <AppCard
+                  key={app.id}
+                  app={app}
+                  onToggle={() => toggleApp(app.id)}
+                  delay={index * 0.1}
+                />
+              ))}
+            </div>
+          </TabsContent>
 
-                <TabsContent value="wallets" className="flex-1 mt-0">
-                  <div className="space-y-3">
-                    {getFilteredApps("wallets").map((app, index) => (
-                      <AppCard
-                        key={app.id}
-                        app={app}
-                        onToggle={() => toggleApp(app.id)}
-                        delay={index * 0.1}
-                      />
-                    ))}
-                  </div>
-                </TabsContent>
+          <TabsContent value="wallets" className="flex-1 mt-0">
+            <div className="space-y-3">
+              {getFilteredApps("wallets").map((app, index) => (
+                <AppCard
+                  key={app.id}
+                  app={app}
+                  onToggle={() => toggleApp(app.id)}
+                  delay={index * 0.1}
+                />
+              ))}
+            </div>
+          </TabsContent>
 
-                <TabsContent value="bills" className="flex-1 mt-0">
-                  <div className="space-y-3">
-                    {getFilteredApps("bills").map((app, index) => (
-                      <AppCard
-                        key={app.id}
-                        app={app}
-                        onToggle={() => toggleApp(app.id)}
-                        delay={index * 0.1}
-                      />
-                    ))}
-                  </div>
-                </TabsContent>
+          <TabsContent value="bills" className="flex-1 mt-0">
+            <div className="space-y-3">
+              {getFilteredApps("bills").map((app, index) => (
+                <AppCard
+                  key={app.id}
+                  app={app}
+                  onToggle={() => toggleApp(app.id)}
+                  delay={index * 0.1}
+                />
+              ))}
+            </div>
+          </TabsContent>
 
-                <TabsContent value="banks" className="flex-1 mt-0">
-                  <div className="space-y-3">
-                    {getFilteredApps("banks").map((app, index) => (
-                      <AppCard
-                        key={app.id}
-                        app={app}
-                        onToggle={() => toggleApp(app.id)}
-                        delay={index * 0.1}
-                      />
-                    ))}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          <TabsContent value="banks" className="flex-1 mt-0">
+            <div className="space-y-3">
+              {getFilteredApps("banks").map((app, index) => (
+                <AppCard
+                  key={app.id}
+                  app={app}
+                  onToggle={() => toggleApp(app.id)}
+                  delay={index * 0.1}
+                />
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Info Footer */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="py-3 relative z-10"
+      >
+        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 rounded-xl p-3">
+          <Info className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            In production, linking would open each app to authorize FLOW. For now, this creates simulated connections.
+          </span>
+        </div>
+      </motion.div>
 
       {/* Trust Footer */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-        className="py-4 relative z-10"
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="py-2 relative z-10"
       >
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <ShieldCheck className="w-4 h-4" />
-          <span>FLOW cannot move money without your confirmation.</span>
+          <span>FLOW never moves money without your confirmation.</span>
         </div>
       </motion.div>
 
@@ -416,36 +409,25 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
         className="py-6 space-y-3 relative z-10"
       >
-        {hasScanned ? (
-          <>
-            <Button
-              onClick={syncRecommended}
-              disabled={isSyncing || selectedCount === 0}
-              className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {isSyncing ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              ) : null}
-              Sync recommended {selectedCount > 0 && `(${selectedCount})`}
-            </Button>
-            <button
-              onClick={() => navigate("/home")}
-              className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Skip for now
-            </button>
-          </>
-        ) : !isScanning && (
-          <button
-            onClick={() => navigate("/home")}
-            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Skip for now
-          </button>
-        )}
+        <Button
+          onClick={connectSelectedApps}
+          disabled={isSyncing || selectedCount === 0}
+          className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {isSyncing ? (
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+          ) : null}
+          {selectedCount > 0 ? `Connect ${selectedCount} app${selectedCount !== 1 ? 's' : ''}` : 'Select apps to connect'}
+        </Button>
+        <button
+          onClick={() => navigate("/home")}
+          className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Skip for now
+        </button>
       </motion.div>
     </div>
   );
