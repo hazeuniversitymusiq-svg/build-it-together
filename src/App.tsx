@@ -8,6 +8,7 @@ import { IntentProvider } from "@/contexts/IntentContext";
 import { OrchestrationProvider } from "@/contexts/OrchestrationContext";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/layout/PageTransition";
+import AppLayout from "./components/layout/AppLayout";
 import WelcomePage from "./pages/WelcomePage";
 import PermissionsPage from "./pages/PermissionsPage";
 import AuthPage from "./pages/AuthPage";
@@ -37,34 +38,34 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Phase 1: Trust & Consent Flow */}
+        {/* Phase 1-3: Onboarding Flow (No Bottom Nav) */}
         <Route path="/" element={<PageTransition><WelcomePage /></PageTransition>} />
         <Route path="/permissions" element={<PageTransition><PermissionsPage /></PageTransition>} />
-        
-        {/* Phase 2: Identity & Security */}
         <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
         <Route path="/biometric-setup" element={<PageTransition><BiometricSetupPage /></PageTransition>} />
-        
-        {/* Phase 3: Funding Stack Declaration */}
         <Route path="/funding-stack" element={<PageTransition><FundingStackPage /></PageTransition>} />
         <Route path="/link-funding" element={<PageTransition><LinkFundingPage /></PageTransition>} />
         <Route path="/auto-sync" element={<PageTransition><AutoSyncPage /></PageTransition>} />
         <Route path="/flow-identity" element={<PageTransition><FlowIdentityPage /></PageTransition>} />
-        <Route path="/home" element={<PageTransition><HomePage /></PageTransition>} />
         
-        {/* Phase 4+: Authenticated App with Intent Engine */}
-        <Route path="/scan" element={<PageTransition><ScanPage /></PageTransition>} />
+        {/* Transaction Flow (No Bottom Nav - focused experience) */}
         <Route path="/resolve/:intentId" element={<PageTransition><ResolvePage /></PageTransition>} />
         <Route path="/confirm/:planId" element={<PageTransition><ConfirmPage /></PageTransition>} />
         <Route path="/handoff/:planId" element={<PageTransition><HandoffPage /></PageTransition>} />
         <Route path="/done/:transactionId" element={<PageTransition><DonePage /></PageTransition>} />
-        <Route path="/send" element={<PageTransition><SendPage /></PageTransition>} />
         <Route path="/request" element={<PageTransition><RequestMoneySurface /></PageTransition>} />
-        <Route path="/bills" element={<PageTransition><BillsPage /></PageTransition>} />
-        <Route path="/activity" element={<PageTransition><ActivityPage /></PageTransition>} />
-        <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
         
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        {/* Main App Routes (With Bottom Nav) */}
+        <Route element={<AppLayout />}>
+          <Route path="/home" element={<PageTransition><HomePage /></PageTransition>} />
+          <Route path="/send" element={<PageTransition><SendPage /></PageTransition>} />
+          <Route path="/scan" element={<PageTransition><ScanPage /></PageTransition>} />
+          <Route path="/bills" element={<PageTransition><BillsPage /></PageTransition>} />
+          <Route path="/activity" element={<PageTransition><ActivityPage /></PageTransition>} />
+          <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+        </Route>
+        
+        {/* Catch-all */}
         <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
     </AnimatePresence>

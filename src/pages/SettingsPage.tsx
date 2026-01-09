@@ -6,7 +6,7 @@
 
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import BottomNav from "@/components/layout/BottomNav";
+
 import { useOrchestration } from "@/contexts/OrchestrationContext";
 import { useSecurity } from "@/contexts/SecurityContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -275,7 +275,7 @@ const SettingsPage = () => {
         </p>
       </div>
       
-      <BottomNav />
+      
     </div>
   );
 };
