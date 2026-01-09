@@ -52,6 +52,16 @@ export const WALLET_DEEP_LINKS: Record<string, {
     fallbackUrl: 'https://www.atome.my/',
     displayName: 'Atome',
   },
+  ShopeePay: {
+    scheme: 'shopeepay://', // ShopeePay eWallet
+    fallbackUrl: 'https://shopee.com.my/',
+    displayName: 'ShopeePay',
+  },
+  BigPay: {
+    scheme: 'bigpay://', // BigPay by AirAsia
+    fallbackUrl: 'https://www.bigpayme.com/',
+    displayName: 'BigPay',
+  },
 };
 
 /**

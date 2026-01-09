@@ -51,11 +51,11 @@ interface DemoPayment {
   merchant: string;
   amount: number;
   qrId: string;
-  rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome';
+  rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome' | 'ShopeePay' | 'BigPay';
   railColor: string;
   railIcon: string;
   simulateError?: 'insufficient_balance';
-  fallbackRail?: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome';
+  fallbackRail?: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome' | 'ShopeePay' | 'BigPay';
   fallbackIcon?: string;
   fallbackColor?: string;
   showBnplOption?: boolean; // Show "Pay in installments" option
@@ -68,6 +68,8 @@ const DEMO_PAYMENTS: DemoPayment[] = [
   { merchant: 'Starbucks KLCC', amount: 18.90, qrId: 'TNG002', rail: 'TouchNGo', railColor: 'text-blue-600', railIcon: '💙' },
   { merchant: 'Village Park Restaurant', amount: 75.00, qrId: 'GP003', rail: 'GrabPay', railColor: 'text-green-600', railIcon: '💚' },
   { merchant: 'Parking MBPJ', amount: 3.00, qrId: 'BST004', rail: 'Boost', railColor: 'text-orange-500', railIcon: '🔶' },
+  { merchant: 'Shopee Mall Purchase', amount: 156.00, qrId: 'SPY007', rail: 'ShopeePay', railColor: 'text-orange-600', railIcon: '🧡' },
+  { merchant: 'AirAsia Flight Booking', amount: 289.00, qrId: 'BPY008', rail: 'BigPay', railColor: 'text-red-500', railIcon: '✈️' },
   { 
     merchant: 'Nasi Lemak Antarabangsa', 
     amount: 45.00, 
@@ -542,7 +544,9 @@ const DemoPage = () => {
                     selectedPayment.rail === 'GrabPay' && "border-green-500 bg-gradient-to-br from-green-500 to-green-600",
                     selectedPayment.rail === 'Boost' && "border-orange-500 bg-gradient-to-br from-orange-500 to-orange-600",
                     selectedPayment.rail === 'DuitNow' && "border-pink-500 bg-gradient-to-br from-pink-500 to-pink-600",
-                    selectedPayment.rail === 'Atome' && "border-teal-500 bg-gradient-to-br from-teal-500 to-cyan-600"
+                    selectedPayment.rail === 'Atome' && "border-teal-500 bg-gradient-to-br from-teal-500 to-cyan-600",
+                    selectedPayment.rail === 'ShopeePay' && "border-orange-600 bg-gradient-to-br from-orange-500 to-red-500",
+                    selectedPayment.rail === 'BigPay' && "border-red-500 bg-gradient-to-br from-red-500 to-red-600"
                   )}>
                     <CardContent className="p-6 text-white text-center space-y-4">
                       <div className="flex items-center justify-center gap-2">
