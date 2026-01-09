@@ -132,7 +132,10 @@ const ResolvePage = forwardRef<HTMLDivElement>((_, ref) => {
       
       // Small delay before navigation
       await new Promise(resolve => setTimeout(resolve, 500));
-      navigate(`/confirm/${result.planId}`);
+      
+      // Navigate to handoff (real-world) or confirm (simulated)
+      // For field testing, default to handoff
+      navigate(`/handoff/${result.planId}`);
     };
 
     runResolve();
