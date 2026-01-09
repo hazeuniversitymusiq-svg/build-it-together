@@ -1,7 +1,11 @@
 /**
  * Payment Rails Manager
  * 
- * Allows users to enable/disable payment rails and set their preferred default wallet.
+ * Allows users to enable/disable payment rails including:
+ * - E-Wallets (Touch 'n Go, GrabPay, etc.)
+ * - Debit/Credit Cards (Visa, Mastercard, Amex)
+ * - Bank Transfers (DuitNow)
+ * - BNPL (Atome)
  */
 
 import { useState, useEffect } from "react";
@@ -10,8 +14,74 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star } from "lucide-react";
+import { Check, Star, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Reusable rail row component
+function RailRow({ 
+  rail, 
+  index, 
+  defaultWallet, 
+  onToggle 
+}: { 
+  rail: PaymentRail; 
+  index: number; 
+  defaultWallet: string;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="flex items-center justify-between p-4"
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn(
+          "w-10 h-10 rounded-xl flex items-center justify-center text-xl",
+          rail.enabled ? rail.color : "bg-muted"
+        )}>
+          <span className={rail.enabled ? "" : "grayscale opacity-50"}>
+            {rail.icon}
+          </span>
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "font-medium",
+              rail.enabled ? "text-foreground" : "text-muted-foreground"
+            )}>
+              {rail.displayName}
+            </span>
+            {rail.id === defaultWallet && rail.enabled && (
+              <Badge variant="secondary" className="text-xs">
+                Default
+              </Badge>
+            )}
+            {rail.type === 'bnpl' && (
+              <Badge variant="outline" className="text-xs text-teal-600 border-teal-300">
+                BNPL
+              </Badge>
+            )}
+            {rail.type === 'card' && (
+              <Badge variant="outline" className="text-xs text-indigo-600 border-indigo-300">
+                <CreditCard className="w-3 h-3 mr-1" />
+                Card
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {rail.description}
+          </p>
+        </div>
+      </div>
+      <Switch
+        checked={rail.enabled}
+        onCheckedChange={() => onToggle(rail.id)}
+      />
+    </motion.div>
+  );
+}
 
 interface PaymentRail {
   id: string;
@@ -20,18 +90,23 @@ interface PaymentRail {
   icon: string;
   color: string;
   enabled: boolean;
-  type: 'wallet' | 'bank' | 'bnpl';
+  type: 'wallet' | 'bank' | 'bnpl' | 'card';
   description?: string;
 }
 
 const DEFAULT_RAILS: PaymentRail[] = [
+  // Wallets
   { id: 'TouchNGo', name: 'TouchNGo', displayName: "Touch 'n Go", icon: '💙', color: 'bg-blue-500', enabled: true, type: 'wallet', description: 'Most popular in Malaysia' },
   { id: 'GrabPay', name: 'GrabPay', displayName: 'GrabPay', icon: '💚', color: 'bg-green-500', enabled: true, type: 'wallet', description: 'Grab super app wallet' },
   { id: 'Boost', name: 'Boost', displayName: 'Boost', icon: '🔶', color: 'bg-orange-500', enabled: true, type: 'wallet', description: 'Axiata digital wallet' },
-  { id: 'DuitNow', name: 'DuitNow', displayName: 'DuitNow', icon: '🏦', color: 'bg-pink-500', enabled: true, type: 'bank', description: 'National QR standard' },
   { id: 'ShopeePay', name: 'ShopeePay', displayName: 'ShopeePay', icon: '🧡', color: 'bg-orange-600', enabled: true, type: 'wallet', description: 'Shopee ecosystem wallet' },
   { id: 'BigPay', name: 'BigPay', displayName: 'BigPay', icon: '✈️', color: 'bg-red-500', enabled: true, type: 'wallet', description: 'AirAsia travel wallet' },
-  { id: 'Atome', name: 'Atome', displayName: 'Atome', icon: '💎', color: 'bg-teal-500', enabled: true, type: 'bnpl', description: 'Buy Now, Pay Later' },
+  // Cards - Direct Payment Rails
+  { id: 'VisaMastercard', name: 'VisaMastercard', displayName: 'Visa / Mastercard', icon: '💳', color: 'bg-indigo-500', enabled: true, type: 'card', description: 'Debit & credit cards' },
+  { id: 'AmericanExpress', name: 'AmericanExpress', displayName: 'American Express', icon: '💎', color: 'bg-blue-600', enabled: false, type: 'card', description: 'Amex cards' },
+  // Bank & BNPL
+  { id: 'DuitNow', name: 'DuitNow', displayName: 'DuitNow', icon: '🏦', color: 'bg-pink-500', enabled: true, type: 'bank', description: 'National QR standard' },
+  { id: 'Atome', name: 'Atome', displayName: 'Atome', icon: '🛍️', color: 'bg-teal-500', enabled: true, type: 'bnpl', description: 'Buy Now, Pay Later' },
 ];
 
 const STORAGE_KEY = 'flow_payment_rails';
@@ -71,6 +146,10 @@ export default function PaymentRailsManager() {
   };
 
   const enabledWallets = rails.filter(r => r.enabled && r.type === 'wallet');
+  const enabledCards = rails.filter(r => r.enabled && r.type === 'card');
+  const walletRails = rails.filter(r => r.type === 'wallet');
+  const cardRails = rails.filter(r => r.type === 'card');
+  const otherRails = rails.filter(r => r.type !== 'wallet' && r.type !== 'card');
 
   return (
     <div className="space-y-6">
@@ -127,62 +206,79 @@ export default function PaymentRailsManager() {
         )}
       </div>
 
-      {/* All Payment Rails */}
+      {/* Wallet Rails */}
       <div className="glass-card rounded-2xl overflow-hidden shadow-float">
         <div className="p-4 border-b border-border/30">
-          <h3 className="font-medium text-foreground">Payment Rails</h3>
+          <h3 className="font-medium text-foreground">E-Wallets</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Enable or disable payment methods for FLOW to use
+            Digital wallets for quick payments
           </p>
         </div>
         
         <div className="divide-y divide-border/30">
-          {rails.map((rail, index) => (
-            <motion.div
-              key={rail.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex items-center justify-between p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center text-xl",
-                  rail.enabled ? rail.color : "bg-muted"
-                )}>
-                  <span className={rail.enabled ? "" : "grayscale opacity-50"}>
-                    {rail.icon}
-                  </span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "font-medium",
-                      rail.enabled ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      {rail.displayName}
-                    </span>
-                    {rail.id === defaultWallet && rail.enabled && (
-                      <Badge variant="secondary" className="text-xs">
-                        Default
-                      </Badge>
-                    )}
-                    {rail.type === 'bnpl' && (
-                      <Badge variant="outline" className="text-xs text-teal-600 border-teal-300">
-                        BNPL
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {rail.description}
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={rail.enabled}
-                onCheckedChange={() => toggleRail(rail.id)}
-              />
-            </motion.div>
+          {walletRails.map((rail, index) => (
+            <RailRow 
+              key={rail.id} 
+              rail={rail} 
+              index={index} 
+              defaultWallet={defaultWallet}
+              onToggle={toggleRail}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Card Rails */}
+      <div className="glass-card rounded-2xl overflow-hidden shadow-float">
+        <div className="p-4 border-b border-border/30">
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-foreground">Debit & Credit Cards</h3>
+            <Badge variant="secondary" className="text-xs">Direct Pay</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Pay directly with your linked cards
+          </p>
+        </div>
+        
+        <div className="divide-y divide-border/30">
+          {cardRails.map((rail, index) => (
+            <RailRow 
+              key={rail.id} 
+              rail={rail} 
+              index={index} 
+              defaultWallet={defaultWallet}
+              onToggle={toggleRail}
+            />
+          ))}
+        </div>
+        
+        {enabledCards.length > 0 && (
+          <div className="p-3 bg-muted/30 border-t border-border/30">
+            <p className="text-xs text-muted-foreground text-center">
+              💡 Cards work as direct payment rails - no wallet top-up needed
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Bank & BNPL Rails */}
+      <div className="glass-card rounded-2xl overflow-hidden shadow-float">
+        <div className="p-4 border-b border-border/30">
+          <h3 className="font-medium text-foreground">Bank & BNPL</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Bank transfers and installment options
+          </p>
+        </div>
+        
+        <div className="divide-y divide-border/30">
+          {otherRails.map((rail, index) => (
+            <RailRow 
+              key={rail.id} 
+              rail={rail} 
+              index={index} 
+              defaultWallet={defaultWallet}
+              onToggle={toggleRail}
+            />
           ))}
         </div>
       </div>
