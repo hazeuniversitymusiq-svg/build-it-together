@@ -1,13 +1,14 @@
 import { forwardRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Send, Receipt, Clock, HandCoins } from "lucide-react";
+import { QrCode, Send, Receipt, Clock, HandCoins, Smartphone, FlaskConical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import QuickPayWidget from "@/components/surfaces/QuickPayWidget";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import NotificationSurface from "@/components/surfaces/NotificationSurface";
 import { useDeepLink } from "@/hooks/useDeepLink";
+import { useTestMode } from "@/hooks/useTestMode";
 
 interface Transaction {
   id: string;
@@ -49,6 +50,7 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
   const [appMode, setAppMode] = useState("Prototype");
   const [notificationCount, setNotificationCount] = useState(0);
+  const { isFieldTest } = useTestMode();
   
   // Initialize deep link handler
   useDeepLink();
@@ -115,12 +117,22 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">
             Home
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <NotificationSurface 
               onNotificationCount={setNotificationCount} 
             />
-            <Badge variant="secondary" className="text-xs font-medium">
-              {appMode} mode
+            <Badge 
+              variant={isFieldTest ? "default" : "secondary"} 
+              className={`text-xs font-medium flex items-center gap-1 ${
+                isFieldTest ? "bg-primary text-primary-foreground" : ""
+              }`}
+            >
+              {isFieldTest ? (
+                <Smartphone className="w-3 h-3" />
+              ) : (
+                <FlaskConical className="w-3 h-3" />
+              )}
+              {isFieldTest ? "Field Test" : "Prototype"}
             </Badge>
           </div>
         </div>
