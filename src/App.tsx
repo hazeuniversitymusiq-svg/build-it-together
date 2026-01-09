@@ -10,13 +10,8 @@ import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/layout/PageTransition";
 import AppLayout from "./components/layout/AppLayout";
 import WelcomePage from "./pages/WelcomePage";
-import PermissionsPage from "./pages/PermissionsPage";
 import AuthPage from "./pages/AuthPage";
-import BiometricSetupPage from "./pages/BiometricSetupPage";
-import FundingStackPage from "./pages/FundingStackPage";
-
 import AutoSyncPage from "./pages/AutoSyncPage";
-import FlowIdentityPage from "./pages/FlowIdentityPage";
 import HomePage from "./pages/HomePage";
 import ScanPage from "./pages/ScanPage";
 import ResolvePage from "./pages/ResolvePage";
@@ -38,14 +33,10 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Phase 1-3: Onboarding Flow (No Bottom Nav) */}
+        {/* Streamlined 4-Step Onboarding: Welcome → Auth + Security → Auto-Sync → Home */}
         <Route path="/" element={<PageTransition><WelcomePage /></PageTransition>} />
-        <Route path="/permissions" element={<PageTransition><PermissionsPage /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
-        <Route path="/biometric-setup" element={<PageTransition><BiometricSetupPage /></PageTransition>} />
-        <Route path="/funding-stack" element={<PageTransition><FundingStackPage /></PageTransition>} />
         <Route path="/auto-sync" element={<PageTransition><AutoSyncPage /></PageTransition>} />
-        <Route path="/flow-identity" element={<PageTransition><FlowIdentityPage /></PageTransition>} />
         
         {/* Transaction Flow (No Bottom Nav - focused experience) */}
         <Route path="/resolve/:intentId" element={<PageTransition><ResolvePage /></PageTransition>} />
