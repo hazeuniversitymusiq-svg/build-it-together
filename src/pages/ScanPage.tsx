@@ -1,125 +1,132 @@
 /**
- * FLOW Scan Page - Phase 3
+ * FLOW Scan Page
  * 
- * Scan → Add to Queue → Resolve
+ * REAL QR scanning with camera access.
+ * Supports: DuitNow, Touch'n'Go, GrabPay, Boost, and FLOW URLs
  */
 
-import { forwardRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Camera, Trash2, ChevronRight, Store, Loader2, ExternalLink } from "lucide-react";
+import { 
+  QrCode, 
+  Camera, 
+  Store, 
+  Loader2, 
+  CheckCircle2,
+  AlertCircle,
+  ChevronRight,
+  Wallet
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { createIntentFromQR } from "@/lib/core/intent-creators";
-import { useNativeCameraSurface } from "@/hooks/useNativeCameraSurface";
+import { useHaptics } from "@/hooks/useHaptics";
+import { useTestMode } from "@/hooks/useTestMode";
+import QRScanner from "@/components/scanner/QRScanner";
+import { parseQRToIntent, createIntentFromParsedQR, type ParsedQRIntent } from "@/lib/qr";
 
-interface QRPayload {
-  id: string;
-  merchant_name: string | null;
-  amount: number | null;
-  reference_id: string | null;
-  rails_available: string[];
-}
-
-const ScanPage = forwardRef<HTMLDivElement>((_, ref) => {
+const ScanPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { simulateNativeScan, isPending: isNativePending } = useNativeCameraSurface();
+  const haptics = useHaptics();
+  const { isFieldTest } = useTestMode();
   
-  const [qrPayloads, setQrPayloads] = useState<QRPayload[]>([]);
-  const [queue, setQueue] = useState<QRPayload[]>([]);
-  const [isResolving, setIsResolving] = useState(false);
-  const [showSimulator, setShowSimulator] = useState(false);
-  const [simulatorUrl, setSimulatorUrl] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [scannedData, setScannedData] = useState<ParsedQRIntent | null>(null);
 
   useEffect(() => {
-    const loadQRPayloads = async () => {
+    const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
         return;
       }
       setUserId(user.id);
-
-      // Fetch seeded QR payloads for prototype mode
-      const { data } = await supabase
-        .from("qr_payloads")
-        .select("id, merchant_name, amount, reference_id, rails_available")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (data) {
-        setQrPayloads(data.map(qr => ({
-          ...qr,
-          rails_available: Array.isArray(qr.rails_available) 
-            ? qr.rails_available as string[]
-            : []
-        })));
-      }
     };
-
-    loadQRPayloads();
+    checkAuth();
   }, [navigate]);
 
-  const addToQueue = (qr: QRPayload) => {
-    // Check if already in queue
-    if (queue.some(q => q.id === qr.id)) {
-      toast({ title: "Already in queue" });
-      return;
-    }
-    setQueue(prev => [...prev, qr]);
-  };
-
-  const clearQueue = () => {
-    setQueue([]);
-  };
-
-  const handleResolve = async () => {
-    if (queue.length === 0 || !userId) return;
-
-    setIsResolving(true);
-
-    // Take the latest (last added) QR from queue
-    const latestQR = queue[queue.length - 1];
-
-    // Create intent from QR
-    const result = await createIntentFromQR(userId, latestQR.id);
-
-    if (!result.success || !result.intentId) {
-      toast({ 
-        title: "Failed to create payment", 
-        description: result.error,
-        variant: "destructive" 
+  const handleScan = async (rawData: string) => {
+    setIsScannerOpen(false);
+    await haptics.impact();
+    
+    console.log('Scanned QR:', rawData);
+    
+    // Parse the QR code
+    const parsed = parseQRToIntent(rawData);
+    setScannedData(parsed);
+    
+    if (!parsed.success) {
+      await haptics.error();
+      toast({
+        title: "Unrecognized QR Code",
+        description: parsed.error,
+        variant: "destructive",
       });
-      setIsResolving(false);
       return;
     }
+    
+    await haptics.success();
+    toast({
+      title: "QR Scanned",
+      description: `${parsed.merchantName} - ${parsed.currency} ${parsed.amount?.toFixed(2) || 'Amount TBD'}`,
+    });
+  };
 
-    // Remove from queue
-    setQueue(prev => prev.filter(q => q.id !== latestQR.id));
-
-    // Navigate to resolve screen with intent ID
+  const handleProceed = async () => {
+    if (!scannedData || !userId) return;
+    
+    setIsProcessing(true);
+    await haptics.confirm();
+    
+    // Create intent in database
+    const result = await createIntentFromParsedQR(userId, scannedData);
+    
+    if (!result.success || !result.intentId) {
+      toast({
+        title: "Failed to create payment",
+        description: result.error,
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+      return;
+    }
+    
+    // Navigate to resolve
     navigate(`/resolve/${result.intentId}`);
   };
 
-  const isInQueue = (qrId: string) => queue.some(q => q.id === qrId);
+  const handleScanAnother = () => {
+    setScannedData(null);
+    setIsScannerOpen(true);
+  };
+
+  const railIcons: Record<string, React.ReactNode> = {
+    TouchNGo: <Wallet className="w-4 h-4" />,
+    GrabPay: <Wallet className="w-4 h-4" />,
+    Boost: <Wallet className="w-4 h-4" />,
+    DuitNow: <Store className="w-4 h-4" />,
+  };
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-24">
+    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-24">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-16 pb-2"
+        className="pt-16 pb-2 flex items-center justify-between"
       >
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">
           Scan to Pay
         </h1>
+        <Badge variant={isFieldTest ? "default" : "secondary"} className="text-xs">
+          {isFieldTest ? "Field Test" : "Prototype"}
+        </Badge>
       </motion.div>
 
       {/* Helper */}
@@ -127,214 +134,195 @@ const ScanPage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="text-muted-foreground mb-6"
+        className="text-muted-foreground mb-8"
       >
-        Scan a QR code or choose one from your gallery.
+        Scan any Malaysian payment QR code.
       </motion.p>
 
-      {/* Native Camera Surface Info */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20"
-      >
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Camera className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="font-medium text-foreground text-sm">Native Camera Ready</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Scan any FLOW QR with your device camera. FLOW will open automatically.
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Simulate Native Scan (Prototype) */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.25 }}
-        className="mb-8"
-      >
-        <button
-          onClick={() => setShowSimulator(!showSimulator)}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
-        >
-          <ExternalLink className="w-4 h-4" />
-          Simulate native camera scan
-        </button>
-        
-        <AnimatePresence>
-          {showSimulator && (
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        <AnimatePresence mode="wait">
+          {scannedData ? (
+            /* Scanned Result */
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-3"
+              key="result"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex-1 flex flex-col"
             >
-              <Input
-                placeholder="flow://pay/merchant-name/12.50"
-                value={simulatorUrl}
-                onChange={(e) => setSimulatorUrl(e.target.value)}
-                className="h-12 rounded-xl"
-              />
-              <Button
-                onClick={() => {
-                  if (simulatorUrl) {
-                    simulateNativeScan(simulatorUrl);
-                    setSimulatorUrl("");
-                    setShowSimulator(false);
-                  }
-                }}
-                disabled={!simulatorUrl || isNativePending}
-                className="w-full rounded-xl"
-              >
-                {isNativePending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
+              {/* Success/Error indicator */}
+              <div className="flex justify-center mb-6">
+                {scannedData.success ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center"
+                  >
+                    <CheckCircle2 className="w-8 h-8 text-success" />
+                  </motion.div>
                 ) : (
-                  "Simulate Scan"
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center"
+                  >
+                    <AlertCircle className="w-8 h-8 text-destructive" />
+                  </motion.div>
                 )}
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Example: flow://pay/kopi-corner/6.50/KC-001
-              </p>
+              </div>
+
+              {scannedData.success ? (
+                /* Payment Details Card */
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-card border border-border rounded-3xl p-6 mb-6"
+                >
+                  {/* Merchant */}
+                  <div className="text-center mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-3">
+                      <Store className="w-7 h-7 text-accent" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-foreground">
+                      {scannedData.merchantName}
+                    </h2>
+                    {scannedData.reference && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Ref: {scannedData.reference}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Amount */}
+                  <div className="text-center py-4 border-t border-b border-border">
+                    {scannedData.amount ? (
+                      <p className="text-4xl font-semibold text-foreground">
+                        {scannedData.currency} {scannedData.amount.toFixed(2)}
+                      </p>
+                    ) : (
+                      <p className="text-lg text-muted-foreground">
+                        Amount to be entered
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Available Rails */}
+                  <div className="mt-4">
+                    <p className="text-xs text-muted-foreground mb-2">Pay via</p>
+                    <div className="flex flex-wrap gap-2">
+                      {scannedData.availableRails.map((rail, i) => (
+                        <Badge 
+                          key={rail} 
+                          variant={i === 0 ? "default" : "secondary"}
+                          className="flex items-center gap-1"
+                        >
+                          {railIcons[rail]}
+                          {rail}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                /* Error Message */
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-destructive/5 border border-destructive/20 rounded-2xl p-6 mb-6"
+                >
+                  <p className="text-center text-destructive">
+                    {scannedData.error}
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Actions */}
+              <div className="mt-auto space-y-3">
+                {scannedData.success && (
+                  <Button
+                    onClick={handleProceed}
+                    disabled={isProcessing}
+                    className="w-full h-14 text-base font-medium rounded-2xl"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Proceed to Pay
+                        <ChevronRight className="w-5 h-5 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                )}
+                
+                <Button
+                  variant="outline"
+                  onClick={handleScanAnother}
+                  className="w-full h-12 rounded-2xl"
+                >
+                  <Camera className="w-5 h-5 mr-2" />
+                  Scan Another
+                </Button>
+              </div>
+            </motion.div>
+          ) : (
+            /* Initial State - Scan Button */
+            <motion.div
+              key="initial"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex flex-col items-center justify-center"
+            >
+              {/* Large Scan Button */}
+              <motion.button
+                onClick={() => setIsScannerOpen(true)}
+                className="w-48 h-48 rounded-3xl bg-primary/10 border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-4 hover:bg-primary/20 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
+                  <Camera className="w-8 h-8 text-primary-foreground" />
+                </div>
+                <span className="text-lg font-medium text-foreground">
+                  Open Scanner
+                </span>
+              </motion.button>
+
+              {/* Supported formats */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-8 text-center"
+              >
+                <p className="text-sm text-muted-foreground mb-3">Supports</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Badge variant="outline">DuitNow</Badge>
+                  <Badge variant="outline">Touch'n'Go</Badge>
+                  <Badge variant="outline">GrabPay</Badge>
+                  <Badge variant="outline">Boost</Badge>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
 
-      {/* QR Gallery Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="mb-8"
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-medium text-foreground">QR gallery</h2>
-          <Badge variant="secondary" className="text-xs">Prototype only</Badge>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {qrPayloads.map((qr, index) => (
-            <motion.button
-              key={qr.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.4 + index * 0.05 }}
-              onClick={() => addToQueue(qr)}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                isInQueue(qr.id)
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-card hover:border-primary/30"
-              }`}
-            >
-              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-                <Store className="w-5 h-5 text-accent" />
-              </div>
-              <p className="font-medium text-foreground text-sm truncate">
-                {qr.merchant_name || "Unknown"}
-              </p>
-              <p className="text-lg font-semibold text-foreground">
-                RM {qr.amount?.toFixed(2) || "0.00"}
-              </p>
-            </motion.button>
-          ))}
-        </div>
-
-        {qrPayloads.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <QrCode className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No QR codes available</p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Queue Section */}
-      <AnimatePresence>
-        {queue.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="flex-1"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-medium text-foreground">Queue</h2>
-              <Badge variant="outline">{queue.length}</Badge>
-            </div>
-
-            <p className="text-xs text-muted-foreground mb-4">
-              You can scan multiple codes, then resolve one by one.
-            </p>
-
-            <div className="space-y-2 mb-6">
-              {queue.map((qr, index) => (
-                <motion.div
-                  key={qr.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.05 }}
-                  className="flex items-center justify-between p-3 rounded-xl bg-card border border-border"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Store className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground text-sm">
-                        {qr.merchant_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        RM {qr.amount?.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    #{index + 1}
-                  </Badge>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-        className="py-6 space-y-3 mt-auto"
-      >
-        <Button
-          onClick={handleResolve}
-          disabled={queue.length === 0 || isResolving}
-          className="w-full h-14 text-base font-medium rounded-2xl"
-        >
-          Resolve now
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </Button>
-
-        {queue.length > 0 && (
-          <button
-            onClick={clearQueue}
-            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Clear queue
-          </button>
-        )}
-      </motion.div>
+      {/* QR Scanner Modal */}
+      <QRScanner
+        isOpen={isScannerOpen}
+        onScan={handleScan}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </div>
   );
-});
-ScanPage.displayName = "ScanPage";
+};
 
 export default ScanPage;

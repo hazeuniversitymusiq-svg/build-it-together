@@ -187,6 +187,24 @@
     }
   }
 
+  /* QR Scanner styles */
+  #qr-reader {
+    border: none !important;
+    background: transparent !important;
+  }
+
+  #qr-reader video {
+    border-radius: 1rem;
+  }
+
+  #qr-reader__scan_region {
+    background: transparent !important;
+  }
+
+  #qr-reader__dashboard {
+    display: none !important;
+  }
+
   /* Safe area padding for mobile */
   .safe-area-bottom {
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
