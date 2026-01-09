@@ -14,7 +14,7 @@ import PermissionsPage from "./pages/PermissionsPage";
 import AuthPage from "./pages/AuthPage";
 import BiometricSetupPage from "./pages/BiometricSetupPage";
 import FundingStackPage from "./pages/FundingStackPage";
-import LinkFundingPage from "./pages/LinkFundingPage";
+
 import AutoSyncPage from "./pages/AutoSyncPage";
 import FlowIdentityPage from "./pages/FlowIdentityPage";
 import HomePage from "./pages/HomePage";
@@ -44,7 +44,6 @@ const AnimatedRoutes = () => {
         <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
         <Route path="/biometric-setup" element={<PageTransition><BiometricSetupPage /></PageTransition>} />
         <Route path="/funding-stack" element={<PageTransition><FundingStackPage /></PageTransition>} />
-        <Route path="/link-funding" element={<PageTransition><LinkFundingPage /></PageTransition>} />
         <Route path="/auto-sync" element={<PageTransition><AutoSyncPage /></PageTransition>} />
         <Route path="/flow-identity" element={<PageTransition><FlowIdentityPage /></PageTransition>} />
         
