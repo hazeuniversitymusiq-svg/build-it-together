@@ -23,7 +23,8 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownLeft,
-  ChevronLeft
+  ChevronLeft,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-type DemoStep = 'idle' | 'scanning' | 'scanned' | 'authorizing' | 'handoff' | 'in_wallet' | 'wallet_error' | 'fallback' | 'fallback_handoff' | 'fallback_wallet' | 'returning' | 'processing' | 'complete' | 'error';
+type DemoStep = 'idle' | 'scanning' | 'scanned' | 'authorizing' | 'handoff' | 'in_wallet' | 'wallet_error' | 'fallback' | 'fallback_handoff' | 'fallback_wallet' | 'returning' | 'processing' | 'complete' | 'error' | 'card_processing' | 'card_3ds';
 
 interface ApiLog {
   id: string;
@@ -51,16 +52,19 @@ interface DemoPayment {
   merchant: string;
   amount: number;
   qrId: string;
-  rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome' | 'ShopeePay' | 'BigPay';
+  rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome' | 'ShopeePay' | 'BigPay' | 'VisaMastercard';
   railColor: string;
   railIcon: string;
   simulateError?: 'insufficient_balance';
-  fallbackRail?: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome' | 'ShopeePay' | 'BigPay';
+  fallbackRail?: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome' | 'ShopeePay' | 'BigPay' | 'VisaMastercard';
   fallbackIcon?: string;
   fallbackColor?: string;
   showBnplOption?: boolean; // Show "Pay in installments" option
   bnplInstallments?: number;
   bnplPerInstallment?: number;
+  isCardPayment?: boolean; // Direct card payment (no wallet)
+  cardType?: 'visa' | 'mastercard';
+  cardLast4?: string;
 }
 
 const DEMO_PAYMENTS: DemoPayment[] = [
@@ -70,6 +74,29 @@ const DEMO_PAYMENTS: DemoPayment[] = [
   { merchant: 'Parking MBPJ', amount: 3.00, qrId: 'BST004', rail: 'Boost', railColor: 'text-orange-500', railIcon: '🔶' },
   { merchant: 'Shopee Mall Purchase', amount: 156.00, qrId: 'SPY007', rail: 'ShopeePay', railColor: 'text-orange-600', railIcon: '🧡' },
   { merchant: 'AirAsia Flight Booking', amount: 289.00, qrId: 'BPY008', rail: 'BigPay', railColor: 'text-red-500', railIcon: '✈️' },
+  // Card Payment Demos
+  { 
+    merchant: 'Sephora Mid Valley', 
+    amount: 245.00, 
+    qrId: 'CARD001', 
+    rail: 'VisaMastercard', 
+    railColor: 'text-indigo-600', 
+    railIcon: '💳',
+    isCardPayment: true,
+    cardType: 'visa',
+    cardLast4: '4242'
+  },
+  { 
+    merchant: 'Uniqlo Pavilion', 
+    amount: 189.90, 
+    qrId: 'CARD002', 
+    rail: 'VisaMastercard', 
+    railColor: 'text-orange-600', 
+    railIcon: '💳',
+    isCardPayment: true,
+    cardType: 'mastercard',
+    cardLast4: '8888'
+  },
   { 
     merchant: 'Nasi Lemak Antarabangsa', 
     amount: 45.00, 
@@ -197,38 +224,53 @@ const DemoPage = () => {
     setStep('authorizing');
     await new Promise(r => setTimeout(r, 600));
     
-    // Show wallet handoff animation
-    setStep('handoff');
-    await new Promise(r => setTimeout(r, 1200));
-    
-    // Simulate being in the wallet app
-    setStep('in_wallet');
-    await new Promise(r => setTimeout(r, 2500));
-    
-    // Check if this payment should simulate an error
-    if (selectedPayment.simulateError === 'insufficient_balance') {
-      // Show wallet error
-      setStep('wallet_error');
-      await new Promise(r => setTimeout(r, 2000));
+    // Card payment flow - no wallet handoff needed
+    if (selectedPayment.isCardPayment) {
+      // Show card processing
+      setStep('card_processing');
+      await new Promise(r => setTimeout(r, 1500));
       
-      // Show fallback selection
-      setStep('fallback');
-      await new Promise(r => setTimeout(r, 1800));
+      // Simulate 3DS authentication for amounts over RM100
+      if (selectedPayment.amount > 100) {
+        setStep('card_3ds');
+        await new Promise(r => setTimeout(r, 2000));
+      }
       
-      // Handoff to fallback wallet
-      setStep('fallback_handoff');
+      setStep('processing');
+    } else {
+      // Wallet payment flow
+      setStep('handoff');
       await new Promise(r => setTimeout(r, 1200));
       
-      // In fallback wallet
-      setStep('fallback_wallet');
+      // Simulate being in the wallet app
+      setStep('in_wallet');
       await new Promise(r => setTimeout(r, 2500));
+      
+      // Check if this payment should simulate an error
+      if (selectedPayment.simulateError === 'insufficient_balance') {
+        // Show wallet error
+        setStep('wallet_error');
+        await new Promise(r => setTimeout(r, 2000));
+        
+        // Show fallback selection
+        setStep('fallback');
+        await new Promise(r => setTimeout(r, 1800));
+        
+        // Handoff to fallback wallet
+        setStep('fallback_handoff');
+        await new Promise(r => setTimeout(r, 1200));
+        
+        // In fallback wallet
+        setStep('fallback_wallet');
+        await new Promise(r => setTimeout(r, 2500));
+      }
+      
+      // Simulate returning from wallet
+      setStep('returning');
+      await new Promise(r => setTimeout(r, 800));
+      
+      setStep('processing');
     }
-    
-    // Simulate returning from wallet
-    setStep('returning');
-    await new Promise(r => setTimeout(r, 800));
-    
-    setStep('processing');
     
     // Initiate payment
     const { data, status } = await loggedFetch('payments/initiate', 'POST', {
@@ -362,20 +404,33 @@ const DemoPage = () => {
                       className={cn(
                         "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all",
                         payment.simulateError && "border-amber-500/30 bg-amber-50/30 dark:bg-amber-950/10",
-                        payment.showBnplOption && "border-teal-500/30 bg-teal-50/30 dark:bg-teal-950/10"
+                        payment.showBnplOption && "border-teal-500/30 bg-teal-50/30 dark:bg-teal-950/10",
+                        payment.isCardPayment && "border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/10"
                       )}
                       onClick={() => startDemo(payment)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-2xl">
-                              {payment.railIcon}
+                            <div className={cn(
+                              "h-12 w-12 rounded-xl flex items-center justify-center text-2xl",
+                              payment.isCardPayment 
+                                ? "bg-gradient-to-br from-indigo-500 to-indigo-600" 
+                                : "bg-gradient-to-br from-muted to-muted/50"
+                            )}>
+                              {payment.isCardPayment ? (
+                                <span className="text-white text-lg">💳</span>
+                              ) : (
+                                payment.railIcon
+                              )}
                             </div>
                             <div>
                               <p className="font-medium">{payment.merchant}</p>
                               <p className={cn("text-xs font-medium", payment.railColor)}>
-                                {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail} • {payment.qrId}
+                                {payment.isCardPayment 
+                                  ? `${payment.cardType === 'visa' ? 'Visa' : 'Mastercard'} •••• ${payment.cardLast4}`
+                                  : `${payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail} • ${payment.qrId}`
+                                }
                               </p>
                             </div>
                           </div>
@@ -392,6 +447,11 @@ const DemoPage = () => {
                         {payment.showBnplOption && (
                           <Badge variant="outline" className="mt-2 text-xs border-teal-500 text-teal-600 bg-teal-50 dark:bg-teal-950/30">
                             💎 Pay in 3 interest-free installments
+                          </Badge>
+                        )}
+                        {payment.isCardPayment && (
+                          <Badge variant="outline" className="mt-2 text-xs border-indigo-500 text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30">
+                            💳 Direct Card Payment - No wallet top-up
                           </Badge>
                         )}
                       </CardContent>
@@ -449,16 +509,35 @@ const DemoPage = () => {
                           <span className="text-muted-foreground">Payment Rail</span>
                           <span className={cn("flex items-center gap-1 font-medium", selectedPayment.railColor)}>
                             <span>{selectedPayment.railIcon}</span>
-                            {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail}
+                            {selectedPayment.isCardPayment 
+                              ? `${selectedPayment.cardType === 'visa' ? 'Visa' : 'Mastercard'} •••• ${selectedPayment.cardLast4}`
+                              : selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail
+                            }
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Funded by</span>
                           <span className="flex items-center gap-1 font-medium">
-                            <Building2 className="h-4 w-4 text-primary" />
-                            RYT Bank
+                            {selectedPayment.isCardPayment ? (
+                              <>
+                                <span>💳</span>
+                                Linked Card
+                              </>
+                            ) : (
+                              <>
+                                <Building2 className="h-4 w-4 text-primary" />
+                                RYT Bank
+                              </>
+                            )}
                           </span>
                         </div>
+                        {selectedPayment.isCardPayment && (
+                          <div className="mt-2 p-2 bg-indigo-500/10 rounded-lg">
+                            <p className="text-xs text-indigo-600 text-center">
+                              💡 Direct card payment - no wallet top-up required
+                            </p>
+                          </div>
+                        )}
                       </div>
                       
                       <Button 
@@ -467,7 +546,7 @@ const DemoPage = () => {
                         onClick={authorizeAndPay}
                       >
                         <Fingerprint className="h-5 w-5" />
-                        Authorize & Pay
+                        {selectedPayment.isCardPayment ? 'Pay with Card' : 'Authorize & Pay'}
                       </Button>
                       
                       <Button 
@@ -499,6 +578,118 @@ const DemoPage = () => {
                   </motion.div>
                   <p className="text-xl font-medium">Verifying biometric...</p>
                   <p className="text-muted-foreground">Touch sensor to confirm</p>
+                </motion.div>
+              )}
+
+              {/* Card Processing - Direct card payment without wallet */}
+              {step === 'card_processing' && selectedPayment && (
+                <motion.div
+                  key="card_processing"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="py-8"
+                >
+                  <Card className="border-2 border-indigo-500 bg-gradient-to-br from-indigo-500 to-indigo-600 overflow-hidden">
+                    <CardContent className="p-6 text-white text-center space-y-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-3xl">💳</span>
+                        <span className="text-xl font-bold">
+                          {selectedPayment.cardType === 'visa' ? 'Visa' : 'Mastercard'}
+                        </span>
+                      </div>
+                      
+                      <div className="py-4 border-t border-b border-white/20">
+                        <p className="text-sm opacity-80">Pay to</p>
+                        <p className="text-lg font-semibold">{selectedPayment.merchant}</p>
+                        <p className="text-4xl font-bold mt-2">RM {selectedPayment.amount.toFixed(2)}</p>
+                      </div>
+                      
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-12 h-8 rounded bg-gradient-to-br from-amber-300 to-amber-500" />
+                        <span className="font-mono text-lg">•••• •••• •••• {selectedPayment.cardLast4}</span>
+                      </div>
+                      
+                      <motion.div
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 1 }}
+                        className="flex items-center justify-center gap-2"
+                      >
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        />
+                        <span className="text-sm">Processing payment...</span>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                  
+                  <p className="text-xs text-center text-muted-foreground mt-4">
+                    Direct card payment - no wallet app needed
+                  </p>
+                </motion.div>
+              )}
+
+              {/* 3DS Authentication for high-value card payments */}
+              {step === 'card_3ds' && selectedPayment && (
+                <motion.div
+                  key="card_3ds"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="py-8"
+                >
+                  <Card className="border-2 border-indigo-500 overflow-hidden">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-center gap-2 text-indigo-600">
+                        <Shield className="h-6 w-6" />
+                        <span className="text-lg font-bold">3D Secure Authentication</span>
+                      </div>
+                      
+                      <div className="bg-muted/50 rounded-xl p-4 text-center">
+                        <p className="text-sm text-muted-foreground">Verifying with your bank</p>
+                        <p className="font-semibold mt-1">
+                          {selectedPayment.cardType === 'visa' ? 'Visa' : 'Mastercard'} •••• {selectedPayment.cardLast4}
+                        </p>
+                        <p className="text-2xl font-bold mt-2">RM {selectedPayment.amount.toFixed(2)}</p>
+                      </div>
+                      
+                      <div className="border rounded-xl p-4 bg-background">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            selectedPayment.cardType === 'visa' ? "bg-blue-100" : "bg-orange-100"
+                          )}>
+                            <span className="text-xl">🔐</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {selectedPayment.cardType === 'visa' ? 'Verified by Visa' : 'Mastercard SecureCode'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Additional security verification</p>
+                          </div>
+                        </div>
+                        
+                        <motion.div
+                          animate={{ opacity: [1, 0.5, 1] }}
+                          transition={{ repeat: Infinity, duration: 1 }}
+                          className="flex items-center justify-center gap-2 py-3 text-muted-foreground"
+                        >
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                            className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full"
+                          />
+                          <span className="text-sm">Authenticating with your bank...</span>
+                        </motion.div>
+                      </div>
+                      
+                      <p className="text-xs text-center text-muted-foreground">
+                        This additional step helps protect your card against fraud
+                      </p>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               )}
 
