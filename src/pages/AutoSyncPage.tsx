@@ -1,12 +1,13 @@
 import { forwardRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, Building2, Receipt, Landmark, Check, ShieldCheck, Link2, Info, ChevronRight } from "lucide-react";
+import { Wallet, Building2, Receipt, Landmark, Check, ShieldCheck, Link2, Info, ChevronRight, Camera, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { ScreenshotBalanceSync } from "@/components/balance/ScreenshotBalanceSync";
 
 interface AvailableApp {
   id: string;
@@ -104,6 +105,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState("popular");
   const [isLoading, setIsLoading] = useState(true);
+  const [showBalanceSync, setShowBalanceSync] = useState(false);
 
   // Initialize apps on mount
   useEffect(() => {
@@ -290,11 +292,89 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
         </p>
       </motion.div>
 
-      {/* How it works hint */}
+      {/* FLOW Protocol - Balance Sync Option */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
+        className="relative z-10 mb-4"
+      >
+        <AnimatePresence mode="wait">
+          {!showBalanceSync ? (
+            <motion.button
+              key="trigger"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBalanceSync(true)}
+              className="w-full glass-card p-4 flex items-center gap-3 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl aurora-gradient flex items-center justify-center shadow-glow-aurora">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-foreground flex items-center gap-2">
+                  Screenshot Balance Sync
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-aurora-purple/20 text-aurora-purple">NEW</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Upload a wallet screenshot → FLOW reads your balance
+                </p>
+              </div>
+              <Sparkles className="w-4 h-4 text-aurora-blue" />
+            </motion.button>
+          ) : (
+            <motion.div
+              key="sync"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <ScreenshotBalanceSync
+                onBalanceExtracted={(extraction) => {
+                  console.log("Balance extracted:", extraction);
+                }}
+                onApplyBalance={async (balance, walletName) => {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) return;
+                  
+                  // Update or create the funding source
+                  await supabase.from("funding_sources").upsert({
+                    user_id: user.id,
+                    name: walletName,
+                    type: "wallet",
+                    balance,
+                    currency: "MYR",
+                    priority: 1,
+                    linked_status: "linked",
+                    available: true,
+                    max_auto_topup_amount: 200,
+                    require_extra_confirm_amount: 300,
+                  }, { onConflict: "user_id,name" });
+                  
+                  toast({
+                    title: "Balance synced!",
+                    description: `${walletName}: RM ${balance.toFixed(2)}`,
+                  });
+                  setShowBalanceSync(false);
+                }}
+              />
+              <button
+                onClick={() => setShowBalanceSync(false)}
+                className="w-full mt-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* How it works hint */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
         className="glass-card p-3 mb-4 relative z-10"
       >
         <div className="flex items-start gap-3">
