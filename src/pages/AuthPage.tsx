@@ -35,10 +35,12 @@ const AuthPage = () => {
   const [isSavingSecurity, setIsSavingSecurity] = useState(false);
 
   useEffect(() => {
-    if (user && !loading && step !== 'security') {
-      setStep('security');
+    // If user is already authenticated and we're on auth step, 
+    // skip to auto-sync (they've already completed onboarding)
+    if (user && !loading) {
+      navigate('/auto-sync', { replace: true });
     }
-  }, [user, loading, step]);
+  }, [user, loading, navigate]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
