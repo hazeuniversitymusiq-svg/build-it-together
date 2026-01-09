@@ -116,13 +116,17 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
   ];
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
+    <div ref={ref} className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-blue/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
+      {/* Aurora background glow */}
+      <div className="absolute top-10 right-0 w-72 h-72 bg-aurora-blue/20 blur-3xl rounded-full" />
+      <div className="absolute bottom-40 left-0 w-56 h-56 bg-aurora-purple/15 blur-3xl rounded-full" />
+      
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-16 pb-6"
+        className="pt-16 pb-6 relative z-10"
       >
         <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2">
           Flow Identity
@@ -135,12 +139,12 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
         </p>
       </motion.div>
 
-      {/* Status Indicators */}
+      {/* Status Indicators - Glass cards */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="space-y-3 mb-8"
+        className="space-y-3 mb-8 relative z-10"
       >
         {statusItems.map((item, index) => (
           <motion.div
@@ -148,7 +152,7 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
-            className="flex items-center justify-between py-3 px-4 rounded-xl bg-card border border-border"
+            className="glass-card flex items-center justify-between py-3 px-4"
           >
             <div className="flex items-center gap-3">
               <div className="text-muted-foreground">
@@ -163,28 +167,28 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
         ))}
       </motion.div>
 
-      {/* Identity Card */}
+      {/* Identity Card - Aurora gradient */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.6 }}
-        className="flex-1 flex items-center justify-center"
+        className="flex-1 flex items-center justify-center relative z-10"
       >
-        <div className="w-full max-w-sm aspect-[1.6/1] rounded-3xl bg-gradient-to-br from-primary via-primary/80 to-accent p-6 flex flex-col justify-between shadow-lg">
+        <div className="w-full max-w-sm aspect-[1.6/1] rounded-3xl aurora-gradient p-6 flex flex-col justify-between shadow-glow-aurora">
           <div>
-            <p className="text-primary-foreground/70 text-xs uppercase tracking-wider mb-1">
+            <p className="text-white/70 text-xs uppercase tracking-wider mb-1">
               Flow Identity
             </p>
-            <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-white" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-primary-foreground/80 text-sm">Active</span>
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-white/80 text-sm">Active</span>
             </div>
-            <p className="text-primary-foreground text-lg font-semibold">
+            <p className="text-white text-lg font-semibold">
               FLOW
             </p>
           </div>
@@ -196,7 +200,7 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.8 }}
-        className="py-6 text-center"
+        className="py-6 text-center relative z-10"
       >
         <p className="text-sm text-muted-foreground">
           This is not a payment card.
@@ -211,11 +215,11 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 1 }}
-        className="py-6 space-y-3"
+        className="py-6 space-y-3 relative z-10"
       >
         <Button
           onClick={handleUseFlow}
-          className="w-full h-14 text-base font-medium rounded-2xl"
+          className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity"
         >
           Use Flow
         </Button>
@@ -235,7 +239,7 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end justify-center"
+            className="fixed inset-0 bg-background/60 backdrop-blur-md z-50 flex items-end justify-center"
             onClick={() => setShowFlowOptions(false)}
           >
             <motion.div
@@ -243,7 +247,7 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full max-w-lg bg-card rounded-t-3xl p-6 pb-10 safe-area-bottom"
+              className="w-full max-w-lg glass rounded-t-3xl p-6 pb-10 safe-area-bottom border-t border-white/20"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -267,9 +271,9 @@ const FlowIdentityPage = forwardRef<HTMLDivElement>((_, ref) => {
                       setShowFlowOptions(false);
                       option.action();
                     }}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-background border border-border hover:border-primary/50 transition-colors text-left"
+                    className="w-full glass-card flex items-center gap-4 p-4 hover:bg-white/10 transition-colors text-left"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <div className="w-12 h-12 rounded-xl aurora-gradient flex items-center justify-center text-white shadow-glow-aurora">
                       {option.icon}
                     </div>
                     <div>

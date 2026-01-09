@@ -82,9 +82,13 @@ const LinkFundingPage = () => {
     .reduce((sum, s) => sum + s.balance, 0);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-blue/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
+      {/* Aurora background glow */}
+      <div className="absolute top-20 left-0 w-64 h-64 bg-aurora-blue/15 blur-3xl rounded-full" />
+      <div className="absolute bottom-60 right-0 w-48 h-48 bg-aurora-purple/10 blur-3xl rounded-full" />
+      
       {/* Main content */}
-      <div className="flex-1 pt-12 pb-6 max-w-md mx-auto w-full overflow-y-auto">
+      <div className="flex-1 pt-12 pb-6 max-w-md mx-auto w-full overflow-y-auto relative z-10">
         {/* Title */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
@@ -105,12 +109,12 @@ const LinkFundingPage = () => {
           Enter your current balances so FLOW can resolve payments accurately.
         </motion.p>
 
-        {/* Summary Card */}
+        {/* Summary Card - Glass */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 mb-6"
+          className="glass-card p-5 mb-6"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -121,7 +125,7 @@ const LinkFundingPage = () => {
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Sources</p>
-              <p className="text-lg font-semibold text-foreground">
+              <p className="text-lg font-semibold text-aurora-blue">
                 {linkedCount} linked
               </p>
             </div>
@@ -135,12 +139,12 @@ const LinkFundingPage = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="manual" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-2 mb-6 glass rounded-xl p-1">
+              <TabsTrigger value="manual" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">
                 <Wallet className="w-4 h-4" />
                 Manual Entry
               </TabsTrigger>
-              <TabsTrigger value="import" className="flex items-center gap-2">
+              <TabsTrigger value="import" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">
                 <FileText className="w-4 h-4" />
                 Import
               </TabsTrigger>
@@ -166,11 +170,11 @@ const LinkFundingPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.3 }}
-        className="pb-6 max-w-md mx-auto w-full space-y-3"
+        className="pb-6 max-w-md mx-auto w-full space-y-3 relative z-10"
       >
         <Button
           onClick={handleContinue}
-          className="w-full h-14 text-base font-medium rounded-2xl"
+          className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity"
         >
           Continue
           <ChevronRight className="w-5 h-5 ml-2" />

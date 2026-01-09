@@ -66,9 +66,13 @@ const BiometricSetupPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
+      {/* Aurora background glow */}
+      <div className="absolute top-20 right-0 w-64 h-64 bg-aurora-purple/20 blur-3xl rounded-full" />
+      <div className="absolute bottom-40 left-0 w-48 h-48 bg-aurora-blue/10 blur-3xl rounded-full" />
+      
       {/* Main content */}
-      <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full relative z-10">
         {/* Title */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
@@ -94,12 +98,12 @@ const BiometricSetupPage = () => {
           </p>
         </motion.div>
 
-        {/* Toggle - Enable biometrics */}
+        {/* Toggle - Enable biometrics - Glass card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-secondary rounded-2xl p-4 mb-6"
+          className="glass-card p-4 mb-6"
         >
           <div className="flex items-center justify-between">
             <Label 
@@ -129,7 +133,7 @@ const BiometricSetupPage = () => {
             onValueChange={(value) => setSessionRule(value as SessionRule)}
             className="space-y-3"
           >
-            <div className="flex items-center space-x-3 bg-secondary rounded-2xl p-4">
+            <div className="glass-card flex items-center space-x-3 p-4">
               <RadioGroupItem value="every_payment" id="every_payment" />
               <Label 
                 htmlFor="every_payment" 
@@ -138,7 +142,7 @@ const BiometricSetupPage = () => {
                 Require biometrics for every payment
               </Label>
             </div>
-            <div className="flex items-center space-x-3 bg-secondary rounded-2xl p-4">
+            <div className="glass-card flex items-center space-x-3 p-4">
               <RadioGroupItem value="after_inactivity" id="after_inactivity" />
               <Label 
                 htmlFor="after_inactivity" 
@@ -166,12 +170,12 @@ const BiometricSetupPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.5 }}
-        className="pb-6 max-w-md mx-auto w-full"
+        className="pb-6 max-w-md mx-auto w-full relative z-10"
       >
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full h-14 text-base font-medium rounded-2xl"
+          className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity"
         >
           {isSaving ? (
             <Loader2 className="w-5 h-5 animate-spin" />
