@@ -47,6 +47,11 @@ export const WALLET_DEEP_LINKS: Record<string, {
     fallbackUrl: '',
     displayName: 'Card',
   },
+  Atome: {
+    scheme: 'atome://', // Atome BNPL app
+    fallbackUrl: 'https://www.atome.my/',
+    displayName: 'Atome',
+  },
 };
 
 /**
