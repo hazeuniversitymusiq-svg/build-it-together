@@ -15,6 +15,7 @@ import { useTestMode } from "@/hooks/useTestMode";
 import { KillSwitch } from "@/components/settings/KillSwitch";
 import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
 import PaymentRailsManager from "@/components/settings/PaymentRailsManager";
+import CardLinkingManager from "@/components/settings/CardLinkingManager";
 import { BankPartnerDemo } from "@/components/demo/BankPartnerDemo";
 import { Switch } from "@/components/ui/switch";
 import { 
@@ -41,6 +42,7 @@ const SettingsPage = () => {
   const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
   const [isBankDemoExpanded, setIsBankDemoExpanded] = useState(true);
   const [isRailsExpanded, setIsRailsExpanded] = useState(false);
+  const [isCardsExpanded, setIsCardsExpanded] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -116,6 +118,37 @@ const SettingsPage = () => {
           className="overflow-hidden"
         >
           <PaymentRailsManager />
+        </motion.div>
+      </section>
+
+      {/* Linked Cards - NEW */}
+      <section className="px-6 mb-6">
+        <button
+          onClick={() => setIsCardsExpanded(!isCardsExpanded)}
+          className="flex items-center justify-between w-full mb-4 group"
+        >
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-indigo-500" />
+            <p className="text-sm font-medium text-muted-foreground">Linked Cards</p>
+          </div>
+          <motion.div
+            animate={{ rotate: isCardsExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.div>
+        </button>
+        
+        <motion.div
+          initial={false}
+          animate={{ 
+            height: isCardsExpanded ? "auto" : 0,
+            opacity: isCardsExpanded ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden"
+        >
+          <CardLinkingManager />
         </motion.div>
       </section>
 
