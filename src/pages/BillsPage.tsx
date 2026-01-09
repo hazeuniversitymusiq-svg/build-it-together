@@ -1,7 +1,7 @@
 /**
- * FLOW Bills Page - Screen 11
+ * FLOW Bills Page
  * 
- * Shows linked billers, allows linking new ones, creates PayBill intents.
+ * iOS 26 Liquid Glass design - Linked billers and bill payments
  */
 
 import { forwardRef, useState, useEffect } from "react";
@@ -29,17 +29,17 @@ type BillerAccount = Database['public']['Tables']['biller_accounts']['Row'];
 interface BillerInfo {
   name: "Maxis" | "Unifi" | "TNB";
   icon: React.ReactNode;
-  color: string;
+  gradient: string;
   dueAmount?: number;
   dueDate?: Date;
   accountRef?: string;
   isLinked: boolean;
 }
 
-const billerConfig: Record<string, { icon: React.ReactNode; color: string }> = {
-  Maxis: { icon: <Phone className="w-6 h-6" />, color: "bg-green-500" },
-  Unifi: { icon: <Wifi className="w-6 h-6" />, color: "bg-orange-500" },
-  TNB: { icon: <Zap className="w-6 h-6" />, color: "bg-yellow-500" },
+const billerConfig: Record<string, { icon: React.ReactNode; gradient: string }> = {
+  Maxis: { icon: <Phone className="w-6 h-6" />, gradient: "from-green-500 to-emerald-600" },
+  Unifi: { icon: <Wifi className="w-6 h-6" />, gradient: "from-orange-500 to-amber-600" },
+  TNB: { icon: <Zap className="w-6 h-6" />, gradient: "from-yellow-500 to-orange-500" },
 };
 
 const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
@@ -53,7 +53,6 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [isLinking, setIsLinking] = useState(false);
   const [isCreatingIntent, setIsCreatingIntent] = useState<string | null>(null);
 
-  // Load biller accounts
   useEffect(() => {
     const loadBillers = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -62,20 +61,17 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
         return;
       }
 
-      // Fetch linked biller accounts
       const { data: linkedBillers } = await supabase
         .from("biller_accounts")
         .select("*")
         .eq("user_id", user.id)
         .eq("status", "linked");
 
-      // Build biller list with linked status
       const billerNames: Array<"Maxis" | "Unifi" | "TNB"> = ["Maxis", "Unifi", "TNB"];
       const billerList: BillerInfo[] = billerNames.map(name => {
         const linked = linkedBillers?.find(b => b.biller_name === name);
         const config = billerConfig[name];
         
-        // Generate sample due amounts/dates for prototype
         const sampleDue = linked ? {
           dueAmount: Math.floor(Math.random() * 150) + 50,
           dueDate: addDays(new Date(), Math.floor(Math.random() * 14) + 1),
@@ -84,7 +80,7 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
         return {
           name,
           icon: config.icon,
-          color: config.color,
+          gradient: config.gradient,
           isLinked: !!linked,
           accountRef: linked?.account_reference,
           ...sampleDue,
@@ -114,7 +110,6 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Create biller account
       await supabase.from("biller_accounts").insert({
         user_id: user.id,
         biller_name: billerName,
@@ -122,7 +117,6 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
         status: "linked",
       });
 
-      // Update local state
       setBillers(prev => prev.map(b => 
         b.name === billerName 
           ? { 
@@ -166,7 +160,6 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
         return;
       }
 
-      // Create PayBill intent
       const { data: intent, error } = await supabase
         .from("intents")
         .insert({
@@ -189,7 +182,6 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
         throw new Error("Failed to create bill payment");
       }
 
-      // Navigate to resolve screen
       navigate(`/resolve/${intent.id}`);
     } catch (error) {
       console.error("Error creating intent:", error);
@@ -205,25 +197,31 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
   if (isLoading) {
     return (
       <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full aurora-gradient opacity-30 animate-aurora" />
+          <Loader2 className="w-12 h-12 text-aurora-blue animate-spin" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom">
+    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
-      <div className="px-6 pt-16 pb-2">
+      <div className="px-6 pt-14 pb-2">
         <div className="flex items-center gap-4 mb-2">
           <button 
             onClick={() => navigate("/home")}
-            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+            className="w-10 h-10 rounded-full glass-card flex items-center justify-center shadow-float"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Bills
-          </h1>
+          <div>
+            <p className="text-muted-foreground text-sm">Manage & pay</p>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+              Bills
+            </h1>
+          </div>
         </div>
       </div>
 
@@ -234,7 +232,7 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
         transition={{ delay: 0.1 }}
         className="px-6 pb-6 text-muted-foreground"
       >
-        FLOW can link your billers and pay in one flow.
+        Link your billers and pay in one flow.
       </motion.p>
 
       {/* Billers List */}
@@ -245,23 +243,23 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 + index * 0.1 }}
-            className="bg-card border border-border rounded-2xl overflow-hidden"
+            className="glass-card rounded-3xl overflow-hidden shadow-float-lg"
           >
             {/* Biller Header */}
-            <div className="flex items-center gap-4 p-4">
-              <div className={`w-12 h-12 rounded-xl ${biller.color} flex items-center justify-center text-white`}>
+            <div className="flex items-center gap-4 p-5">
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${biller.gradient} flex items-center justify-center text-white shadow-float`}>
                 {biller.icon}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-foreground">{biller.name}</p>
+                <p className="font-semibold text-foreground text-lg">{biller.name}</p>
                 {biller.isLinked && biller.accountRef && (
                   <p className="text-sm text-muted-foreground">Acc: {biller.accountRef}</p>
                 )}
               </div>
               {biller.isLinked && (
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Due</p>
-                  <p className="font-semibold text-foreground">
+                  <p className="text-xs text-muted-foreground">Due</p>
+                  <p className="font-bold text-foreground text-xl">
                     RM {biller.dueAmount?.toFixed(2)}
                   </p>
                 </div>
@@ -275,21 +273,19 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="px-4 pb-4"
+                  className="px-5 pb-5"
                 >
-                  {/* Due Date */}
                   {biller.dueDate && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 glass-subtle rounded-xl px-3 py-2">
                       <Calendar className="w-4 h-4" />
                       <span>Due on {format(biller.dueDate, "MMM d, yyyy")}</span>
                     </div>
                   )}
                   
-                  {/* Pay Now Button */}
                   <Button
                     onClick={() => handlePayNow(biller)}
                     disabled={isCreatingIntent === biller.name}
-                    className="w-full rounded-xl"
+                    className="w-full rounded-2xl h-12 aurora-gradient text-white border-0 shadow-glow-aurora"
                   >
                     {isCreatingIntent === biller.name ? (
                       <>
@@ -310,23 +306,23 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="px-4 pb-4"
+                  className="px-5 pb-5"
                 >
                   <Input
                     type="text"
                     placeholder="Account number or reference"
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
-                    className="mb-3 h-12 rounded-xl"
+                    className="mb-3 h-12 rounded-2xl glass-subtle border-0"
                   />
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setLinkingBiller(null);
                         setAccountNumber("");
                       }}
-                      className="flex-1 rounded-xl"
+                      className="flex-1 rounded-2xl h-11 glass-card border-0"
                       disabled={isLinking}
                     >
                       Cancel
@@ -334,14 +330,14 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
                     <Button
                       onClick={() => handleLinkBiller(biller.name)}
                       disabled={isLinking}
-                      className="flex-1 rounded-xl"
+                      className="flex-1 rounded-2xl h-11 aurora-gradient text-white border-0"
                     >
                       {isLinking ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <>
                           <LinkIcon className="w-4 h-4 mr-2" />
-                          Link biller
+                          Link
                         </>
                       )}
                     </Button>
@@ -353,12 +349,12 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="px-4 pb-4"
+                  className="px-5 pb-5"
                 >
                   <Button
                     variant="outline"
                     onClick={() => setLinkingBiller(biller.name)}
-                    className="w-full rounded-xl"
+                    className="w-full rounded-2xl h-11 glass-card border-0 text-muted-foreground hover:text-foreground"
                   >
                     <LinkIcon className="w-4 h-4 mr-2" />
                     Link biller
@@ -369,9 +365,6 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
           </motion.div>
         ))}
       </div>
-
-      {/* Bottom spacing */}
-      <div className="h-8" />
     </div>
   );
 });
