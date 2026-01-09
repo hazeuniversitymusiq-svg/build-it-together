@@ -213,7 +213,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
     });
     
     setIsSyncing(false);
-    navigate("/flow-identity"); // Navigate to Flow Identity
+    navigate("/home"); // Navigate directly to Home
   };
 
   const getFilteredApps = (type?: string) => {
@@ -387,15 +387,15 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
               Sync recommended {selectedCount > 0 && `(${selectedCount})`}
             </Button>
             <button
-              onClick={() => navigate("/flow-identity")}
+              onClick={() => navigate("/home")}
               className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Choose manually
+              Skip for now
             </button>
           </>
         ) : !isScanning && (
           <button
-            onClick={() => navigate("/flow-identity")}
+            onClick={() => navigate("/home")}
             className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Skip for now
