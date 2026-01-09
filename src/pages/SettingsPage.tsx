@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTestMode } from "@/hooks/useTestMode";
 import { KillSwitch } from "@/components/settings/KillSwitch";
 import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
+import { BankPartnerDemo } from "@/components/demo/BankPartnerDemo";
 import { Switch } from "@/components/ui/switch";
 import { 
   ChevronRight, 
@@ -25,7 +26,8 @@ import {
   LogOut,
   FlaskConical,
   Smartphone,
-  CreditCard
+  CreditCard,
+  Building2
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -34,7 +36,8 @@ const SettingsPage = () => {
   const { isWebAuthnRegistered } = useSecurity();
   const { signOut } = useAuth();
   const { toggleMode, isFieldTest } = useTestMode();
-  const [isSourcesExpanded, setIsSourcesExpanded] = useState(true);
+  const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
+  const [isBankDemoExpanded, setIsBankDemoExpanded] = useState(true);
 
   const handleSignOut = async () => {
     await signOut();
@@ -48,6 +51,39 @@ const SettingsPage = () => {
         <p className="text-muted-foreground text-sm mb-1">Configuration</p>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Settings</h1>
       </header>
+
+      {/* Bank Partner Demo - NEW */}
+      <section className="px-6 mb-6">
+        <button
+          onClick={() => setIsBankDemoExpanded(!isBankDemoExpanded)}
+          className="flex items-center justify-between w-full mb-4 group"
+        >
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-aurora-teal" />
+            <p className="text-sm font-medium text-muted-foreground">Bank Partner Demo</p>
+          </div>
+          <motion.div
+            animate={{ rotate: isBankDemoExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.div>
+        </button>
+        
+        <motion.div
+          initial={false}
+          animate={{ 
+            height: isBankDemoExpanded ? "auto" : 0,
+            opacity: isBankDemoExpanded ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden"
+        >
+          <div className="glass-card rounded-2xl p-4 shadow-float">
+            <BankPartnerDemo />
+          </div>
+        </motion.div>
+      </section>
 
       {/* Payment Sources - Expandable */}
       <section className="px-6 mb-6">
