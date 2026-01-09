@@ -34,7 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-type DemoStep = 'idle' | 'scanning' | 'scanned' | 'authorizing' | 'handoff' | 'in_wallet' | 'returning' | 'processing' | 'complete' | 'error';
+type DemoStep = 'idle' | 'scanning' | 'scanned' | 'authorizing' | 'handoff' | 'in_wallet' | 'wallet_error' | 'fallback' | 'fallback_handoff' | 'fallback_wallet' | 'returning' | 'processing' | 'complete' | 'error';
 
 interface ApiLog {
   id: string;
@@ -54,6 +54,10 @@ interface DemoPayment {
   rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost';
   railColor: string;
   railIcon: string;
+  simulateError?: 'insufficient_balance';
+  fallbackRail?: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost';
+  fallbackIcon?: string;
+  fallbackColor?: string;
 }
 
 const DEMO_PAYMENTS: DemoPayment[] = [
@@ -61,6 +65,18 @@ const DEMO_PAYMENTS: DemoPayment[] = [
   { merchant: 'Starbucks KLCC', amount: 18.90, qrId: 'TNG002', rail: 'TouchNGo', railColor: 'text-blue-600', railIcon: '💙' },
   { merchant: 'Village Park Restaurant', amount: 75.00, qrId: 'GP003', rail: 'GrabPay', railColor: 'text-green-600', railIcon: '💚' },
   { merchant: 'Parking MBPJ', amount: 3.00, qrId: 'BST004', rail: 'Boost', railColor: 'text-orange-500', railIcon: '🔶' },
+  { 
+    merchant: 'Nasi Lemak Antarabangsa', 
+    amount: 45.00, 
+    qrId: 'ERR005', 
+    rail: 'GrabPay', 
+    railColor: 'text-green-600', 
+    railIcon: '💚',
+    simulateError: 'insufficient_balance',
+    fallbackRail: 'TouchNGo',
+    fallbackIcon: '💙',
+    fallbackColor: 'text-blue-600'
+  },
 ];
 
 // API URL helper
@@ -173,6 +189,25 @@ const DemoPage = () => {
     setStep('in_wallet');
     await new Promise(r => setTimeout(r, 2500));
     
+    // Check if this payment should simulate an error
+    if (selectedPayment.simulateError === 'insufficient_balance') {
+      // Show wallet error
+      setStep('wallet_error');
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Show fallback selection
+      setStep('fallback');
+      await new Promise(r => setTimeout(r, 1800));
+      
+      // Handoff to fallback wallet
+      setStep('fallback_handoff');
+      await new Promise(r => setTimeout(r, 1200));
+      
+      // In fallback wallet
+      setStep('fallback_wallet');
+      await new Promise(r => setTimeout(r, 2500));
+    }
+    
     // Simulate returning from wallet
     setStep('returning');
     await new Promise(r => setTimeout(r, 800));
@@ -184,7 +219,7 @@ const DemoPage = () => {
       amount: { value: selectedPayment.amount, currency: 'MYR' },
       recipient: { name: selectedPayment.merchant, duitnow_id: selectedPayment.qrId },
       reference: `FLOW-DEMO-${Date.now()}`,
-      rail: selectedPayment.rail,
+      rail: selectedPayment.simulateError ? selectedPayment.fallbackRail : selectedPayment.rail,
     });
 
     const paymentData = data as {
@@ -509,6 +544,188 @@ const DemoPage = () => {
                 </motion.div>
               )}
 
+              {step === 'wallet_error' && selectedPayment && (
+                <motion.div
+                  key="wallet_error"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="py-8"
+                >
+                  <Card className="border-2 border-red-500 bg-gradient-to-br from-red-500 to-red-600 overflow-hidden">
+                    <CardContent className="p-6 text-white text-center space-y-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-3xl">{selectedPayment.railIcon}</span>
+                        <span className="text-xl font-bold">
+                          {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go eWallet" : selectedPayment.rail}
+                        </span>
+                      </div>
+                      
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', damping: 10 }}
+                        className="mx-auto w-16 h-16 rounded-full bg-white/20 flex items-center justify-center"
+                      >
+                        <AlertCircle className="h-10 w-10 text-white" />
+                      </motion.div>
+                      
+                      <div>
+                        <p className="text-lg font-bold">Insufficient Balance</p>
+                        <p className="text-sm opacity-80 mt-1">
+                          Your {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail} balance is too low
+                        </p>
+                        <p className="text-xs opacity-60 mt-2">
+                          Required: RM {selectedPayment.amount.toFixed(2)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <p className="text-xs text-center text-muted-foreground mt-4">
+                    FLOW will automatically find an alternative...
+                  </p>
+                </motion.div>
+              )}
+
+              {step === 'fallback' && selectedPayment && selectedPayment.fallbackRail && (
+                <motion.div
+                  key="fallback"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="py-8 space-y-4"
+                >
+                  <div className="text-center space-y-2">
+                    <motion.div
+                      initial={{ rotate: 0 }}
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1 }}
+                      className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center"
+                    >
+                      <Zap className="h-6 w-6 text-primary" />
+                    </motion.div>
+                    <p className="font-semibold">FLOW Smart Fallback</p>
+                    <p className="text-sm text-muted-foreground">Finding best alternative payment rail...</p>
+                  </div>
+                  
+                  <Card className="border-primary/50 bg-primary/5">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-3 opacity-50">
+                        <span className="text-2xl">{selectedPayment.railIcon}</span>
+                        <div className="flex-1">
+                          <p className="font-medium line-through">
+                            {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail}
+                          </p>
+                          <p className="text-xs text-red-500">Insufficient balance</p>
+                        </div>
+                        <AlertCircle className="h-5 w-5 text-red-500" />
+                      </div>
+                      
+                      <div className="h-px bg-border" />
+                      
+                      <motion.div 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="flex items-center gap-3"
+                      >
+                        <span className="text-2xl">{selectedPayment.fallbackIcon}</span>
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {selectedPayment.fallbackRail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.fallbackRail}
+                          </p>
+                          <p className="text-xs text-green-600">Balance sufficient ✓</p>
+                        </div>
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                  
+                  <p className="text-xs text-center text-muted-foreground">
+                    Switching to backup wallet automatically...
+                  </p>
+                </motion.div>
+              )}
+
+              {step === 'fallback_handoff' && selectedPayment && (
+                <motion.div
+                  key="fallback_handoff"
+                  initial={{ opacity: 0, scale: 1 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5, y: -50 }}
+                  className="py-12 text-center space-y-6"
+                >
+                  <motion.div
+                    initial={{ y: 0 }}
+                    animate={{ y: [-10, 10, -10] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    className="text-6xl"
+                  >
+                    {selectedPayment.fallbackIcon}
+                  </motion.div>
+                  <div>
+                    <p className="text-xl font-bold">Opening {selectedPayment.fallbackRail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.fallbackRail}...</p>
+                    <p className="text-muted-foreground mt-2">Switching to backup wallet</p>
+                  </div>
+                  <motion.div
+                    animate={{ width: ['0%', '100%'] }}
+                    transition={{ duration: 1.2, ease: 'easeInOut' }}
+                    className="h-1 bg-primary rounded-full mx-auto max-w-[200px]"
+                  />
+                </motion.div>
+              )}
+
+              {step === 'fallback_wallet' && selectedPayment && selectedPayment.fallbackRail && (
+                <motion.div
+                  key="fallback_wallet"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.1 }}
+                  className="py-8"
+                >
+                  <Card className={cn(
+                    "border-2 overflow-hidden",
+                    selectedPayment.fallbackRail === 'TouchNGo' && "border-blue-500 bg-gradient-to-br from-blue-500 to-blue-600",
+                    selectedPayment.fallbackRail === 'GrabPay' && "border-green-500 bg-gradient-to-br from-green-500 to-green-600",
+                    selectedPayment.fallbackRail === 'Boost' && "border-orange-500 bg-gradient-to-br from-orange-500 to-orange-600",
+                    selectedPayment.fallbackRail === 'DuitNow' && "border-pink-500 bg-gradient-to-br from-pink-500 to-pink-600"
+                  )}>
+                    <CardContent className="p-6 text-white text-center space-y-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-3xl">{selectedPayment.fallbackIcon}</span>
+                        <span className="text-xl font-bold">
+                          {selectedPayment.fallbackRail === 'TouchNGo' ? "Touch 'n Go eWallet" : selectedPayment.fallbackRail}
+                        </span>
+                      </div>
+                      
+                      <Badge className="bg-white/20 text-white border-0">
+                        Fallback Payment
+                      </Badge>
+                      
+                      <div className="py-4 border-t border-b border-white/20">
+                        <p className="text-sm opacity-80">Pay to</p>
+                        <p className="text-lg font-semibold">{selectedPayment.merchant}</p>
+                        <p className="text-4xl font-bold mt-2">RM {selectedPayment.amount.toFixed(2)}</p>
+                      </div>
+                      
+                      <motion.div
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 1 }}
+                        className="flex items-center justify-center gap-2"
+                      >
+                        <Fingerprint className="h-5 w-5" />
+                        <span className="text-sm">Confirming payment...</span>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                  
+                  <p className="text-xs text-center text-muted-foreground mt-4">
+                    Payment recovered via {selectedPayment.fallbackRail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.fallbackRail}
+                  </p>
+                </motion.div>
+              )}
+
               {step === 'returning' && selectedPayment && (
                 <motion.div
                   key="returning"
@@ -525,7 +742,7 @@ const DemoPage = () => {
                     <ArrowRight className="h-12 w-12 text-primary" />
                   </motion.div>
                   <p className="text-xl font-medium">Returning to FLOW...</p>
-                  <p className="text-muted-foreground">Payment confirmed by {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail}</p>
+                  <p className="text-muted-foreground">Payment confirmed by {selectedPayment.simulateError ? (selectedPayment.fallbackRail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.fallbackRail) : (selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail)}</p>
                 </motion.div>
               )}
 
