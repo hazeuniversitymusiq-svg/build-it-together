@@ -14,6 +14,7 @@ import QuickPayWidget from "@/components/surfaces/QuickPayWidget";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import NotificationSurface from "@/components/surfaces/NotificationSurface";
 import FlowIdentityCard from "@/components/identity/FlowIdentityCard";
+import { QuickBalanceSync } from "@/components/balance/QuickBalanceSync";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { useTestMode } from "@/hooks/useTestMode";
 
@@ -191,6 +192,9 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
           variant="bills"
         />
       </motion.div>
+
+      {/* Quick Balance Sync - FLOW Protocol Layer 2 */}
+      <QuickBalanceSync className="mb-4" />
 
       {/* Quick Pay Surface */}
       <QuickPayWidget className="mb-4" />
