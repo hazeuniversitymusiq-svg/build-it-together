@@ -11,7 +11,9 @@ import BottomNav from "@/components/layout/BottomNav";
 import { useOrchestration } from "@/contexts/OrchestrationContext";
 import { useSecurity } from "@/contexts/SecurityContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useTestMode } from "@/hooks/useTestMode";
 import { KillSwitch } from "@/components/settings/KillSwitch";
+import { Switch } from "@/components/ui/switch";
 import { 
   ChevronRight, 
   Wallet, 
@@ -20,7 +22,9 @@ import {
   Shield, 
   Bell,
   DollarSign,
-  LogOut
+  LogOut,
+  FlaskConical,
+  Smartphone
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -28,6 +32,7 @@ const SettingsPage = () => {
   const { sources, guardrails, walletBalance } = useOrchestration();
   const { isWebAuthnRegistered } = useSecurity();
   const { signOut } = useAuth();
+  const { mode, toggleMode, isFieldTest } = useTestMode();
 
   const railIcons = {
     wallet: Wallet,
@@ -138,6 +143,36 @@ const SettingsPage = () => {
         <section className="px-6 mb-8">
           <p className="text-sm text-muted-foreground mb-4">Emergency Controls</p>
           <KillSwitch />
+        </section>
+
+        {/* Test Mode */}
+        <section className="px-6 mb-8">
+          <p className="text-sm text-muted-foreground mb-4">Test Mode</p>
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isFieldTest ? (
+                  <Smartphone className="w-5 h-5 text-primary" />
+                ) : (
+                  <FlaskConical className="w-5 h-5 text-muted-foreground" />
+                )}
+                <div>
+                  <span className="text-foreground font-medium">
+                    {isFieldTest ? "Field Test Mode" : "Prototype Mode"}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isFieldTest 
+                      ? "Opens real wallet apps for payment" 
+                      : "Simulates payment execution"}
+                  </p>
+                </div>
+              </div>
+              <Switch 
+                checked={isFieldTest} 
+                onCheckedChange={toggleMode}
+              />
+            </div>
+          </div>
         </section>
 
         {/* Security */}

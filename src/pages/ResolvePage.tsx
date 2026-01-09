@@ -11,6 +11,7 @@ import { Loader2, Check, ArrowRight, Wallet, CreditCard, ShieldCheck } from "luc
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIntent, type ResolutionPlan, type ResolutionStep } from "@/lib/core/resolve-engine";
 import { useToast } from "@/hooks/use-toast";
+import { useTestMode, getConfirmRoute } from "@/hooks/useTestMode";
 
 const stepIcons: Record<string, React.ReactNode> = {
   TOP_UP: <Wallet className="w-5 h-5" />,
@@ -73,6 +74,7 @@ const ResolvePage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { intentId } = useParams<{ intentId: string }>();
   const { toast } = useToast();
+  const { mode } = useTestMode();
   
   const [plan, setPlan] = useState<ResolutionPlan | null>(null);
   const [planId, setPlanId] = useState<string | null>(null);
@@ -133,13 +135,12 @@ const ResolvePage = forwardRef<HTMLDivElement>((_, ref) => {
       // Small delay before navigation
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Navigate to handoff (real-world) or confirm (simulated)
-      // For field testing, default to handoff
-      navigate(`/handoff/${result.planId}`);
+      // Navigate based on test mode setting
+      navigate(getConfirmRoute(result.planId, mode));
     };
 
     runResolve();
-  }, [intentId, navigate, toast]);
+  }, [intentId, navigate, toast, mode]);
 
   return (
     <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
