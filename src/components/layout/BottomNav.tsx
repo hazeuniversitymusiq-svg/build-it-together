@@ -1,19 +1,22 @@
 /**
  * FLOW Bottom Navigation
  * 
- * iOS 26 Liquid Glass design - floating glass pill with aurora accents
+ * Atome-inspired design with iOS 26 Liquid Glass styling
+ * - 5 nav items with center elevated Scan button
+ * - Clean minimal icons with labels
+ * - Smooth active state transitions
  */
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Send, Clock, Settings, Scan } from "lucide-react";
+import { Home, Send, Receipt, User, Scan } from "lucide-react";
 
 const navItems = [
   { path: "/home", icon: Home, label: "Home" },
   { path: "/send", icon: Send, label: "Send" },
   { path: "/scan", icon: Scan, label: "Scan", primary: true },
-  { path: "/activity", icon: Clock, label: "Activity" },
-  { path: "/settings", icon: Settings, label: "Settings" },
+  { path: "/bills", icon: Receipt, label: "Bills" },
+  { path: "/settings", icon: User, label: "Me" },
 ];
 
 const BottomNav = () => {
@@ -22,7 +25,7 @@ const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="max-w-md mx-auto px-4 pb-6 safe-area-bottom">
+      <div className="max-w-md mx-auto px-4 pb-4 safe-area-bottom">
         {/* Floating glass pill */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
@@ -41,65 +44,73 @@ const BottomNav = () => {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`relative flex flex-col items-center transition-all duration-300 ${
-                    isPrimary ? "px-2" : "py-2 px-3"
+                  className={`relative flex flex-col items-center justify-center transition-all duration-300 ${
+                    isPrimary ? "px-1" : "py-2 px-3 min-w-[56px]"
                   }`}
                 >
                   {isPrimary ? (
-                    /* Central Scan button with aurora glow */
+                    /* Central Scan button - Atome style elevated circle */
                     <motion.div
-                      whileTap={{ scale: 0.95 }}
-                      className={`relative -mt-6 mb-1`}
+                      whileTap={{ scale: 0.92 }}
+                      className="relative -mt-8 mb-1"
                     >
-                      {/* Glow effect */}
-                      <div className="absolute inset-0 aurora-gradient rounded-full blur-lg opacity-60 scale-110" />
+                      {/* Outer glow ring */}
+                      <div className="absolute inset-[-4px] aurora-gradient rounded-full opacity-40 blur-md" />
                       
-                      {/* Button */}
-                      <div className={`relative w-14 h-14 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora ${
-                        isActive ? 'ring-2 ring-white/30' : ''
+                      {/* Main button */}
+                      <div className={`relative w-14 h-14 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora transition-all duration-200 ${
+                        isActive ? 'ring-2 ring-white/40 scale-105' : ''
                       }`}>
-                        <Icon size={24} strokeWidth={2} className="text-white" />
+                        <Icon size={26} strokeWidth={2} className="text-white" />
                       </div>
+                      
+                      {/* Label below */}
+                      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-medium text-foreground whitespace-nowrap">
+                        {item.label}
+                      </span>
                     </motion.div>
                   ) : (
-                    /* Regular nav items */
-                    <motion.div
-                      animate={{ 
-                        scale: isActive ? 1 : 0.92,
-                      }}
-                      transition={{ duration: 0.2 }}
-                      className="relative"
-                    >
-                      {/* Active glow indicator */}
-                      {isActive && (
-                        <motion.div
-                          layoutId="navGlow"
-                          className="absolute -inset-2 bg-aurora-blue/10 rounded-2xl"
-                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    /* Regular nav items - Atome style */
+                    <>
+                      <motion.div
+                        animate={{ 
+                          scale: isActive ? 1.05 : 1,
+                          y: isActive ? -2 : 0,
+                        }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="relative"
+                      >
+                        {/* Active indicator dot */}
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeIndicator"
+                            className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-aurora-blue"
+                            transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                          />
+                        )}
+                        
+                        <Icon
+                          size={24}
+                          strokeWidth={isActive ? 2.5 : 1.5}
+                          className={`transition-all duration-200 ${
+                            isActive 
+                              ? "text-aurora-blue drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" 
+                              : "text-muted-foreground"
+                          }`}
                         />
-                      )}
+                      </motion.div>
                       
-                      <Icon
-                        size={22}
-                        strokeWidth={isActive ? 2 : 1.5}
-                        className={`relative z-10 transition-colors duration-200 ${
-                          isActive ? "text-aurora-blue" : "text-muted-foreground"
+                      {/* Label */}
+                      <span
+                        className={`text-[10px] mt-1.5 font-medium transition-all duration-200 ${
+                          isActive 
+                            ? "text-aurora-blue" 
+                            : "text-muted-foreground"
                         }`}
-                      />
-                    </motion.div>
-                  )}
-                  
-                  {/* Label */}
-                  {!isPrimary && (
-                    <span
-                      className={`text-[10px] mt-1 font-medium transition-all duration-200 ${
-                        isActive 
-                          ? "text-aurora-blue" 
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
+                      >
+                        {item.label}
+                      </span>
+                    </>
                   )}
                 </button>
               );
