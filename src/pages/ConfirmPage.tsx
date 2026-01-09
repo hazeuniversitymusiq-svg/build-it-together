@@ -5,7 +5,7 @@
  * executes plan, and navigates to Done screen.
  */
 
-import { forwardRef, useState, useEffect } from "react";
+import { forwardRef, useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
@@ -30,8 +30,11 @@ import { useFlowPause } from "@/hooks/useFlowPause";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useFlowIntelligence } from "@/hooks/useFlowIntelligence";
 import { useToast } from "@/hooks/use-toast";
+import { useLinkedCards } from "@/hooks/useLinkedCards";
+import { useFundingSources } from "@/hooks/useFundingSources";
 import RiskIndicator from "@/components/intelligence/RiskIndicator";
 import SmartSuggestion from "@/components/intelligence/SmartSuggestion";
+import PaymentMethodSelector, { type PaymentMethod } from "@/components/payment/PaymentMethodSelector";
 import type { Database } from "@/integrations/supabase/types";
 
 type ResolutionPlan = Database['public']['Tables']['resolution_plans']['Row'];
@@ -78,6 +81,8 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const { isPaused, isLoading: isPauseLoading } = useFlowPause();
   const haptics = useHaptics();
   const { analyzePayment, getFundingRecommendation, isAnalyzing } = useFlowIntelligence();
+  const { cards: linkedCards, loading: cardsLoading } = useLinkedCards();
+  const { sources: fundingSources, wallets, banks } = useFundingSources();
 
   const [state, setState] = useState<ConfirmState>({
     plan: null,
@@ -90,10 +95,43 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [recoveryRail, setRecoveryRail] = useState<string | null>(null);
   const [showRecovery, setShowRecovery] = useState(false);
   
+  // Payment method selection state
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [isCardPayment, setIsCardPayment] = useState(false);
+  
   // AI Intelligence state
   const [paymentAnalysis, setPaymentAnalysis] = useState<PaymentAnalysis | null>(null);
   const [fundingRec, setFundingRec] = useState<FundingRecommendation | null>(null);
   const [showFundingSuggestion, setShowFundingSuggestion] = useState(true);
+
+  // Build payment methods list from funding sources
+  const paymentMethods = useMemo<PaymentMethod[]>(() => {
+    const methods: PaymentMethod[] = [];
+    
+    // Add wallets
+    wallets.forEach(w => {
+      methods.push({
+        id: w.name,
+        type: "wallet",
+        name: w.name,
+        displayName: w.name,
+        icon: <Wallet className="w-5 h-5" />,
+      });
+    });
+    
+    // Add banks
+    banks.forEach(b => {
+      methods.push({
+        id: b.name,
+        type: "bank",
+        name: b.name,
+        displayName: b.name,
+        icon: <Building2 className="w-5 h-5" />,
+      });
+    });
+    
+    return methods;
+  }, [wallets, banks]);
 
   // Load plan and intent data
   useEffect(() => {
@@ -146,6 +184,9 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         isLoading: false,
         error: null,
       });
+
+      // Initialize selected payment method to the plan's chosen rail
+      setSelectedPaymentMethod(plan.chosen_rail);
 
       // Run AI analysis in background (quiet intelligence)
       analyzePayment(
@@ -217,6 +258,14 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         .single();
 
       const deviceId = userData?.device_id || "prototype-device";
+
+      // Log if using card payment (for prototype, actual card processing would be handled by payment gateway)
+      if (isCardPayment && selectedPaymentMethod) {
+        const selectedCard = linkedCards.find(c => c.id === selectedPaymentMethod);
+        if (selectedCard) {
+          console.log(`Processing card payment with ${selectedCard.cardType} •••• ${selectedCard.cardNumber}`);
+        }
+      }
 
       const result = await executePlan(user.id, deviceId, state.plan.id);
 
@@ -472,13 +521,18 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
           </span>
         </div>
 
-        {/* Paying with */}
-        <div className="flex justify-between items-center py-3 border-b border-border">
-          <span className="text-muted-foreground">Paying with</span>
-          <div className="flex items-center gap-2">
-            {railIcons[plan.chosen_rail] || <Wallet className="w-5 h-5" />}
-            <span className="font-medium text-foreground">{plan.chosen_rail}</span>
-          </div>
+        {/* Paying with - Interactive Selector */}
+        <div className="border-b border-border">
+          <PaymentMethodSelector
+            selectedMethodId={selectedPaymentMethod || plan.chosen_rail}
+            methods={paymentMethods}
+            linkedCards={linkedCards}
+            onSelect={(methodId, isCard) => {
+              setSelectedPaymentMethod(methodId);
+              setIsCardPayment(isCard);
+            }}
+            disabled={isProcessing || isComplete}
+          />
         </div>
 
         {/* Fallback (if any) */}
