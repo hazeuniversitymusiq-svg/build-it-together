@@ -7,6 +7,7 @@
 
 import { forwardRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { 
   ShieldCheck, 
   Wallet, 
@@ -15,7 +16,8 @@ import {
   CheckCircle2, 
   XCircle,
   ChevronRight,
-  Loader2
+  Loader2,
+  Plus
 } from "lucide-react";
 import {
   Sheet,
@@ -24,6 +26,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Connection {
@@ -56,6 +59,7 @@ const typeColors: Record<string, string> = {
 
 const FlowIdentityCard = forwardRef<HTMLDivElement, FlowIdentityCardProps>(
   ({ className = "" }, ref) => {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [connections, setConnections] = useState<Connection[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -237,6 +241,19 @@ const FlowIdentityCard = forwardRef<HTMLDivElement, FlowIdentityCardProps>(
                     </p>
                   </div>
                 )}
+
+                {/* Add Connection Button */}
+                <Button
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate("/auto-sync");
+                  }}
+                  variant="outline"
+                  className="w-full h-14 rounded-2xl border-dashed border-2 gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Connection
+                </Button>
               </div>
             )}
           </SheetContent>
