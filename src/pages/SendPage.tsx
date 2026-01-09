@@ -1,7 +1,7 @@
 /**
- * FLOW Send Money Page - Screen 10
+ * FLOW Send Money Page
  * 
- * Contact selection + amount entry → Navigate to Resolve screen
+ * iOS 26 Liquid Glass design - Contact selection + amount entry
  */
 
 import { forwardRef, useState, useEffect } from "react";
@@ -12,7 +12,8 @@ import {
   ArrowRight, 
   Users, 
   ChevronLeft,
-  Loader2
+  Loader2,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [hasContactsPermission, setHasContactsPermission] = useState(false);
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
 
-  // Load contacts from database
   useEffect(() => {
     const loadContacts = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -50,7 +50,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
         return;
       }
 
-      // Check if contacts connector is available
       const { data: connector } = await supabase
         .from("connectors")
         .select("*")
@@ -62,7 +61,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
       if (connector) {
         setHasContactsPermission(true);
 
-        // Load contacts
         const { data: contactsData } = await supabase
           .from("contacts")
           .select("*")
@@ -77,7 +75,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
             initial: c.name.charAt(0).toUpperCase(),
           })));
         } else {
-          // Sample contacts for prototype
           setContacts([
             { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
             { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
@@ -100,7 +97,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Create contacts connector
     await supabase.from("connectors").insert({
       user_id: user.id,
       name: "Contacts",
@@ -110,8 +106,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
     });
 
     setHasContactsPermission(true);
-
-    // Load sample contacts for prototype
     setContacts([
       { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
       { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
@@ -145,7 +139,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
         return;
       }
 
-      // Create intent in database
       const { data: intent, error } = await supabase
         .from("intents")
         .insert({
@@ -167,7 +160,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
         throw new Error("Failed to create payment request");
       }
 
-      // Navigate to resolve screen
       navigate(`/resolve/${intent.id}`);
     } catch (error) {
       console.error("Error creating intent:", error);
@@ -180,7 +172,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
     }
   };
 
-  // Filter contacts by search
   const filteredContacts = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.phone.includes(searchQuery)
@@ -189,25 +180,31 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
   if (isLoading) {
     return (
       <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full aurora-gradient opacity-30 animate-aurora" />
+          <Loader2 className="w-12 h-12 text-aurora-blue animate-spin" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom">
+    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
-      <div className="px-6 pt-16 pb-2">
+      <div className="px-6 pt-14 pb-2">
         <div className="flex items-center gap-4 mb-2">
           <button 
             onClick={() => navigate("/home")}
-            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+            className="w-10 h-10 rounded-full glass-card flex items-center justify-center shadow-float"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Send Money
-          </h1>
+          <div>
+            <p className="text-muted-foreground text-sm">Transfer money</p>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+              Send
+            </h1>
+          </div>
         </div>
       </div>
 
@@ -219,15 +216,11 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
         className="px-6 pb-6"
       >
         <p className="text-muted-foreground">
-          Choose a person.
-        </p>
-        <p className="text-muted-foreground">
-          FLOW will deliver to the best supported wallet.
+          FLOW delivers to the best supported wallet.
         </p>
       </motion.div>
 
       <AnimatePresence mode="wait">
-        {/* No Contacts Permission State */}
         {!hasContactsPermission ? (
           <motion.div
             key="no-permission"
@@ -236,16 +229,24 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col items-center justify-center px-6 text-center"
           >
-            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
-              <Users className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <p className="text-foreground font-medium mb-2">
-              Allow contacts to send faster.
+            <motion.div 
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="w-24 h-24 rounded-full aurora-gradient-soft flex items-center justify-center mb-6 shadow-float-lg"
+            >
+              <Users className="w-12 h-12 text-aurora-purple" />
+            </motion.div>
+            <p className="text-foreground font-medium text-lg mb-2">
+              Allow contacts to send faster
             </p>
             <p className="text-muted-foreground text-sm mb-8 max-w-xs">
               FLOW needs access to your contacts to help you send money quickly.
             </p>
-            <Button onClick={handleAllowContacts} size="lg" className="rounded-2xl px-8">
+            <Button 
+              onClick={handleAllowContacts} 
+              size="lg" 
+              className="rounded-2xl px-8 aurora-gradient text-white border-0 shadow-glow-aurora"
+            >
               Allow contacts access
             </Button>
           </motion.div>
@@ -262,31 +263,34 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Contacts"
+                placeholder="Search contacts"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 rounded-xl bg-muted border-0"
+                className="pl-12 h-12 rounded-2xl glass-card border-0 shadow-float"
               />
             </div>
 
             {/* Contacts List */}
             <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-              {filteredContacts.map((contact) => (
+              {filteredContacts.map((contact, index) => (
                 <motion.button
                   key={contact.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setSelectedContact(
                     selectedContact?.id === contact.id ? null : contact
                   )}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all shadow-float ${
                     selectedContact?.id === contact.id
-                      ? "bg-primary/10 border-2 border-primary"
-                      : "bg-muted/50 border-2 border-transparent hover:bg-muted"
+                      ? "aurora-gradient-soft aurora-border"
+                      : "glass-card hover:bg-white/60 dark:hover:bg-white/5"
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-medium ${
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-medium transition-all ${
                     selectedContact?.id === contact.id
-                      ? "bg-primary text-primary-foreground"
+                      ? "aurora-gradient text-white shadow-glow-blue"
                       : "bg-secondary text-secondary-foreground"
                   }`}>
                     {contact.initial}
@@ -299,23 +303,28 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="w-6 h-6 rounded-full bg-primary flex items-center justify-center"
+                      className="w-6 h-6 rounded-full aurora-gradient flex items-center justify-center"
                     >
-                      <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                      <Check className="w-4 h-4 text-white" />
                     </motion.div>
                   )}
                 </motion.button>
               ))}
 
               {filteredContacts.length === 0 && (
-                <div className="text-center py-8">
+                <div className="text-center py-8 glass-card rounded-2xl">
                   <p className="text-muted-foreground">No contacts found</p>
                 </div>
               )}
             </div>
 
             {/* Amount Field */}
-            <div className="mb-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mb-4"
+            >
               <label className="block text-sm text-muted-foreground mb-2">Amount</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
@@ -326,19 +335,19 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-14 h-14 text-xl font-semibold rounded-xl bg-muted border-0"
+                  className="pl-14 h-14 text-xl font-semibold rounded-2xl glass-card border-0 shadow-float"
                   step="0.01"
                   min="0"
                 />
               </div>
-            </div>
+            </motion.div>
 
             {/* Primary Button */}
             <Button
               onClick={handleResolveAndSend}
               disabled={!selectedContact || !amount || parseFloat(amount) <= 0 || isCreatingIntent}
               size="lg"
-              className="w-full h-14 text-base font-medium rounded-2xl mb-8"
+              className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white border-0 shadow-glow-aurora disabled:opacity-50 disabled:shadow-none mb-4"
             >
               {isCreatingIntent ? (
                 <>

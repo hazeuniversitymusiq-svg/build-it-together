@@ -1,7 +1,7 @@
 /**
  * FLOW Activity Page
  * 
- * Full transaction history with filters and detailed cards.
+ * iOS 26 Liquid Glass design - Full transaction history with filters
  */
 
 import { forwardRef, useState, useEffect } from "react";
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import type { Database } from "@/integrations/supabase/types";
 
 type TransactionLog = Database['public']['Tables']['transaction_logs']['Row'];
@@ -73,7 +73,6 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Load transaction logs
   const loadLogs = async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
     
@@ -101,22 +100,16 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
     loadLogs();
   }, [navigate]);
 
-  // Filter logs
   const filteredLogs = logs.filter(log => {
-    // Type filter
     if (typeFilter !== "all") {
       if (typeFilter === "payments" && log.intent_type !== "PayMerchant") return false;
       if (typeFilter === "transfers" && log.intent_type !== "SendMoney") return false;
       if (typeFilter === "bills" && log.intent_type !== "PayBill") return false;
     }
-    
-    // Status filter
     if (statusFilter !== "all" && log.status !== statusFilter) return false;
-    
     return true;
   });
 
-  // Get display info
   const getLogDisplay = (log: TransactionLog) => {
     const isOutgoing = log.intent_type !== "RequestMoney";
     
@@ -162,20 +155,23 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
   if (isLoading) {
     return (
       <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full aurora-gradient opacity-30 animate-aurora" />
+          <Loader2 className="w-12 h-12 text-aurora-blue animate-spin" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom">
+    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
-      <div className="px-6 pt-16 pb-4">
+      <div className="px-6 pt-14 pb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate("/home")}
-              className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+              className="w-10 h-10 rounded-full glass-card flex items-center justify-center shadow-float"
             >
               <ChevronLeft className="w-5 h-5 text-foreground" />
             </button>
@@ -186,18 +182,20 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-full transition-colors ${
-                showFilters ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              className={`w-10 h-10 rounded-full transition-all shadow-float ${
+                showFilters 
+                  ? "aurora-gradient text-white" 
+                  : "glass-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Filter className="w-5 h-5" />
+              <Filter className="w-5 h-5 mx-auto" />
             </button>
             <button 
               onClick={() => loadLogs(true)}
               disabled={isRefreshing}
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="w-10 h-10 rounded-full glass-card text-muted-foreground hover:text-foreground transition-colors shadow-float"
             >
-              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 mx-auto ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -221,8 +219,8 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
                       onClick={() => setTypeFilter(btn.key)}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                         typeFilter === btn.key
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
+                          ? "aurora-gradient text-white shadow-glow-blue"
+                          : "glass-card text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {btn.label}
@@ -241,8 +239,8 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
                       onClick={() => setStatusFilter(btn.key)}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                         statusFilter === btn.key
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
+                          ? "aurora-gradient text-white shadow-glow-blue"
+                          : "glass-card text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {btn.label}
@@ -278,13 +276,13 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
-              className="bg-card border border-border rounded-2xl p-4"
+              className="glass-card rounded-2xl p-4 shadow-float"
             >
               {/* Top Row */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-foreground" />
+                  <div className="w-12 h-12 rounded-xl aurora-gradient-soft flex items-center justify-center">
+                    <Icon className="w-6 h-6 text-aurora-blue" />
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{display.name}</p>
@@ -307,7 +305,7 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
               </div>
 
               {/* Details Row */}
-              <div className="flex items-center justify-between text-sm border-t border-border pt-3">
+              <div className="flex items-center justify-between text-sm border-t border-border/30 pt-3">
                 <div className="flex items-center gap-4 text-muted-foreground">
                   {log.rail_used && (
                     <span>via {log.rail_used}</span>
@@ -321,9 +319,9 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
                 </span>
               </div>
 
-              {/* Note (if any) */}
+              {/* Note */}
               {log.note && (
-                <div className="mt-3 pt-3 border-t border-border">
+                <div className="mt-3 pt-3 border-t border-border/30">
                   <p className="text-sm text-muted-foreground italic">"{log.note}"</p>
                 </div>
               )}
@@ -336,10 +334,10 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-20 text-center"
+            className="flex flex-col items-center justify-center py-20 text-center glass-card rounded-3xl"
           >
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Receipt className="w-8 h-8 text-muted-foreground" />
+            <div className="w-16 h-16 rounded-full aurora-gradient-soft flex items-center justify-center mb-4">
+              <Receipt className="w-8 h-8 text-aurora-purple" />
             </div>
             <p className="font-medium text-foreground mb-1">No transactions found</p>
             <p className="text-sm text-muted-foreground max-w-xs">
@@ -363,9 +361,6 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
           </motion.div>
         )}
       </div>
-
-      {/* Bottom padding */}
-      <div className="h-8" />
     </div>
   );
 });
