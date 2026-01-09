@@ -7,17 +7,14 @@
 
 import { forwardRef } from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck, CheckCircle, Link2, Layers, Fingerprint } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 interface FlowIdentityCardProps {
   className?: string;
-  securityLevel?: "PIN only" | "Biometric" | "Face ID";
-  connectionsCount?: number;
-  mode?: "Prototype" | "Pilot" | "Production";
 }
 
 const FlowIdentityCard = forwardRef<HTMLDivElement, FlowIdentityCardProps>(
-  ({ className = "", securityLevel = "PIN only", connectionsCount = 0, mode = "Prototype" }, ref) => {
+  ({ className = "" }, ref) => {
     return (
       <motion.div
         ref={ref}
@@ -26,54 +23,6 @@ const FlowIdentityCard = forwardRef<HTMLDivElement, FlowIdentityCardProps>(
         transition={{ duration: 0.5 }}
         className={className}
       >
-        {/* Section Header */}
-        <h2 className="text-lg font-semibold text-foreground mb-2">Flow Identity</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Your Flow Identity is now active.
-        </p>
-        <p className="text-sm text-muted-foreground mb-6">
-          It represents your verified identity, device, and connected payment ecosystem.
-        </p>
-
-        {/* Status Rows */}
-        <div className="space-y-2 mb-8">
-          {/* Identity Status */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-muted-foreground" />
-              <span className="text-foreground font-medium">Identity</span>
-            </div>
-            <span className="text-success font-medium">Active</span>
-          </div>
-
-          {/* Security Level */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border">
-            <div className="flex items-center gap-3">
-              <Fingerprint className="w-5 h-5 text-muted-foreground" />
-              <span className="text-foreground font-medium">Security</span>
-            </div>
-            <span className="text-muted-foreground">{securityLevel}</span>
-          </div>
-
-          {/* Connections */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border">
-            <div className="flex items-center gap-3">
-              <Link2 className="w-5 h-5 text-muted-foreground" />
-              <span className="text-foreground font-medium">Connections</span>
-            </div>
-            <span className="text-muted-foreground">{connectionsCount} linked</span>
-          </div>
-
-          {/* Mode */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border">
-            <div className="flex items-center gap-3">
-              <Layers className="w-5 h-5 text-muted-foreground" />
-              <span className="text-foreground font-medium">Mode</span>
-            </div>
-            <span className="text-aurora-blue font-medium">{mode}</span>
-          </div>
-        </div>
-
         {/* Identity Card Visual */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
