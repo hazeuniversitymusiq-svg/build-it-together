@@ -40,19 +40,19 @@ const AppCard = forwardRef<HTMLDivElement, {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
       onClick={onToggle}
-      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+      className={`glass-card p-4 transition-all cursor-pointer ${
         app.selected 
-          ? "border-primary bg-primary/5" 
-          : "border-border bg-card hover:border-muted-foreground/30"
+          ? "ring-2 ring-aurora-blue/50 bg-aurora-blue/5" 
+          : "hover:bg-white/5"
       }`}
     >
       <div className="flex items-start gap-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
           app.app_type === "wallet" 
-            ? "bg-accent/10 text-accent"
+            ? "bg-aurora-blue/20 text-aurora-blue"
             : app.app_type === "bank"
-            ? "bg-primary/10 text-primary"
-            : "bg-muted text-muted-foreground"
+            ? "bg-aurora-purple/20 text-aurora-purple"
+            : "bg-aurora-pink/20 text-aurora-pink"
         }`}>
           {appIcons[app.app_name] || <Wallet className="w-5 h-5" />}
         </div>
@@ -60,8 +60,8 @@ const AppCard = forwardRef<HTMLDivElement, {
           <div className="flex items-center justify-between">
             <h3 className="font-medium text-foreground">{app.app_name}</h3>
             {app.selected && (
-              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                <Check className="w-3 h-3 text-primary-foreground" />
+              <div className="w-5 h-5 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
+                <Check className="w-3 h-3 text-white" />
               </div>
             )}
           </div>
@@ -231,13 +231,17 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
   const selectedCount = discoveredApps.filter(app => app.selected).length;
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom">
+    <div ref={ref} className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
+      {/* Aurora background glow */}
+      <div className="absolute top-20 right-0 w-64 h-64 bg-aurora-purple/15 blur-3xl rounded-full" />
+      <div className="absolute bottom-60 left-0 w-48 h-48 bg-aurora-blue/10 blur-3xl rounded-full" />
+      
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-16 pb-6"
+        className="pt-16 pb-6 relative z-10"
       >
         <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2">
           Auto Sync
@@ -248,7 +252,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
       </motion.div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative z-10">
         <AnimatePresence mode="wait">
           {!hasScanned ? (
             <motion.div
@@ -260,15 +264,15 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
             >
               {isScanning ? (
                 <>
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                  <div className="w-20 h-20 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
+                    <Loader2 className="w-10 h-10 text-white animate-spin" />
                   </div>
                   <p className="text-muted-foreground">Scanning your device...</p>
                 </>
               ) : (
                 <Button
                   onClick={runAutoSync}
-                  className="h-14 px-8 text-base font-medium rounded-2xl"
+                  className="h-14 px-8 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity"
                 >
                   Run Auto Sync
                 </Button>
@@ -282,11 +286,11 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
               className="flex-1 flex flex-col"
             >
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="grid w-full grid-cols-4 h-12 mb-4">
-                  <TabsTrigger value="recommended" className="text-xs">Recommended</TabsTrigger>
-                  <TabsTrigger value="wallets" className="text-xs">Wallets</TabsTrigger>
-                  <TabsTrigger value="bills" className="text-xs">Bills</TabsTrigger>
-                  <TabsTrigger value="banks" className="text-xs">Banks</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4 h-12 mb-4 glass rounded-xl p-1">
+                  <TabsTrigger value="recommended" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Recommended</TabsTrigger>
+                  <TabsTrigger value="wallets" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Wallets</TabsTrigger>
+                  <TabsTrigger value="bills" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Bills</TabsTrigger>
+                  <TabsTrigger value="banks" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Banks</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="recommended" className="flex-1 mt-0">
@@ -355,7 +359,7 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.5 }}
-        className="py-4"
+        className="py-4 relative z-10"
       >
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <ShieldCheck className="w-4 h-4" />
@@ -368,14 +372,14 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
-        className="py-6 space-y-3"
+        className="py-6 space-y-3 relative z-10"
       >
         {hasScanned ? (
           <>
             <Button
               onClick={syncRecommended}
               disabled={isSyncing || selectedCount === 0}
-              className="w-full h-14 text-base font-medium rounded-2xl"
+              className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {isSyncing ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
