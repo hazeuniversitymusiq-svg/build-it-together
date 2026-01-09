@@ -1,9 +1,10 @@
 /**
  * FLOW Settings Page
  * 
- * iOS 26 Liquid Glass design - Funding sources, guardrails, security
+ * iOS 26 Liquid Glass design - Payment sources, guardrails, security
  */
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -12,33 +13,28 @@ import { useSecurity } from "@/contexts/SecurityContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useTestMode } from "@/hooks/useTestMode";
 import { KillSwitch } from "@/components/settings/KillSwitch";
+import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
 import { Switch } from "@/components/ui/switch";
 import { 
   ChevronRight, 
+  ChevronDown,
   Wallet, 
-  Building2, 
-  CreditCard, 
   Shield, 
   Bell,
   DollarSign,
   LogOut,
   FlaskConical,
   Smartphone,
-  Layers
+  CreditCard
 } from "lucide-react";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const { sources, guardrails, walletBalance } = useOrchestration();
+  const { guardrails } = useOrchestration();
   const { isWebAuthnRegistered } = useSecurity();
   const { signOut } = useAuth();
   const { toggleMode, isFieldTest } = useTestMode();
-
-  const railIcons = {
-    wallet: Wallet,
-    bank: Building2,
-    card: CreditCard,
-  };
+  const [isSourcesExpanded, setIsSourcesExpanded] = useState(true);
 
   const handleSignOut = async () => {
     await signOut();
@@ -53,55 +49,34 @@ const SettingsPage = () => {
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Settings</h1>
       </header>
 
-      {/* Funding Stack */}
+      {/* Payment Sources - Expandable */}
       <section className="px-6 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Layers className="w-4 h-4 text-aurora-blue" />
-          <p className="text-sm font-medium text-muted-foreground">Funding Stack</p>
-        </div>
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-2xl overflow-hidden shadow-float"
+        <button
+          onClick={() => setIsSourcesExpanded(!isSourcesExpanded)}
+          className="flex items-center justify-between w-full mb-4 group"
         >
-          <div className="divide-y divide-border/30">
-            {sources
-              .sort((a, b) => a.priority - b.priority)
-              .map((source, index) => {
-                const Icon = railIcons[source.type];
-                return (
-                  <motion.div
-                    key={source.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="flex items-center justify-between p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-aurora-blue" />
-                      </div>
-                      <div>
-                        <span className="text-foreground font-medium">{source.name}</span>
-                        {source.type === 'wallet' && (
-                          <p className="text-xs text-muted-foreground">
-                            RM {walletBalance.toFixed(2)} balance
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground glass-subtle px-2 py-1 rounded-full">
-                        #{source.priority}
-                      </span>
-                      <div className={`w-2.5 h-2.5 rounded-full ${
-                        source.isLinked ? "bg-success shadow-glow-success" : "bg-muted-foreground/30"
-                      }`} />
-                    </div>
-                  </motion.div>
-                );
-              })}
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-aurora-blue" />
+            <p className="text-sm font-medium text-muted-foreground">Payment Sources</p>
           </div>
+          <motion.div
+            animate={{ rotate: isSourcesExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.div>
+        </button>
+        
+        <motion.div
+          initial={false}
+          animate={{ 
+            height: isSourcesExpanded ? "auto" : 0,
+            opacity: isSourcesExpanded ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden"
+        >
+          <PaymentSourcesManager />
         </motion.div>
       </section>
 
