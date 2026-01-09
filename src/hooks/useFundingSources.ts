@@ -169,12 +169,34 @@ export function useFundingSources() {
     .filter(s => s.isLinked && s.isAvailable)
     .reduce((sum, s) => sum + s.balance, 0);
 
+  // Get linked cards
+  const linkedCards = sources.filter(s => 
+    (s.type === 'debit_card' || s.type === 'credit_card') && 
+    s.isLinked && 
+    s.isAvailable
+  );
+
+  // Check if user has any linked cards
+  const hasLinkedCards = linkedCards.length > 0;
+
+  // Get sources by type
+  const wallets = sources.filter(s => s.type === 'wallet' && s.isLinked);
+  const banks = sources.filter(s => s.type === 'bank' && s.isLinked);
+  const cards = sources.filter(s => 
+    (s.type === 'debit_card' || s.type === 'credit_card') && s.isLinked
+  );
+
   return {
     sources,
     loading,
     error,
     walletBalance,
     totalBalance,
+    linkedCards,
+    hasLinkedCards,
+    wallets,
+    banks,
+    cards,
     refetch: fetchSources,
     updateBalance,
     updateLinkedStatus,
