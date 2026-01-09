@@ -2,10 +2,10 @@
  * Card Linking Manager
  * 
  * Allows users to add, view, and manage their debit/credit cards.
- * Cards are stored with masked numbers for security.
+ * Cards are stored in Supabase funding_sources for integration with FLOW resolution engine.
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   CreditCard, 
@@ -16,12 +16,14 @@ import {
   Star,
   Shield,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -38,22 +40,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-interface LinkedCard {
-  id: string;
-  cardNumber: string; // Last 4 digits only
-  maskedNumber: string; // e.g., •••• •••• •••• 1234
-  cardholderName: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cardType: 'visa' | 'mastercard' | 'amex';
-  isDefault: boolean;
-  addedAt: string;
-  nickname?: string;
-}
-
-const STORAGE_KEY = 'flow_linked_cards';
-const DEFAULT_CARD_KEY = 'flow_default_card';
+import { useLinkedCards, LinkedCard } from "@/hooks/useLinkedCards";
 
 // Card type detection based on number prefix
 function detectCardType(number: string): 'visa' | 'mastercard' | 'amex' {
@@ -69,11 +56,6 @@ function formatCardNumber(value: string): string {
   const cleaned = value.replace(/\D/g, '');
   const groups = cleaned.match(/.{1,4}/g) || [];
   return groups.join(' ').substring(0, 19);
-}
-
-// Mask card number
-function maskCardNumber(last4: string): string {
-  return `•••• •••• •••• ${last4}`;
 }
 
 // Card brand colors and icons
@@ -158,19 +140,29 @@ function CardVisual({ card, isCompact = false }: { card: LinkedCard; isCompact?:
           </Badge>
         </div>
       )}
+      
+      {/* Type badge */}
+      <div className="absolute bottom-4 right-5">
+        <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
+          {card.fundingSourceType === 'debit_card' ? 'Debit' : 'Credit'}
+        </Badge>
+      </div>
     </div>
   );
 }
 
 export default function CardLinkingManager() {
   const { toast } = useToast();
-  const [cards, setCards] = useState<LinkedCard[]>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  });
-  const [defaultCardId, setDefaultCardId] = useState<string>(() => {
-    return localStorage.getItem(DEFAULT_CARD_KEY) || '';
-  });
+  const { 
+    cards, 
+    loading, 
+    error, 
+    addCard, 
+    removeCard, 
+    setDefaultCard,
+    toggleCardAvailability 
+  } = useLinkedCards();
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<LinkedCard | null>(null);
   
@@ -181,23 +173,9 @@ export default function CardLinkingManager() {
   const [expiryYear, setExpiryYear] = useState('');
   const [cvv, setCvv] = useState('');
   const [nickname, setNickname] = useState('');
+  const [isDebit, setIsDebit] = useState(true);
   const [showCvv, setShowCvv] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Persist changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
-  }, [cards]);
-
-  useEffect(() => {
-    localStorage.setItem(DEFAULT_CARD_KEY, defaultCardId);
-  }, [defaultCardId]);
-
-  // Update cards with default status
-  const cardsWithDefault = cards.map(card => ({
-    ...card,
-    isDefault: card.id === defaultCardId
-  }));
 
   const resetForm = () => {
     setCardNumber('');
@@ -206,6 +184,7 @@ export default function CardLinkingManager() {
     setExpiryYear('');
     setCvv('');
     setNickname('');
+    setIsDebit(true);
     setShowCvv(false);
   };
 
@@ -230,73 +209,93 @@ export default function CardLinkingManager() {
     }
 
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
     const last4 = cleanedNumber.slice(-4);
-    const newCard: LinkedCard = {
-      id: crypto.randomUUID(),
-      cardNumber: last4,
-      maskedNumber: maskCardNumber(last4),
+    const cardType = detectCardType(cleanedNumber);
+
+    const result = await addCard({
+      cardType,
+      last4,
       cardholderName: cardholderName.trim().toUpperCase(),
       expiryMonth,
       expiryYear,
-      cardType: detectCardType(cleanedNumber),
-      isDefault: cards.length === 0,
-      addedAt: new Date().toISOString(),
+      isDebit,
       nickname: nickname.trim() || undefined,
-    };
-
-    setCards(prev => [...prev, newCard]);
-    
-    // Set as default if first card
-    if (cards.length === 0) {
-      setDefaultCardId(newCard.id);
-    }
+    });
 
     setIsSubmitting(false);
-    setIsAddDialogOpen(false);
-    resetForm();
-    
-    toast({ 
-      title: "Card added", 
-      description: `${cardBrands[newCard.cardType].name} ending in ${last4}` 
-    });
-  };
 
-  const handleRemoveCard = (cardId: string) => {
-    const card = cards.find(c => c.id === cardId);
-    setCards(prev => prev.filter(c => c.id !== cardId));
-    
-    // If removing default card, set new default
-    if (cardId === defaultCardId) {
-      const remaining = cards.filter(c => c.id !== cardId);
-      setDefaultCardId(remaining[0]?.id || '');
+    if (result.success) {
+      setIsAddDialogOpen(false);
+      resetForm();
+      toast({ 
+        title: "Card linked", 
+        description: `${cardBrands[cardType].name} ending in ${last4} added to FLOW` 
+      });
+    } else {
+      toast({ title: "Failed to add card", description: result.error, variant: "destructive" });
     }
-    
-    toast({ 
-      title: "Card removed", 
-      description: `Card ending in ${card?.cardNumber} has been unlinked` 
-    });
-    setSelectedCard(null);
   };
 
-  const handleSetDefault = (cardId: string) => {
-    setDefaultCardId(cardId);
-    toast({ title: "Default card updated" });
+  const handleRemoveCard = async (cardId: string) => {
+    const card = cards.find(c => c.id === cardId);
+    const result = await removeCard(cardId);
+    
+    if (result.success) {
+      toast({ 
+        title: "Card removed", 
+        description: `Card ending in ${card?.cardNumber} has been unlinked` 
+      });
+      setSelectedCard(null);
+    } else {
+      toast({ title: "Failed to remove card", description: result.error, variant: "destructive" });
+    }
+  };
+
+  const handleSetDefault = async (cardId: string) => {
+    const result = await setDefaultCard(cardId);
+    if (result.success) {
+      toast({ title: "Default card updated" });
+    } else {
+      toast({ title: "Failed to update default", description: result.error, variant: "destructive" });
+    }
+  };
+
+  const handleToggleAvailability = async (cardId: string, available: boolean) => {
+    const result = await toggleCardAvailability(cardId, available);
+    if (result.success) {
+      toast({ title: available ? "Card enabled" : "Card disabled" });
+    } else {
+      toast({ title: "Failed to update card", description: result.error, variant: "destructive" });
+    }
   };
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => (currentYear + i).toString().slice(-2));
   const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="glass-card rounded-2xl p-4 text-center">
+        <p className="text-sm text-destructive">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Cards Grid */}
-      {cardsWithDefault.length > 0 ? (
+      {cards.length > 0 ? (
         <div className="space-y-3">
-          {cardsWithDefault.map((card, index) => (
+          {cards.map((card, index) => (
             <motion.div
               key={card.id}
               initial={{ opacity: 0, y: 10 }}
@@ -304,7 +303,8 @@ export default function CardLinkingManager() {
               transition={{ delay: index * 0.1 }}
               className={cn(
                 "glass-card rounded-2xl p-4 cursor-pointer transition-all",
-                selectedCard?.id === card.id ? "ring-2 ring-primary" : "hover:bg-muted/50"
+                selectedCard?.id === card.id ? "ring-2 ring-primary" : "hover:bg-muted/50",
+                !card.isAvailable && "opacity-60"
               )}
               onClick={() => setSelectedCard(selectedCard?.id === card.id ? null : card)}
             >
@@ -321,6 +321,9 @@ export default function CardLinkingManager() {
                         Default
                       </Badge>
                     )}
+                    <Badge variant="outline" className="text-xs">
+                      {card.fundingSourceType === 'debit_card' ? 'Debit' : 'Credit'}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground font-mono">
                     {card.maskedNumber}
@@ -329,7 +332,13 @@ export default function CardLinkingManager() {
                     Expires {card.expiryMonth}/{card.expiryYear}
                   </p>
                 </div>
-                <CreditCard className="w-5 h-5 text-muted-foreground" />
+                <Switch 
+                  checked={card.isAvailable}
+                  onCheckedChange={(checked) => {
+                    handleToggleAvailability(card.id, checked);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
               </div>
               
               {/* Expanded actions */}
@@ -377,7 +386,7 @@ export default function CardLinkingManager() {
                       
                       <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
                         <Shield className="w-3 h-3" />
-                        <span>Card details are encrypted and securely stored</span>
+                        <span>This card is available as a funding source in FLOW checkout</span>
                       </div>
                     </div>
                   </motion.div>
@@ -415,6 +424,24 @@ export default function CardLinkingManager() {
           </DialogHeader>
           
           <div className="space-y-4 pt-4">
+            {/* Card Type Toggle */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <Label htmlFor="cardTypeToggle">Card Type</Label>
+              <div className="flex items-center gap-2">
+                <span className={cn("text-sm", isDebit ? "text-foreground font-medium" : "text-muted-foreground")}>
+                  Debit
+                </span>
+                <Switch 
+                  id="cardTypeToggle"
+                  checked={!isDebit} 
+                  onCheckedChange={(checked) => setIsDebit(!checked)} 
+                />
+                <span className={cn("text-sm", !isDebit ? "text-foreground font-medium" : "text-muted-foreground")}>
+                  Credit
+                </span>
+              </div>
+            </div>
+            
             {/* Card Number */}
             <div className="space-y-2">
               <Label htmlFor="cardNumber">Card Number</Label>
@@ -517,7 +544,7 @@ export default function CardLinkingManager() {
             <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
               <Shield className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
-                Your card details are encrypted and securely stored. 
+                Your card will be available as a funding source in FLOW. 
                 CVV is used for verification only and never saved.
               </span>
             </div>
@@ -541,15 +568,11 @@ export default function CardLinkingManager() {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                  />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
                     <Check className="w-4 h-4 mr-2" />
-                    Add Card
+                    Link Card
                   </>
                 )}
               </Button>
@@ -561,7 +584,7 @@ export default function CardLinkingManager() {
       {/* Info */}
       {cards.length > 0 && (
         <p className="text-xs text-muted-foreground text-center">
-          Tap a card to view details or manage
+          Linked cards appear as funding sources during FLOW checkout
         </p>
       )}
     </div>
