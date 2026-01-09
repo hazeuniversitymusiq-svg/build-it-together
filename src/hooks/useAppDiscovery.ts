@@ -22,6 +22,8 @@ const PROBE_APPS = [
   { name: 'TouchNGo', scheme: 'tngew://', displayName: "Touch 'n Go" },
   { name: 'GrabPay', scheme: 'grab://', displayName: 'GrabPay' },
   { name: 'Boost', scheme: 'boostapp://', displayName: 'Boost' },
+  { name: 'DuitNow', scheme: 'duitnow://', displayName: 'DuitNow' },
+  { name: 'Atome', scheme: 'atome://', displayName: 'Atome' },
   { name: 'MAE', scheme: 'maybank2u://', displayName: 'Maybank MAE' },
   { name: 'ShopeePay', scheme: 'shopeepay://', displayName: 'ShopeePay' },
   { name: 'BigPay', scheme: 'bigpay://', displayName: 'BigPay' },
