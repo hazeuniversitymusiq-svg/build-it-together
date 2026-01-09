@@ -51,13 +51,16 @@ interface DemoPayment {
   merchant: string;
   amount: number;
   qrId: string;
-  rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost';
+  rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome';
   railColor: string;
   railIcon: string;
   simulateError?: 'insufficient_balance';
-  fallbackRail?: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost';
+  fallbackRail?: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost' | 'Atome';
   fallbackIcon?: string;
   fallbackColor?: string;
+  showBnplOption?: boolean; // Show "Pay in installments" option
+  bnplInstallments?: number;
+  bnplPerInstallment?: number;
 }
 
 const DEMO_PAYMENTS: DemoPayment[] = [
@@ -76,6 +79,17 @@ const DEMO_PAYMENTS: DemoPayment[] = [
     fallbackRail: 'TouchNGo',
     fallbackIcon: '💙',
     fallbackColor: 'text-blue-600'
+  },
+  { 
+    merchant: 'Harvey Norman Electronics', 
+    amount: 899.00, 
+    qrId: 'ATM006', 
+    rail: 'Atome', 
+    railColor: 'text-teal-500', 
+    railIcon: '💎',
+    showBnplOption: true,
+    bnplInstallments: 3,
+    bnplPerInstallment: 299.67
   },
 ];
 
@@ -343,25 +357,41 @@ const DemoPage = () => {
                   {DEMO_PAYMENTS.map((payment) => (
                     <Card 
                       key={payment.qrId}
-                      className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
+                      className={cn(
+                        "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all",
+                        payment.simulateError && "border-amber-500/30 bg-amber-50/30 dark:bg-amber-950/10",
+                        payment.showBnplOption && "border-teal-500/30 bg-teal-50/30 dark:bg-teal-950/10"
+                      )}
                       onClick={() => startDemo(payment)}
                     >
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-2xl">
-                            {payment.railIcon}
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-2xl">
+                              {payment.railIcon}
+                            </div>
+                            <div>
+                              <p className="font-medium">{payment.merchant}</p>
+                              <p className={cn("text-xs font-medium", payment.railColor)}>
+                                {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail} • {payment.qrId}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{payment.merchant}</p>
-                            <p className={cn("text-xs font-medium", payment.railColor)}>
-                              {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail} • {payment.qrId}
-                            </p>
+                          <div className="text-right">
+                            <p className="font-bold text-lg">RM {payment.amount.toFixed(2)}</p>
+                            <ArrowRight className="h-4 w-4 text-primary ml-auto" />
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-lg">RM {payment.amount.toFixed(2)}</p>
-                          <ArrowRight className="h-4 w-4 text-primary ml-auto" />
-                        </div>
+                        {payment.simulateError && (
+                          <Badge variant="outline" className="mt-2 text-xs border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30">
+                            ⚠️ Demo: Insufficient balance → Fallback
+                          </Badge>
+                        )}
+                        {payment.showBnplOption && (
+                          <Badge variant="outline" className="mt-2 text-xs border-teal-500 text-teal-600 bg-teal-50 dark:bg-teal-950/30">
+                            💎 Pay in 3 interest-free installments
+                          </Badge>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -511,7 +541,8 @@ const DemoPage = () => {
                     selectedPayment.rail === 'TouchNGo' && "border-blue-500 bg-gradient-to-br from-blue-500 to-blue-600",
                     selectedPayment.rail === 'GrabPay' && "border-green-500 bg-gradient-to-br from-green-500 to-green-600",
                     selectedPayment.rail === 'Boost' && "border-orange-500 bg-gradient-to-br from-orange-500 to-orange-600",
-                    selectedPayment.rail === 'DuitNow' && "border-pink-500 bg-gradient-to-br from-pink-500 to-pink-600"
+                    selectedPayment.rail === 'DuitNow' && "border-pink-500 bg-gradient-to-br from-pink-500 to-pink-600",
+                    selectedPayment.rail === 'Atome' && "border-teal-500 bg-gradient-to-br from-teal-500 to-cyan-600"
                   )}>
                     <CardContent className="p-6 text-white text-center space-y-4">
                       <div className="flex items-center justify-center gap-2">
@@ -521,11 +552,32 @@ const DemoPage = () => {
                         </span>
                       </div>
                       
-                      <div className="py-4 border-t border-b border-white/20">
-                        <p className="text-sm opacity-80">Pay to</p>
-                        <p className="text-lg font-semibold">{selectedPayment.merchant}</p>
-                        <p className="text-4xl font-bold mt-2">RM {selectedPayment.amount.toFixed(2)}</p>
-                      </div>
+                      {selectedPayment.showBnplOption ? (
+                        <div className="py-4 border-t border-b border-white/20 space-y-3">
+                          <p className="text-sm opacity-80">Pay to</p>
+                          <p className="text-lg font-semibold">{selectedPayment.merchant}</p>
+                          <div className="bg-white/10 rounded-xl p-3 mt-3">
+                            <p className="text-xs opacity-70">Pay in {selectedPayment.bnplInstallments} interest-free installments</p>
+                            <div className="flex items-center justify-center gap-2 mt-2">
+                              {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex flex-col items-center">
+                                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
+                                    {i}
+                                  </div>
+                                  <p className="text-xs mt-1">RM {selectedPayment.bnplPerInstallment?.toFixed(2)}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-3xl font-bold">Total: RM {selectedPayment.amount.toFixed(2)}</p>
+                        </div>
+                      ) : (
+                        <div className="py-4 border-t border-b border-white/20">
+                          <p className="text-sm opacity-80">Pay to</p>
+                          <p className="text-lg font-semibold">{selectedPayment.merchant}</p>
+                          <p className="text-4xl font-bold mt-2">RM {selectedPayment.amount.toFixed(2)}</p>
+                        </div>
+                      )}
                       
                       <motion.div
                         animate={{ opacity: [1, 0.5, 1] }}
