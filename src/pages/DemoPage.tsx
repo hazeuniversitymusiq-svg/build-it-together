@@ -51,13 +51,16 @@ interface DemoPayment {
   merchant: string;
   amount: number;
   qrId: string;
+  rail: 'DuitNow' | 'TouchNGo' | 'GrabPay' | 'Boost';
+  railColor: string;
+  railIcon: string;
 }
 
 const DEMO_PAYMENTS: DemoPayment[] = [
-  { merchant: 'Ah Seng Mamak', amount: 12.50, qrId: 'DQR001' },
-  { merchant: 'Starbucks KLCC', amount: 18.90, qrId: 'DQR002' },
-  { merchant: 'Village Park Restaurant', amount: 75.00, qrId: 'DQR003' },
-  { merchant: 'Parking MBPJ', amount: 3.00, qrId: 'DQR004' },
+  { merchant: 'Ah Seng Mamak', amount: 12.50, qrId: 'DQR001', rail: 'DuitNow', railColor: 'text-pink-600', railIcon: '🏦' },
+  { merchant: 'Starbucks KLCC', amount: 18.90, qrId: 'TNG002', rail: 'TouchNGo', railColor: 'text-blue-600', railIcon: '💙' },
+  { merchant: 'Village Park Restaurant', amount: 75.00, qrId: 'GP003', rail: 'GrabPay', railColor: 'text-green-600', railIcon: '💚' },
+  { merchant: 'Parking MBPJ', amount: 3.00, qrId: 'BST004', rail: 'Boost', railColor: 'text-orange-500', railIcon: '🔶' },
 ];
 
 // API URL helper
@@ -297,12 +300,14 @@ const DemoPage = () => {
                     >
                       <CardContent className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                            <Scan className="h-6 w-6 text-muted-foreground" />
+                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center text-2xl">
+                            {payment.railIcon}
                           </div>
                           <div>
                             <p className="font-medium">{payment.merchant}</p>
-                            <p className="text-xs text-muted-foreground">DuitNow QR: {payment.qrId}</p>
+                            <p className={cn("text-xs font-medium", payment.railColor)}>
+                              {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail} • {payment.qrId}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -361,7 +366,14 @@ const DemoPage = () => {
                           <span className="text-2xl font-bold">RM {selectedPayment.amount.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Pay from</span>
+                          <span className="text-muted-foreground">Payment Rail</span>
+                          <span className={cn("flex items-center gap-1 font-medium", selectedPayment.railColor)}>
+                            <span>{selectedPayment.railIcon}</span>
+                            {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Funded by</span>
                           <span className="flex items-center gap-1 font-medium">
                             <Building2 className="h-4 w-4 text-primary" />
                             RYT Bank
