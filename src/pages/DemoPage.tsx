@@ -34,7 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-type DemoStep = 'idle' | 'scanning' | 'scanned' | 'authorizing' | 'processing' | 'complete' | 'error';
+type DemoStep = 'idle' | 'scanning' | 'scanned' | 'authorizing' | 'handoff' | 'in_wallet' | 'returning' | 'processing' | 'complete' | 'error';
 
 interface ApiLog {
   id: string;
@@ -165,6 +165,18 @@ const DemoPage = () => {
     setStep('authorizing');
     await new Promise(r => setTimeout(r, 600));
     
+    // Show wallet handoff animation
+    setStep('handoff');
+    await new Promise(r => setTimeout(r, 1200));
+    
+    // Simulate being in the wallet app
+    setStep('in_wallet');
+    await new Promise(r => setTimeout(r, 2500));
+    
+    // Simulate returning from wallet
+    setStep('returning');
+    await new Promise(r => setTimeout(r, 800));
+    
     setStep('processing');
     
     // Initiate payment
@@ -172,6 +184,7 @@ const DemoPage = () => {
       amount: { value: selectedPayment.amount, currency: 'MYR' },
       recipient: { name: selectedPayment.merchant, duitnow_id: selectedPayment.qrId },
       reference: `FLOW-DEMO-${Date.now()}`,
+      rail: selectedPayment.rail,
     });
 
     const paymentData = data as {
@@ -402,7 +415,121 @@ const DemoPage = () => {
                 </motion.div>
               )}
 
-              {(step === 'authorizing' || step === 'processing') && (
+              {step === 'authorizing' && (
+                <motion.div
+                  key="authorizing"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="py-16 text-center space-y-4"
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ repeat: Infinity, duration: 0.6 }}
+                    className="mx-auto w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center"
+                  >
+                    <Fingerprint className="h-12 w-12 text-primary" />
+                  </motion.div>
+                  <p className="text-xl font-medium">Verifying biometric...</p>
+                  <p className="text-muted-foreground">Touch sensor to confirm</p>
+                </motion.div>
+              )}
+
+              {step === 'handoff' && selectedPayment && (
+                <motion.div
+                  key="handoff"
+                  initial={{ opacity: 0, scale: 1 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5, y: -50 }}
+                  className="py-12 text-center space-y-6"
+                >
+                  <motion.div
+                    initial={{ y: 0 }}
+                    animate={{ y: [-10, 10, -10] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    className="text-6xl"
+                  >
+                    {selectedPayment.railIcon}
+                  </motion.div>
+                  <div>
+                    <p className="text-xl font-bold">Opening {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail}...</p>
+                    <p className="text-muted-foreground mt-2">Handing off to wallet app</p>
+                  </div>
+                  <motion.div
+                    animate={{ width: ['0%', '100%'] }}
+                    transition={{ duration: 1.2, ease: 'easeInOut' }}
+                    className="h-1 bg-primary rounded-full mx-auto max-w-[200px]"
+                  />
+                </motion.div>
+              )}
+
+              {step === 'in_wallet' && selectedPayment && (
+                <motion.div
+                  key="in_wallet"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.1 }}
+                  className="py-8"
+                >
+                  <Card className={cn(
+                    "border-2 overflow-hidden",
+                    selectedPayment.rail === 'TouchNGo' && "border-blue-500 bg-gradient-to-br from-blue-500 to-blue-600",
+                    selectedPayment.rail === 'GrabPay' && "border-green-500 bg-gradient-to-br from-green-500 to-green-600",
+                    selectedPayment.rail === 'Boost' && "border-orange-500 bg-gradient-to-br from-orange-500 to-orange-600",
+                    selectedPayment.rail === 'DuitNow' && "border-pink-500 bg-gradient-to-br from-pink-500 to-pink-600"
+                  )}>
+                    <CardContent className="p-6 text-white text-center space-y-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-3xl">{selectedPayment.railIcon}</span>
+                        <span className="text-xl font-bold">
+                          {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go eWallet" : selectedPayment.rail}
+                        </span>
+                      </div>
+                      
+                      <div className="py-4 border-t border-b border-white/20">
+                        <p className="text-sm opacity-80">Pay to</p>
+                        <p className="text-lg font-semibold">{selectedPayment.merchant}</p>
+                        <p className="text-4xl font-bold mt-2">RM {selectedPayment.amount.toFixed(2)}</p>
+                      </div>
+                      
+                      <motion.div
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 1 }}
+                        className="flex items-center justify-center gap-2"
+                      >
+                        <Fingerprint className="h-5 w-5" />
+                        <span className="text-sm">Confirming payment...</span>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                  
+                  <p className="text-xs text-center text-muted-foreground mt-4">
+                    Simulating {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail} app experience
+                  </p>
+                </motion.div>
+              )}
+
+              {step === 'returning' && selectedPayment && (
+                <motion.div
+                  key="returning"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  className="py-16 text-center space-y-4"
+                >
+                  <motion.div
+                    animate={{ x: [20, 0, 20] }}
+                    transition={{ repeat: Infinity, duration: 0.8 }}
+                    className="mx-auto w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center"
+                  >
+                    <ArrowRight className="h-12 w-12 text-primary" />
+                  </motion.div>
+                  <p className="text-xl font-medium">Returning to FLOW...</p>
+                  <p className="text-muted-foreground">Payment confirmed by {selectedPayment.rail === 'TouchNGo' ? "Touch 'n Go" : selectedPayment.rail}</p>
+                </motion.div>
+              )}
+
+              {step === 'processing' && (
                 <motion.div
                   key="processing"
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -415,18 +542,10 @@ const DemoPage = () => {
                     transition={{ repeat: Infinity, duration: 0.6 }}
                     className="mx-auto w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center"
                   >
-                    {step === 'authorizing' ? (
-                      <Fingerprint className="h-12 w-12 text-primary" />
-                    ) : (
-                      <RefreshCw className="h-12 w-12 text-primary animate-spin" />
-                    )}
+                    <RefreshCw className="h-12 w-12 text-primary animate-spin" />
                   </motion.div>
-                  <p className="text-xl font-medium">
-                    {step === 'authorizing' ? 'Verifying biometric...' : 'Processing payment...'}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {step === 'authorizing' ? 'Touch sensor to confirm' : 'Connecting to RYT Bank API'}
-                  </p>
+                  <p className="text-xl font-medium">Recording transaction...</p>
+                  <p className="text-muted-foreground">Syncing with RYT Bank</p>
                 </motion.div>
               )}
 
