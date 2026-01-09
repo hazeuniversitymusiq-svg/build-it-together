@@ -169,7 +169,16 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
 
     const selectedApps = discoveredApps.filter(app => app.selected);
 
-    // Create connectors for selected apps
+    // Default balances for simulation
+    const defaultBalances: Record<string, number> = {
+      TouchNGo: 85.50,
+      GrabPay: 42.00,
+      Boost: 25.00,
+      Maybank: 1250.00,
+    };
+
+    // Create connectors and funding sources for selected apps
+    let priority = 1;
     for (const app of selectedApps) {
       const connectorType = app.app_type === "wallet" ? "wallet" 
         : app.app_type === "bank" ? "bank" 
@@ -179,19 +188,55 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
       const validConnectorNames = ["TouchNGo", "GrabPay", "Boost", "DuitNow", "BankTransfer", "Maybank", "VisaMastercard", "Maxis", "Unifi", "TNB", "Contacts"];
       
       if (validConnectorNames.includes(app.app_name)) {
+        // Create connector with capabilities
+        const capabilities: Record<string, boolean> = {};
+        if (app.app_type === "wallet") {
+          capabilities.can_pay_qr = true;
+          capabilities.can_p2p = true;
+          capabilities.can_receive = true;
+        } else if (app.app_type === "bank") {
+          capabilities.can_pay = true;
+          capabilities.can_transfer = true;
+        }
+
         const { error: connectorError } = await supabase.from("connectors").upsert({
           user_id: user.id,
           name: app.app_name as any,
           type: connectorType,
           status: "available",
           mode: "Prototype",
+          capabilities,
         }, { onConflict: "user_id,name" });
 
         if (connectorError) {
           console.error("Error creating connector:", connectorError);
         }
 
-        // For billers, also create biller_accounts
+        // Create funding source for wallets and banks
+        if (app.app_type === "wallet" || app.app_type === "bank") {
+          const fundingType = app.app_type === "wallet" ? "wallet" : "bank";
+          const balance = defaultBalances[app.app_name] || 50.00;
+
+          const { error: fundingError } = await supabase.from("funding_sources").upsert({
+            user_id: user.id,
+            name: app.app_name,
+            type: fundingType,
+            balance,
+            currency: "MYR",
+            priority,
+            linked_status: "linked",
+            available: true,
+            max_auto_topup_amount: fundingType === "wallet" ? 200 : 500,
+            require_extra_confirm_amount: fundingType === "wallet" ? 300 : 1000,
+          }, { onConflict: "user_id,name" });
+
+          if (fundingError) {
+            console.error("Error creating funding source:", fundingError);
+          }
+          priority++;
+        }
+
+        // For billers, create biller_accounts
         if (app.app_type === "biller") {
           const { error: billerError } = await supabase.from("biller_accounts").upsert({
             user_id: user.id,
