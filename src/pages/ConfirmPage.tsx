@@ -543,21 +543,55 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         {/* Paying with - Interactive Selector */}
         <div className="border-b border-border">
           {/* Card Fallback Indicator */}
-          {isCardFallback && isCardPayment && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="flex items-center gap-2 px-1 pt-3 pb-2"
-            >
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                <span className="text-xs font-medium text-primary">Smart Fallback</span>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                Using your default card (wallet balance low)
-              </span>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {isCardFallback && isCardPayment && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 400, 
+                  damping: 25,
+                  delay: 0.1 
+                }}
+                className="flex items-center gap-2 px-1 pt-3 pb-2"
+              >
+                <motion.div 
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full relative overflow-hidden"
+                  initial={{ boxShadow: "0 0 0 0 hsl(var(--primary) / 0)" }}
+                  animate={{ 
+                    boxShadow: [
+                      "0 0 0 0 hsl(var(--primary) / 0.4)",
+                      "0 0 12px 4px hsl(var(--primary) / 0.2)",
+                      "0 0 0 0 hsl(var(--primary) / 0)"
+                    ]
+                  }}
+                  transition={{ 
+                    duration: 1.5, 
+                    repeat: 2,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <motion.div
+                    animate={{ rotate: [0, 15, -15, 0] }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  </motion.div>
+                  <span className="text-xs font-medium text-primary">Smart Fallback</span>
+                </motion.div>
+                <motion.span 
+                  className="text-xs text-muted-foreground"
+                  initial={{ opacity: 0, x: -4 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  Using your default card (wallet balance low)
+                </motion.span>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <PaymentMethodSelector
             selectedMethodId={selectedPaymentMethod || plan.chosen_rail}
             methods={paymentMethods}
