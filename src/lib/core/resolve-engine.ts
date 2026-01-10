@@ -3,14 +3,16 @@
  * 
  * The brain of FLOW - determines how to execute a payment.
  * Pure deterministic logic. No ML.
+ * 
+ * Uses centralized types from @/types
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { checkResolutionGates, checkConsentGate, type GateResult } from './gates';
 import type { Database } from '@/integrations/supabase/types';
+import type { ResolutionPlan, ResolutionStep, ResolveResult, RiskLevel } from '@/types';
 
 type IntentType = Database['public']['Enums']['intent_type'];
-type RiskLevel = Database['public']['Enums']['risk_level'];
 type ConnectorName = Database['public']['Enums']['connector_name'];
 
 interface Connector {
@@ -32,33 +34,8 @@ interface FundingSource {
   requireExtraConfirmAmount: number;
 }
 
-export interface ResolutionStep {
-  action: string;
-  description: string;
-  amount?: number;
-  source?: string;
-}
-
-export interface ResolutionPlan {
-  intentId: string;
-  chosenRail: string;
-  fallbackRail?: string;
-  topupNeeded: boolean;
-  topupAmount: number;
-  executionMode: 'sync' | 'async';
-  pendingReason?: string;
-  steps: ResolutionStep[];
-  reasonCodes: string[];
-  riskLevel: RiskLevel;
-}
-
-export interface ResolveResult {
-  success: boolean;
-  plan?: ResolutionPlan;
-  planId?: string;
-  error?: string;
-  gateResult?: GateResult;
-}
+// Re-export types for consumers
+export type { ResolutionStep, ResolutionPlan, ResolveResult };
 
 // Capability mapping by intent type
 const INTENT_CAPABILITY_MAP: Record<IntentType, string> = {
@@ -186,7 +163,10 @@ export async function resolveIntent(
     return {
       success: false,
       error: gateResult.blockedReason,
-      gateResult,
+      gateResult: {
+        passed: gateResult.passed,
+        blockedReason: gateResult.blockedReason,
+      },
     };
   }
 
@@ -337,7 +317,9 @@ export function explainPlan(plan: ResolutionPlan): string {
   const parts: string[] = [];
 
   for (const step of plan.steps) {
-    parts.push(step.description);
+    if (step.description) {
+      parts.push(step.description);
+    }
   }
 
   return parts.join('. Then ');

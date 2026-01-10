@@ -5,7 +5,7 @@
  * No ML. Pure deterministic logic.
  */
 
-// Types
+// Types - re-exported from centralized location
 export type {
   FundingRailType,
   FundingSource,
@@ -15,7 +15,8 @@ export type {
   PaymentResolution,
   GuardrailConfig,
   UserPaymentState,
-} from './types';
+  FallbackPreference,
+} from '@/types';
 
 // Guardrails
 export {
@@ -31,5 +32,3 @@ export {
   resolvePayment,
   explainResolution,
 } from './resolver';
-
-export type { FallbackPreference } from './resolver';

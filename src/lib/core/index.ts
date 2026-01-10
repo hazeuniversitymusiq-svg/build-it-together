@@ -29,10 +29,14 @@ export {
 export {
   resolveIntent,
   explainPlan,
-  type ResolutionStep,
-  type ResolutionPlan,
-  type ResolveResult,
 } from './resolve-engine';
+
+// Re-export types from centralized location
+export type {
+  ResolutionStep,
+  ResolutionPlan,
+  ResolveResult,
+} from '@/types';
 
 // Execute Plan
 export {

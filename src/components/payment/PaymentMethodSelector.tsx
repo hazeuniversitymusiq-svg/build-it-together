@@ -16,7 +16,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { LinkedCard } from "@/hooks/useLinkedCards";
+import type { LinkedCard } from "@/types";
 
 // Card brand colors
 const cardBrandColors: Record<string, string> = {

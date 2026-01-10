@@ -19,10 +19,9 @@ import type {
   ResolutionStep,
   GuardrailConfig,
   UserPaymentState,
-} from './types';
+  FallbackPreference,
+} from '@/types';
 import { checkGuardrails, canAutoTopUp, DEFAULT_GUARDRAILS } from './guardrails';
-
-export type FallbackPreference = 'use_card' | 'top_up_wallet' | 'ask_each_time';
 
 export interface ResolverContext {
   sources: FundingSource[];

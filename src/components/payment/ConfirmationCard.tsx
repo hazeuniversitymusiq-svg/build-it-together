@@ -34,6 +34,8 @@ const railConfig: Record<FundingRailType, { icon: typeof Wallet; label: string }
   wallet: { icon: Wallet, label: 'FLOW Wallet' },
   bank: { icon: Building2, label: 'Bank Account' },
   card: { icon: CreditCard, label: 'Card' },
+  debit_card: { icon: CreditCard, label: 'Debit Card' },
+  credit_card: { icon: CreditCard, label: 'Credit Card' },
 };
 
 const ConfirmationCard = ({
