@@ -22,10 +22,13 @@ import type {
 } from './types';
 import { checkGuardrails, canAutoTopUp, DEFAULT_GUARDRAILS } from './guardrails';
 
+export type FallbackPreference = 'use_card' | 'top_up_wallet' | 'ask_each_time';
+
 export interface ResolverContext {
   sources: FundingSource[];
   config?: GuardrailConfig;
   userState: UserPaymentState;
+  fallbackPreference?: FallbackPreference;
 }
 
 /**
@@ -56,7 +59,7 @@ export function resolvePayment(
   context: ResolverContext
 ): PaymentResolution {
   const { amount } = request;
-  const { sources, config = DEFAULT_GUARDRAILS, userState } = context;
+  const { sources, config = DEFAULT_GUARDRAILS, userState, fallbackPreference = 'use_card' } = context;
 
   // Step 1: Check guardrails first
   const guardrailCheck = checkGuardrails(request, userState, config);
@@ -88,7 +91,7 @@ export function resolvePayment(
 
   // Step 3: Try to resolve with primary source (usually wallet)
   const primarySource = availableSources[0];
-  const resolution = tryResolveWithSource(primarySource, amount, availableSources, config);
+  const resolution = tryResolveWithSource(primarySource, amount, availableSources, config, fallbackPreference);
 
   // Step 4: Apply confirmation requirements
   return {
@@ -105,7 +108,8 @@ function tryResolveWithSource(
   source: FundingSource,
   amount: number,
   allSources: FundingSource[],
-  config: GuardrailConfig
+  config: GuardrailConfig,
+  fallbackPreference: FallbackPreference
 ): PaymentResolution {
   // Case 1: Source has sufficient balance
   if (source.balance >= amount) {
@@ -126,29 +130,44 @@ function tryResolveWithSource(
   if (source.type === 'wallet') {
     const shortfall = amount - source.balance;
     
-    // NEW: Check for default card first - prefer direct card payment
-    const defaultCard = findDefaultCard(allSources);
-    
-    if (defaultCard) {
-      // Use default card for direct payment (no wallet top-up needed)
+    // Handle based on user's fallback preference
+    if (fallbackPreference === 'ask_each_time') {
+      // Return a resolution that requires user choice
       return {
-        action: 'USE_FALLBACK',
-        steps: [{
-          action: 'charge',
-          sourceId: defaultCard.id,
-          sourceType: defaultCard.type,
-          amount,
-        }],
-        requiresConfirmation: amount > config.requireConfirmationAbove,
-        confirmationReason: amount > config.requireConfirmationAbove 
-          ? `Card payment of RM${amount.toFixed(2)} requires confirmation`
-          : undefined,
+        action: 'REQUIRES_CONFIRMATION',
+        steps: [],
+        requiresConfirmation: true,
+        confirmationReason: 'Choose payment method: wallet balance is low',
         totalAmount: amount,
-        preferredCard: true, // Flag for UI to show card preference
-      } as PaymentResolution;
+      };
     }
     
-    // No default card - try top-up from bank/other sources
+    if (fallbackPreference === 'use_card') {
+      // Check for default card first - prefer direct card payment
+      const defaultCard = findDefaultCard(allSources);
+      
+      if (defaultCard) {
+        // Use default card for direct payment (no wallet top-up needed)
+        return {
+          action: 'USE_FALLBACK',
+          steps: [{
+            action: 'charge',
+            sourceId: defaultCard.id,
+            sourceType: defaultCard.type,
+            amount,
+          }],
+          requiresConfirmation: amount > config.requireConfirmationAbove,
+          confirmationReason: amount > config.requireConfirmationAbove 
+            ? `Card payment of RM${amount.toFixed(2)} requires confirmation`
+            : undefined,
+          totalAmount: amount,
+          preferredCard: true, // Flag for UI to show card preference
+        } as PaymentResolution;
+      }
+    }
+    
+    // Fallback preference is 'top_up_wallet' OR no card available
+    // Try top-up from bank/other sources
     const topUpResult = tryTopUp(shortfall, allSources.filter(s => s.type !== 'card'), config);
 
     if (topUpResult.success) {

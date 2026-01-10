@@ -889,6 +889,7 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          fallback_preference: string
           flow_paused: boolean
           id: string
           paused_at: string | null
@@ -896,6 +897,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          fallback_preference?: string
           flow_paused?: boolean
           id?: string
           paused_at?: string | null
@@ -903,6 +905,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          fallback_preference?: string
           flow_paused?: boolean
           id?: string
           paused_at?: string | null
