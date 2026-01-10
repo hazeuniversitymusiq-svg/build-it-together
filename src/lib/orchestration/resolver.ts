@@ -6,9 +6,10 @@
  * 
  * Resolution order:
  * 1. Check wallet first (user's declared priority)
- * 2. If insufficient → calculate top-up from next source
- * 3. If unavailable → fallback to next rail
- * 4. Apply guardrails at each step
+ * 2. If insufficient → prefer DEFAULT CARD for direct payment
+ * 3. If no default card → calculate top-up from next source
+ * 4. If unavailable → fallback to next rail
+ * 5. Apply guardrails at each step
  */
 
 import type {
@@ -25,6 +26,26 @@ export interface ResolverContext {
   sources: FundingSource[];
   config?: GuardrailConfig;
   userState: UserPaymentState;
+}
+
+/**
+ * Find the default card from available sources
+ * Cards have priority 1 when set as default
+ */
+function findDefaultCard(sources: FundingSource[]): FundingSource | null {
+  // Look for cards with priority 1 (default card marker)
+  const defaultCard = sources.find(
+    s => s.type === 'card' && s.isLinked && s.isAvailable && s.priority === 1
+  );
+  
+  if (defaultCard) return defaultCard;
+  
+  // Fallback: any available card sorted by priority
+  const anyCard = sources
+    .filter(s => s.type === 'card' && s.isLinked && s.isAvailable)
+    .sort((a, b) => a.priority - b.priority)[0];
+  
+  return anyCard || null;
 }
 
 /**
@@ -101,10 +122,34 @@ function tryResolveWithSource(
     };
   }
 
-  // Case 2: Source is wallet with insufficient balance - try top-up
+  // Case 2: Source is wallet with insufficient balance
   if (source.type === 'wallet') {
     const shortfall = amount - source.balance;
-    const topUpResult = tryTopUp(shortfall, allSources.slice(1), config);
+    
+    // NEW: Check for default card first - prefer direct card payment
+    const defaultCard = findDefaultCard(allSources);
+    
+    if (defaultCard) {
+      // Use default card for direct payment (no wallet top-up needed)
+      return {
+        action: 'USE_FALLBACK',
+        steps: [{
+          action: 'charge',
+          sourceId: defaultCard.id,
+          sourceType: defaultCard.type,
+          amount,
+        }],
+        requiresConfirmation: amount > config.requireConfirmationAbove,
+        confirmationReason: amount > config.requireConfirmationAbove 
+          ? `Card payment of RM${amount.toFixed(2)} requires confirmation`
+          : undefined,
+        totalAmount: amount,
+        preferredCard: true, // Flag for UI to show card preference
+      } as PaymentResolution;
+    }
+    
+    // No default card - try top-up from bank/other sources
+    const topUpResult = tryTopUp(shortfall, allSources.filter(s => s.type !== 'card'), config);
 
     if (topUpResult.success) {
       const steps: ResolutionStep[] = [];
@@ -134,7 +179,7 @@ function tryResolveWithSource(
       };
     }
 
-    // Top-up not possible, try fallback
+    // Top-up not possible, try fallback to any remaining source
     return tryFallback(amount, allSources.slice(1), config);
   }
 
@@ -143,7 +188,7 @@ function tryResolveWithSource(
 }
 
 /**
- * Try to top up wallet from another source
+ * Try to top up wallet from another source (excluding cards)
  */
 function tryTopUp(
   amount: number,
@@ -156,9 +201,9 @@ function tryTopUp(
   requiresConfirmation: boolean;
   confirmationReason?: string;
 } {
-  // Find a source that can cover the top-up
+  // Find a non-card source that can cover the top-up
   for (const source of sources) {
-    if (source.balance >= amount) {
+    if (source.type !== 'card' && source.balance >= amount) {
       const autoCheck = canAutoTopUp(amount, config);
 
       return {
@@ -185,7 +230,24 @@ function tryFallback(
   sources: FundingSource[],
   _config: GuardrailConfig
 ): PaymentResolution {
-  // Find first source that can cover the amount
+  // Prefer cards for fallback (direct payment without balance check)
+  const cards = sources.filter(s => s.type === 'card');
+  if (cards.length > 0) {
+    const bestCard = cards.sort((a, b) => a.priority - b.priority)[0];
+    return {
+      action: 'USE_FALLBACK',
+      steps: [{
+        action: 'charge',
+        sourceId: bestCard.id,
+        sourceType: bestCard.type,
+        amount,
+      }],
+      requiresConfirmation: false,
+      totalAmount: amount,
+    };
+  }
+
+  // Find first non-card source that can cover the amount
   for (const source of sources) {
     if (source.balance >= amount) {
       return {
@@ -225,7 +287,11 @@ export function explainResolution(resolution: PaymentResolution): string {
       return `Top up wallet from ${topUpStep?.sourceType}, then pay`;
     
     case 'USE_FALLBACK':
-      return `Using ${resolution.steps[0].sourceType} as fallback`;
+      const source = resolution.steps[0];
+      if (source?.sourceType === 'card') {
+        return `Using linked card for direct payment`;
+      }
+      return `Using ${source?.sourceType} as fallback`;
     
     case 'REQUIRES_CONFIRMATION':
       return `Confirmation required: ${resolution.confirmationReason}`;
