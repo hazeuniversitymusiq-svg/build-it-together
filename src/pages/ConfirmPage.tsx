@@ -20,7 +20,8 @@ import {
   RefreshCw,
   Check,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,6 +99,7 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   // Payment method selection state
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [isCardPayment, setIsCardPayment] = useState(false);
+  const [isCardFallback, setIsCardFallback] = useState(false);
   
   // AI Intelligence state
   const [paymentAnalysis, setPaymentAnalysis] = useState<PaymentAnalysis | null>(null);
@@ -187,6 +189,23 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
 
       // Initialize selected payment method to the plan's chosen rail
       setSelectedPaymentMethod(plan.chosen_rail);
+      
+      // Check if this is a card fallback scenario (wallet insufficient, using card)
+      const stepsArray = plan.steps as Array<{ action: string; source?: string; sourceType?: string }>;
+      const isUsingCardAsFallback = stepsArray.some(
+        step => step.action === 'charge' && step.sourceType === 'card'
+      );
+      
+      // Also check if plan indicates card preference via fallback
+      if (isUsingCardAsFallback) {
+        setIsCardFallback(true);
+        // Find the default card and auto-select it
+        const defaultCard = linkedCards.find(c => c.isDefault) || linkedCards[0];
+        if (defaultCard) {
+          setSelectedPaymentMethod(defaultCard.id);
+          setIsCardPayment(true);
+        }
+      }
 
       // Run AI analysis in background (quiet intelligence)
       analyzePayment(
@@ -205,7 +224,7 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
     };
 
     loadData();
-  }, [planId, navigate, analyzePayment, getFundingRecommendation]);
+  }, [planId, navigate, analyzePayment, getFundingRecommendation, linkedCards]);
 
   // Check identity status
   const [identityBlocked, setIdentityBlocked] = useState(false);
@@ -523,6 +542,22 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
 
         {/* Paying with - Interactive Selector */}
         <div className="border-b border-border">
+          {/* Card Fallback Indicator */}
+          {isCardFallback && isCardPayment && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="flex items-center gap-2 px-1 pt-3 pb-2"
+            >
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-medium text-primary">Smart Fallback</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Using your default card (wallet balance low)
+              </span>
+            </motion.div>
+          )}
           <PaymentMethodSelector
             selectedMethodId={selectedPaymentMethod || plan.chosen_rail}
             methods={paymentMethods}
@@ -530,6 +565,8 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
             onSelect={(methodId, isCard) => {
               setSelectedPaymentMethod(methodId);
               setIsCardPayment(isCard);
+              // If user manually selects non-card, clear fallback indicator
+              if (!isCard) setIsCardFallback(false);
             }}
             disabled={isProcessing || isComplete}
           />
