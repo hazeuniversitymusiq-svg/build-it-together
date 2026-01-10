@@ -5,7 +5,7 @@
  * These are safety rails - not intelligence.
  */
 
-import type { GuardrailConfig, PaymentRequest, UserPaymentState } from './types';
+import type { GuardrailConfig, PaymentRequest, UserPaymentState } from '@/types';
 
 // Default guardrail configuration
 export const DEFAULT_GUARDRAILS: GuardrailConfig = {

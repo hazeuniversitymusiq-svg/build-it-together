@@ -9,7 +9,8 @@ import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, Check, ArrowRight, Wallet, CreditCard, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveIntent, type ResolutionPlan, type ResolutionStep } from "@/lib/core/resolve-engine";
+import { resolveIntent } from "@/lib/core/resolve-engine";
+import type { ResolutionPlan, ResolutionStep } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useTestMode, getConfirmRoute } from "@/hooks/useTestMode";
 

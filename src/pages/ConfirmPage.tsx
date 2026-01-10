@@ -31,7 +31,6 @@ import { useFlowPause } from "@/hooks/useFlowPause";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useFlowIntelligence } from "@/hooks/useFlowIntelligence";
 import { useToast } from "@/hooks/use-toast";
-import { useLinkedCards } from "@/hooks/useLinkedCards";
 import { useFundingSources } from "@/hooks/useFundingSources";
 import RiskIndicator from "@/components/intelligence/RiskIndicator";
 import SmartSuggestion from "@/components/intelligence/SmartSuggestion";
@@ -82,8 +81,7 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
   const { isPaused, isLoading: isPauseLoading } = useFlowPause();
   const haptics = useHaptics();
   const { analyzePayment, getFundingRecommendation, isAnalyzing } = useFlowIntelligence();
-  const { cards: linkedCards, loading: cardsLoading } = useLinkedCards();
-  const { sources: fundingSources, wallets, banks } = useFundingSources();
+  const { sources: fundingSources, wallets, banks, cards: linkedCards, loading: cardsLoading } = useFundingSources();
 
   const [state, setState] = useState<ConfirmState>({
     plan: null,

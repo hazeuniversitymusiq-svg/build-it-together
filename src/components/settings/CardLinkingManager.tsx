@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useLinkedCards, LinkedCard } from "@/hooks/useLinkedCards";
+import { useFundingSources, type LinkedCard } from "@/hooks/useFundingSources";
 
 // Card type detection based on number prefix
 function detectCardType(number: string): 'visa' | 'mastercard' | 'amex' {
@@ -161,7 +161,7 @@ export default function CardLinkingManager() {
     removeCard, 
     setDefaultCard,
     toggleCardAvailability 
-  } = useLinkedCards();
+  } = useFundingSources();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<LinkedCard | null>(null);
