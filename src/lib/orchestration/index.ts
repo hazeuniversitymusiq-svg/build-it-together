@@ -31,3 +31,5 @@ export {
   resolvePayment,
   explainResolution,
 } from './resolver';
+
+export type { FallbackPreference } from './resolver';

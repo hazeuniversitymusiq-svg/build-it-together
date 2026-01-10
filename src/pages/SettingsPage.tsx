@@ -16,6 +16,7 @@ import { KillSwitch } from "@/components/settings/KillSwitch";
 import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
 import PaymentRailsManager from "@/components/settings/PaymentRailsManager";
 import CardLinkingManager from "@/components/settings/CardLinkingManager";
+import FallbackPreferenceSelector from "@/components/settings/FallbackPreferenceSelector";
 import { BankPartnerDemo } from "@/components/demo/BankPartnerDemo";
 import { Switch } from "@/components/ui/switch";
 import { 
@@ -30,7 +31,8 @@ import {
   Smartphone,
   CreditCard,
   Building2,
-  Route
+  Route,
+  ArrowLeftRight
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -43,6 +45,7 @@ const SettingsPage = () => {
   const [isBankDemoExpanded, setIsBankDemoExpanded] = useState(true);
   const [isRailsExpanded, setIsRailsExpanded] = useState(false);
   const [isCardsExpanded, setIsCardsExpanded] = useState(false);
+  const [isFallbackExpanded, setIsFallbackExpanded] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -149,6 +152,37 @@ const SettingsPage = () => {
           className="overflow-hidden"
         >
           <CardLinkingManager />
+        </motion.div>
+      </section>
+
+      {/* Fallback Preference - NEW */}
+      <section className="px-6 mb-6">
+        <button
+          onClick={() => setIsFallbackExpanded(!isFallbackExpanded)}
+          className="flex items-center justify-between w-full mb-4 group"
+        >
+          <div className="flex items-center gap-2">
+            <ArrowLeftRight className="w-4 h-4 text-primary" />
+            <p className="text-sm font-medium text-muted-foreground">Fallback Preference</p>
+          </div>
+          <motion.div
+            animate={{ rotate: isFallbackExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.div>
+        </button>
+        
+        <motion.div
+          initial={false}
+          animate={{ 
+            height: isFallbackExpanded ? "auto" : 0,
+            opacity: isFallbackExpanded ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden"
+        >
+          <FallbackPreferenceSelector />
         </motion.div>
       </section>
 

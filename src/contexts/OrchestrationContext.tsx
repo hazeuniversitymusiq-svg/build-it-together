@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFundingSources, RealFundingSource } from '@/hooks/useFundingSources';
+import { useFallbackPreference, type FallbackPreference } from '@/hooks/useFallbackPreference';
 import {
   FundingSource,
   PaymentRequest,
@@ -34,6 +35,10 @@ interface OrchestrationContextValue {
   // Guardrails
   guardrails: GuardrailConfig;
   updateGuardrails: (config: Partial<GuardrailConfig>) => void;
+  
+  // Fallback preference
+  fallbackPreference: FallbackPreference;
+  updateFallbackPreference: (pref: FallbackPreference) => Promise<{ success: boolean; error: string | null }>;
   
   // Resolution
   resolvePaymentRequest: (request: PaymentRequest) => PaymentResolution;
@@ -104,6 +109,12 @@ export function OrchestrationProvider({ children }: { children: React.ReactNode 
     updateLinkedStatus,
   } = useFundingSources();
 
+  // Fallback preference from Supabase
+  const { 
+    preference: fallbackPreference, 
+    updatePreference: updateFallbackPreference 
+  } = useFallbackPreference();
+
   // Convert to orchestration format
   const sources = realSources.map(toOrchestrationSource);
 
@@ -165,8 +176,9 @@ export function OrchestrationProvider({ children }: { children: React.ReactNode 
       sources,
       config: guardrails,
       userState: currentState,
+      fallbackPreference,
     });
-  }, [sources, guardrails, userState]);
+  }, [sources, guardrails, userState, fallbackPreference]);
 
   const recordPayment = useCallback((amount: number) => {
     setUserState(prev => recordAutoApprovedPayment(prev, amount));
@@ -181,6 +193,8 @@ export function OrchestrationProvider({ children }: { children: React.ReactNode 
     updateLinkedStatus,
     guardrails,
     updateGuardrails,
+    fallbackPreference,
+    updateFallbackPreference,
     resolvePaymentRequest,
     userState,
     recordPayment,
