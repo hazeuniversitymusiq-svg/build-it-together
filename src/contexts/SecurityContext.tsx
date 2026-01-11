@@ -108,11 +108,18 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       }
       return false;
     }
-
     // FLOW Security: Block payments without biometrics
-    // In development, allow fallback with a warning
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('FLOW Security: Allowing payment without biometrics (development only)');
+    // Only allow dev bypass if BOTH NODE_ENV is development AND we're on localhost
+    const isLocalhost = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.includes('.local')
+    );
+    
+    const isDevelopment = process.env.NODE_ENV === 'development' && isLocalhost;
+    
+    if (isDevelopment) {
+      console.warn('FLOW Security: Allowing payment without biometrics (localhost development only)');
       setState({
         isPaymentAuthorized: true,
         lastAuthTime: Date.now(),
@@ -122,7 +129,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       return true;
     }
 
-    // Production: Require biometrics
+    // Production or non-localhost: Require biometrics
     console.error('FLOW Security: Biometric authentication required');
     return false;
   }, [user, nativeBiometric, webAuthn]);
