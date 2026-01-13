@@ -152,6 +152,7 @@ const HomePage = () => {
           description="Scan any QR code — DuitNow, TnG, GrabPay. FLOW detects the type and routes payment automatically."
           onTryIt={() => !isDemoMode && navigate("/scan")}
           position="bottom"
+          className="contents"
         >
           <ActionCard
             icon={<QrCode className="w-5 h-5 text-aurora-blue" />}
@@ -167,6 +168,7 @@ const HomePage = () => {
           description="Send to any contact. FLOW finds their preferred wallet and delivers instantly."
           onTryIt={() => !isDemoMode && navigate("/send")}
           position="bottom"
+          className="contents"
         >
           <ActionCard
             icon={<Send className="w-5 h-5 text-aurora-purple" />}
@@ -182,6 +184,7 @@ const HomePage = () => {
           description="Generate a QR code for others to pay you. Works with any wallet or bank app."
           onTryIt={() => !isDemoMode && navigate("/receive")}
           position="top"
+          className="contents"
         >
           <ActionCard
             icon={<QrCode className="w-5 h-5 text-aurora-teal" />}
@@ -197,6 +200,7 @@ const HomePage = () => {
           description="Link billers like TNB, Unifi, Maxis. FLOW reminds you before due dates."
           onTryIt={() => !isDemoMode && navigate("/bills")}
           position="top"
+          className="contents"
         >
           <ActionCard
             icon={<Receipt className="w-5 h-5 text-aurora-pink" />}
