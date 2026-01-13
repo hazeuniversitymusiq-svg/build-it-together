@@ -481,6 +481,11 @@ export type Database = {
       }
       flow_card_profiles: {
         Row: {
+          card_brand: string | null
+          card_cvv: string | null
+          card_expiry: string | null
+          card_last_four: string | null
+          card_number: string | null
           created_at: string
           device_binding_status: string
           id: string
@@ -491,6 +496,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          card_brand?: string | null
+          card_cvv?: string | null
+          card_expiry?: string | null
+          card_last_four?: string | null
+          card_number?: string | null
           created_at?: string
           device_binding_status?: string
           id?: string
@@ -501,6 +511,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          card_brand?: string | null
+          card_cvv?: string | null
+          card_expiry?: string | null
+          card_last_four?: string | null
+          card_number?: string | null
           created_at?: string
           device_binding_status?: string
           id?: string

@@ -169,10 +169,16 @@ export default function FlowCardPage() {
           </Button>
         </div>
 
-        {/* Card Visual */}
+        {/* Card Visual with Credentials */}
         <FlowCardVisual
           status={profile?.status || 'not_created'}
           mode={profile?.mode || 'in_app'}
+          lastFourDigits={profile?.card_last_four || undefined}
+          cardNumber={profile?.card_number}
+          cardCvv={profile?.card_cvv}
+          cardExpiry={profile?.card_expiry}
+          cardBrand={profile?.card_brand}
+          showCredentials={true}
         />
 
         {/* Quick Actions */}
