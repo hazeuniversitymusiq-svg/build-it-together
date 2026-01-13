@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useTestMode } from "@/hooks/useTestMode";
 import { useFundingSources } from "@/hooks/useFundingSources";
+import { useDemo } from "@/contexts/DemoContext";
 import QRScanner from "@/components/scanner/QRScanner";
 import MyPaymentCode from "@/components/scanner/MyPaymentCode";
 import FundingSourcePicker from "@/components/scanner/FundingSourcePicker";
@@ -51,6 +52,7 @@ const ScanPage = () => {
   const haptics = useHaptics();
   const { isFieldTest } = useTestMode();
   const { sources } = useFundingSources();
+  const { registerPageAction, clearPageActions } = useDemo();
   
   const [userId, setUserId] = useState<string | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -66,6 +68,28 @@ const ScanPage = () => {
   const simulateTestScan = (type: 'merchant' | 'flow' | 'static') => {
     handleScan(TEST_QR_CODES[type]);
   };
+
+  // Register demo actions for this page
+  useEffect(() => {
+    registerPageAction({
+      id: 'scan-simulate-merchant',
+      label: 'Simulate Merchant QR Scan',
+      description: 'Scan a DuitNow merchant QR code',
+      action: async () => {
+        toast({
+          title: 'Scanning QR...',
+          description: 'Simulating merchant QR scan',
+        });
+        // Small delay for effect
+        await new Promise(resolve => setTimeout(resolve, 500));
+        simulateTestScan('merchant');
+      },
+    });
+
+    return () => {
+      clearPageActions();
+    };
+  }, [registerPageAction, clearPageActions, toast]);
 
   useEffect(() => {
     const checkAuth = async () => {
