@@ -11,7 +11,7 @@
  * - My Payment Code for receiving
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -24,6 +24,14 @@ import {
   ChevronRight,
   Wallet
 } from "lucide-react";
+
+// Rail icons - defined outside component to avoid recreation
+const RAIL_ICONS: Record<string, React.ReactNode> = {
+  TouchNGo: <Wallet className="w-3.5 h-3.5" />,
+  GrabPay: <Wallet className="w-3.5 h-3.5" />,
+  Boost: <Wallet className="w-3.5 h-3.5" />,
+  DuitNow: <Store className="w-3.5 h-3.5" />,
+};
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -55,20 +63,44 @@ const ScanPage = () => {
   const { sources } = useFundingSources();
   const { registerPageAction, clearPageActions } = useDemo();
   
+  const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isMyCodeOpen, setIsMyCodeOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scannedData, setScannedData] = useState<ParsedQRIntent | null>(null);
-  
-  // New states for enhanced UX
   const [selectedFundingSourceId, setSelectedFundingSourceId] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState<string>("");
 
-  // Simulate a test QR scan
-  const simulateTestScan = (type: 'merchant' | 'flow' | 'static') => {
-    handleScan(TEST_QR_CODES[type]);
-  };
+  // Simulate a test QR scan - wrapped in useCallback for stable reference
+  const simulateTestScan = useCallback((type: 'merchant' | 'flow' | 'static') => {
+    const handleTestScan = async (rawData: string) => {
+      setIsScannerOpen(false);
+      haptics.impact();
+      
+      const parsed = parseQRToIntent(rawData);
+      setScannedData(parsed);
+      setManualAmount("");
+      
+      if (!parsed.success) {
+        haptics.error();
+        toast({
+          title: "Unrecognized QR Code",
+          description: parsed.error,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      haptics.success();
+      toast({
+        title: "QR Scanned",
+        description: `${parsed.merchantName} - ${parsed.currency} ${parsed.amount?.toFixed(2) || 'Enter amount'}`,
+      });
+    };
+    
+    handleTestScan(TEST_QR_CODES[type]);
+  }, [haptics, toast]);
 
   // Register demo actions for this page
   useEffect(() => {
@@ -81,7 +113,6 @@ const ScanPage = () => {
           title: 'Scanning QR...',
           description: 'Simulating merchant QR scan',
         });
-        // Small delay for effect
         await new Promise(resolve => setTimeout(resolve, 500));
         simulateTestScan('merchant');
       },
@@ -90,7 +121,7 @@ const ScanPage = () => {
     return () => {
       clearPageActions();
     };
-  }, [registerPageAction, clearPageActions, toast]);
+  }, [registerPageAction, clearPageActions, toast, simulateTestScan]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -100,6 +131,7 @@ const ScanPage = () => {
         return;
       }
       setUserId(user.id);
+      setIsLoading(false);
       
       // Pre-select first available funding source
       if (sources.length > 0 && !selectedFundingSourceId) {
@@ -112,16 +144,16 @@ const ScanPage = () => {
     checkAuth();
   }, [navigate, sources, selectedFundingSourceId]);
 
-  const handleScan = async (rawData: string) => {
+  const handleScan = useCallback(async (rawData: string) => {
     setIsScannerOpen(false);
-    await haptics.impact();
+    haptics.impact();
     
     const parsed = parseQRToIntent(rawData);
     setScannedData(parsed);
-    setManualAmount(""); // Reset manual amount
+    setManualAmount("");
     
     if (!parsed.success) {
-      await haptics.error();
+      haptics.error();
       toast({
         title: "Unrecognized QR Code",
         description: parsed.error,
@@ -130,12 +162,12 @@ const ScanPage = () => {
       return;
     }
     
-    await haptics.success();
+    haptics.success();
     toast({
       title: "QR Scanned",
       description: `${parsed.merchantName} - ${parsed.currency} ${parsed.amount?.toFixed(2) || 'Enter amount'}`,
     });
-  };
+  }, [haptics, toast]);
 
   const handleProceed = async () => {
     if (!scannedData || !userId) return;
@@ -187,16 +219,17 @@ const ScanPage = () => {
     setIsScannerOpen(true);
   };
 
-  const railIcons: Record<string, React.ReactNode> = {
-    TouchNGo: <Wallet className="w-3.5 h-3.5" />,
-    GrabPay: <Wallet className="w-3.5 h-3.5" />,
-    Boost: <Wallet className="w-3.5 h-3.5" />,
-    DuitNow: <Store className="w-3.5 h-3.5" />,
-  };
-
   // Check if QR is static (no amount)
   const isStaticQR = scannedData?.success && !scannedData.amount;
   const displayAmount = scannedData?.amount || (manualAmount ? parseFloat(manualAmount) : null);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
@@ -322,7 +355,7 @@ const ScanPage = () => {
                               i === 0 ? "aurora-gradient text-white border-0" : "glass-card"
                             }`}
                           >
-                            {railIcons[rail]}
+                            {RAIL_ICONS[rail]}
                             {rail}
                           </Badge>
                         ))}
