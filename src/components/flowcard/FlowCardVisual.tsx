@@ -313,9 +313,9 @@ export function FlowCardVisual({
                 </div>
               </div>
 
-              {/* Partnership note */}
+              {/* Usage note */}
               <p className="text-xs text-muted-foreground text-center pt-2">
-                <strong>Demo credentials</strong> — In production, bank partner issues these for Apple/Google Pay enrollment
+                Use these credentials for Apple Pay / Google Pay enrollment
               </p>
             </motion.div>
           </AnimatePresence>

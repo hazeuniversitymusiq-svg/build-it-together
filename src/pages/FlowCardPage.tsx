@@ -13,9 +13,7 @@ import {
   Smartphone, 
   Pause, 
   Play,
-  Zap,
-  Shield,
-  Building2
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
@@ -106,7 +104,7 @@ export default function FlowCardPage() {
 
     if (result.success) {
       toast({
-        title: 'Bank Auth Request Received',
+        title: 'Tap Simulated',
         description: `RM ${amount.toFixed(2)} at ${merchant} - Confirm below`,
       });
     } else {
@@ -255,8 +253,8 @@ export default function FlowCardPage() {
               />
             ) : (
               <>
-                <Building2 size={18} className="mr-2" />
-                Bank Auth Demo
+                <Zap size={18} className="mr-2" />
+                Simulate Tap
               </>
             )}
           </Button>
@@ -265,7 +263,7 @@ export default function FlowCardPage() {
         {/* Demo Explainer */}
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground text-center">
-            <strong>Demo Mode:</strong> Simulates bank partner sending auth request → Flow decides funding source → Approve/Decline
+            <strong>Demo:</strong> Simulate Tap → Flow Decides → Approve
           </p>
         </div>
       </div>
@@ -349,65 +347,34 @@ export default function FlowCardPage() {
         </div>
       </div>
 
-      {/* Bank Partnership Status */}
+      {/* Network Status */}
       {isNetworkEnabled && provisioning && (
         <div className="px-6 mt-6">
           <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-            Tap-to-Pay Status
+            Wallet Provisioning
           </h2>
-          <div className="glass-card rounded-xl p-4">
-            {/* Partnership Notice */}
-            <div className="flex items-start gap-3 mb-4 p-3 bg-muted/50 rounded-lg">
-              <div className="w-8 h-8 rounded-full bg-aurora-blue/20 flex items-center justify-center flex-shrink-0">
-                <Shield size={16} className="text-aurora-blue" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Bank Partner Required</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Tap-to-pay requires a bank partner to issue card credentials and handle Apple/Google Pay verification.
-                </p>
-              </div>
-            </div>
-
-            {/* Wallet Status */}
+          <div className="glass-card rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Smartphone size={20} className="text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Apple Pay</p>
-                  <p className="text-xs text-muted-foreground">
-                    {provisioning.apple_status === 'ready' 
-                      ? 'Awaiting Partner Activation' 
-                      : provisioning.apple_status.replace('_', ' ')}
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {provisioning.apple_status.replace('_', ' ')}
                   </p>
                 </div>
               </div>
-              <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                Partner Required
-              </span>
             </div>
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between pt-3 border-t border-border">
               <div className="flex items-center gap-3">
                 <Smartphone size={20} className="text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Google Pay</p>
-                  <p className="text-xs text-muted-foreground">
-                    {provisioning.google_status === 'ready' 
-                      ? 'Awaiting Partner Activation' 
-                      : provisioning.google_status.replace('_', ' ')}
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {provisioning.google_status.replace('_', ' ')}
                   </p>
                 </div>
               </div>
-              <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                Partner Required
-              </span>
-            </div>
-
-            {/* How it works */}
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center">
-                With a bank partner, Flow Card becomes a tap-to-pay card that routes payments through your preferred sources automatically.
-              </p>
             </div>
           </div>
         </div>
