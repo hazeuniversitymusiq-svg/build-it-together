@@ -47,6 +47,7 @@ import MyPaymentCode from "@/components/scanner/MyPaymentCode";
 import FundingSourcePicker from "@/components/scanner/FundingSourcePicker";
 import MerchantHistory from "@/components/scanner/MerchantHistory";
 import { parseQRToIntent, createIntentFromParsedQR, type ParsedQRIntent } from "@/lib/qr";
+import SmartRailRecommendation from "@/components/scanner/SmartRailRecommendation";
 
 // Test QR codes for simulation
 const TEST_QR_CODES = {
@@ -363,20 +364,46 @@ const ScanPage = () => {
                     </div>
                   </motion.div>
 
-                  {/* Funding Source Picker */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="mb-4"
-                  >
-                    <FundingSourcePicker
-                      sources={sources}
-                      selectedId={selectedFundingSourceId}
-                      onSelect={setSelectedFundingSourceId}
-                      merchantRails={scannedData.availableRails}
-                    />
-                  </motion.div>
+                  {/* Smart Rail Recommendation */}
+                  {userId && displayAmount && displayAmount > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="mb-4"
+                    >
+                      <SmartRailRecommendation
+                        userId={userId}
+                        amount={displayAmount}
+                        merchantRails={scannedData.availableRails}
+                        selectedRailName={sources.find(s => s.id === selectedFundingSourceId)?.name}
+                        onSelectRail={(railName, fundingSourceId) => {
+                          // Find the matching funding source
+                          const source = sources.find(s => s.name === railName || s.id === fundingSourceId);
+                          if (source) {
+                            setSelectedFundingSourceId(source.id);
+                          }
+                        }}
+                      />
+                    </motion.div>
+                  )}
+
+                  {/* Funding Source Picker (fallback for when no amount yet) */}
+                  {(!displayAmount || displayAmount <= 0) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="mb-4"
+                    >
+                      <FundingSourcePicker
+                        sources={sources}
+                        selectedId={selectedFundingSourceId}
+                        onSelect={setSelectedFundingSourceId}
+                        merchantRails={scannedData.availableRails}
+                      />
+                    </motion.div>
+                  )}
                 </>
               ) : (
                 /* Error Message */
