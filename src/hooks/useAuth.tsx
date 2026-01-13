@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -42,15 +44,35 @@ export function useAuth() {
   }, [refreshSession]);
 
   const signInWithGoogle = async () => {
-    // Use redirect flow instead of popup for native app compatibility
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-        skipBrowserRedirect: false,
-      },
-    });
-    return { error };
+    const isNative = Capacitor.isNativePlatform();
+    
+    if (isNative) {
+      // For native apps, get the OAuth URL and open in external browser
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `app.lovable.4f80439d456c47d48afef4444d0b35a2://`,
+          skipBrowserRedirect: true,
+        },
+      });
+      
+      if (error) return { error };
+      
+      if (data?.url) {
+        await Browser.open({ url: data.url });
+      }
+      
+      return { error: null };
+    } else {
+      // For web, use standard redirect
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      return { error };
+    }
   };
 
   const signOut = async () => {
