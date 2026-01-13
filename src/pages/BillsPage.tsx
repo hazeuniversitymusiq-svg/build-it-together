@@ -5,7 +5,7 @@
  * With intelligent features: payment history, auto-pay, spending insights
  */
 
-import { forwardRef, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -47,7 +47,7 @@ const billerConfig: Record<string, { icon: React.ReactNode; gradient: string }> 
   TNB: { icon: <Zap className="w-6 h-6" />, gradient: "from-yellow-500 to-orange-500" },
 };
 
-const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
+const BillsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { registerPageAction, clearPageActions } = useDemo();
@@ -157,7 +157,7 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
     };
   }, [registerPageAction, clearPageActions, simulateBillPayment]);
 
-  const handleLinkBiller = async (billerName: string) => {
+  const handleLinkBiller = useCallback(async (billerName: string) => {
     if (!accountNumber.trim()) {
       toast({
         title: "Missing account number",
@@ -209,9 +209,9 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
     } finally {
       setIsLinking(false);
     }
-  };
+  }, [accountNumber, toast]);
 
-  const handlePayNow = async (biller: BillerInfo) => {
+  const handlePayNow = useCallback(async (biller: BillerInfo) => {
     if (!biller.dueAmount) return;
 
     setIsCreatingIntent(biller.name);
@@ -255,21 +255,18 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
       });
       setIsCreatingIntent(null);
     }
-  };
+  }, [navigate, toast]);
 
   if (isLoading) {
     return (
-      <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full aurora-gradient opacity-30 animate-aurora" />
-          <Loader2 className="w-12 h-12 text-aurora-blue animate-spin" />
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <div className="px-6 pt-14 pb-2">
         <div className="flex items-center gap-4 mb-2">
@@ -451,7 +448,6 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </div>
   );
-});
-BillsPage.displayName = "BillsPage";
+};
 
 export default BillsPage;
