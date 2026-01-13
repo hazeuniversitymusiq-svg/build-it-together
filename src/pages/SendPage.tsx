@@ -5,7 +5,7 @@
  * With intelligent features: frequent contacts, send history, note field
  */
 
-import { forwardRef, useState, useEffect } from "react";
+import { forwardRef, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -18,6 +18,7 @@ import {
   Wallet,
   MessageSquare
 } from "lucide-react";
+import { useDemo } from "@/contexts/DemoContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,7 @@ interface ContactDisplayItem {
 const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { registerPageAction, clearPageActions } = useDemo();
 
   const [contacts, setContacts] = useState<ContactDisplayItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,6 +107,42 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
 
     loadContacts();
   }, [navigate]);
+
+  // Simulate selecting a contact and initiating transfer
+  const simulateSendDemo = useCallback(() => {
+    const demoContact: ContactDisplayItem = {
+      id: "demo-1",
+      name: "Sarah",
+      phone: "+60123456789",
+      initial: "S",
+      supportedWallets: ["TouchNGo", "GrabPay"],
+      defaultWallet: "TouchNGo",
+    };
+    
+    setSelectedContact(demoContact);
+    setSelectedWallet("TouchNGo");
+    setAmount("50.00");
+    setNote("Lunch yesterday 🍜");
+    
+    toast({
+      title: "Demo: Contact Selected",
+      description: `Selected ${demoContact.name} with RM 50.00`,
+    });
+  }, [toast]);
+
+  // Register demo actions for this page
+  useEffect(() => {
+    registerPageAction({
+      id: 'send-simulate-transfer',
+      label: 'Simulate Send Money',
+      description: 'Select a contact and pre-fill transfer details',
+      action: simulateSendDemo,
+    });
+
+    return () => {
+      clearPageActions();
+    };
+  }, [registerPageAction, clearPageActions, simulateSendDemo]);
 
   const handleAllowContacts = async () => {
     const { data: { user } } = await supabase.auth.getUser();
