@@ -4,7 +4,7 @@
  * iOS 26 Liquid Glass design - Clean, minimal settings UI
  */
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
@@ -21,6 +21,7 @@ import PaymentRailsManager from "@/components/settings/PaymentRailsManager";
 import CardLinkingManager from "@/components/settings/CardLinkingManager";
 import FallbackPreferenceSelector from "@/components/settings/FallbackPreferenceSelector";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   ChevronRight, 
   ChevronDown,
@@ -37,7 +38,8 @@ import {
   Clock,
   Settings2,
   Sliders,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -55,18 +57,39 @@ const SettingsPage = () => {
   } = useFeatureFlags();
   const { resetOnboarding } = useOnboarding();
   
+  const [isLoading, setIsLoading] = useState(true);
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false);
   const [isLimitsExpanded, setIsLimitsExpanded] = useState(false);
 
-  const handleSignOut = async () => {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+      setIsLoading(false);
+    };
+    checkAuth();
+  }, [navigate]);
+
+  const handleSignOut = useCallback(async () => {
     await signOut();
     navigate('/');
-  };
+  }, [signOut, navigate]);
 
-  const handleReplayOnboarding = () => {
+  const handleReplayOnboarding = useCallback(() => {
     resetOnboarding();
     window.location.href = '/';
-  };
+  }, [resetOnboarding]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background safe-area-top safe-area-bottom pb-28">
