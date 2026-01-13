@@ -313,9 +313,9 @@ export function FlowCardVisual({
                 </div>
               </div>
 
-              {/* Add to Wallet hint */}
+              {/* Partnership note */}
               <p className="text-xs text-muted-foreground text-center pt-2">
-                Use these details to add Flow Card to Apple Pay or Google Pay
+                <strong>Demo credentials</strong> — In production, bank partner issues these for Apple/Google Pay enrollment
               </p>
             </motion.div>
           </AnimatePresence>
