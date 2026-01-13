@@ -4,7 +4,7 @@
  * iOS 26 Liquid Glass design - Full transaction history with filters
  */
 
-import { forwardRef, useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -63,7 +63,22 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; label
   },
 };
 
-const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
+// Filter button options - extracted to avoid recreation
+const FILTER_BUTTONS: { key: FilterType; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "payments", label: "Payments" },
+  { key: "transfers", label: "Transfers" },
+  { key: "bills", label: "Bills" },
+];
+
+const STATUS_BUTTONS: { key: StatusFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "success", label: "Completed" },
+  { key: "pending", label: "Pending" },
+  { key: "failed", label: "Failed" },
+];
+
+const ActivityPage = () => {
   const navigate = useNavigate();
   
   const [logs, setLogs] = useState<TransactionLog[]>([]);
@@ -73,7 +88,7 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  const loadLogs = async (showRefresh = false) => {
+  const loadLogs = useCallback(async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -94,11 +109,11 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
 
     setIsLoading(false);
     setIsRefreshing(false);
-  };
+  }, [navigate]);
 
   useEffect(() => {
     loadLogs();
-  }, [navigate]);
+  }, [loadLogs]);
 
   const filteredLogs = logs.filter(log => {
     if (typeFilter !== "all") {
@@ -110,7 +125,7 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
     return true;
   });
 
-  const getLogDisplay = (log: TransactionLog) => {
+  const getLogDisplay = useCallback((log: TransactionLog) => {
     const isOutgoing = log.intent_type !== "RequestMoney";
     
     let icon = Wallet;
@@ -136,35 +151,18 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
     }
     
     return { icon, name, isOutgoing };
-  };
-
-  const filterButtons: { key: FilterType; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "payments", label: "Payments" },
-    { key: "transfers", label: "Transfers" },
-    { key: "bills", label: "Bills" },
-  ];
-
-  const statusButtons: { key: StatusFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "success", label: "Completed" },
-    { key: "pending", label: "Pending" },
-    { key: "failed", label: "Failed" },
-  ];
+  }, []);
 
   if (isLoading) {
     return (
-      <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full aurora-gradient opacity-30 animate-aurora" />
-          <Loader2 className="w-12 h-12 text-aurora-blue animate-spin" />
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <div className="px-6 pt-14 pb-4">
         <div className="flex items-center justify-between mb-4">
@@ -213,7 +211,7 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
               <div>
                 <p className="text-xs text-muted-foreground mb-2">Type</p>
                 <div className="flex gap-2 flex-wrap">
-                  {filterButtons.map(btn => (
+                  {FILTER_BUTTONS.map(btn => (
                     <button
                       key={btn.key}
                       onClick={() => setTypeFilter(btn.key)}
@@ -233,7 +231,7 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
               <div>
                 <p className="text-xs text-muted-foreground mb-2">Status</p>
                 <div className="flex gap-2 flex-wrap">
-                  {statusButtons.map(btn => (
+                  {STATUS_BUTTONS.map(btn => (
                     <button
                       key={btn.key}
                       onClick={() => setStatusFilter(btn.key)}
@@ -363,7 +361,6 @@ const ActivityPage = forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </div>
   );
-});
-ActivityPage.displayName = "ActivityPage";
+};
 
 export default ActivityPage;
