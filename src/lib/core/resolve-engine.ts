@@ -133,9 +133,20 @@ function assignRiskLevel(amount: number, requiresConfirmation: boolean): RiskLev
 function generateHumanSteps(
   resolution: { action: string; steps: Array<{ action: string; sourceType?: string; amount?: number }> },
   amount: number,
-  chosenRail: string
+  chosenRail: string,
+  intentType?: string,
+  recipientName?: string,
+  recipientPreferredWallet?: string
 ): ResolutionStep[] {
   const steps: ResolutionStep[] = [];
+
+  // Determine destination description for P2P payments
+  const isP2P = intentType === 'SendMoney';
+  const destinationDesc = isP2P && recipientName
+    ? recipientPreferredWallet && recipientPreferredWallet !== 'None'
+      ? `${recipientName}'s ${recipientPreferredWallet}`
+      : `${recipientName} via ${chosenRail}`
+    : chosenRail;
 
   for (const step of resolution.steps) {
     if (step.action === 'top_up') {
@@ -148,7 +159,9 @@ function generateHumanSteps(
     } else if (step.action === 'charge') {
       steps.push({
         action: 'PAY',
-        description: `Pay RM${step.amount?.toFixed(2)} using ${chosenRail}`,
+        description: isP2P 
+          ? `Send RM${step.amount?.toFixed(2)} to ${destinationDesc}`
+          : `Pay RM${step.amount?.toFixed(2)} using ${chosenRail}`,
         amount: step.amount,
         source: chosenRail,
       });
@@ -159,7 +172,9 @@ function generateHumanSteps(
   if (steps.length === 0) {
     steps.push({
       action: 'PAY',
-      description: `Pay RM${amount.toFixed(2)} using ${chosenRail}`,
+      description: isP2P 
+        ? `Send RM${amount.toFixed(2)} to ${destinationDesc}`
+        : `Pay RM${amount.toFixed(2)} using ${chosenRail}`,
       amount,
       source: chosenRail,
     });
@@ -209,9 +224,33 @@ export async function resolveIntent(
   const amount = Number(intent.amount);
   const metadata = intent.metadata as Record<string, unknown>;
   const railsAvailable = metadata?.railsAvailable as string[] | undefined;
+  const recipientWallets = metadata?.recipientWallets as string[] | undefined;
+  const recipientPreferredWallet = metadata?.recipientPreferredWallet as string | undefined;
 
   // Get candidate rails
-  const candidates = await getCandidateRails(userId, intent.type, railsAvailable);
+  let candidates = await getCandidateRails(userId, intent.type, railsAvailable);
+  
+  // For SendMoney: prioritize rails that match recipient's wallets
+  if (intent.type === 'SendMoney' && recipientWallets && recipientWallets.length > 0) {
+    // Sort candidates to prioritize recipient's preferred wallet, then other recipient wallets
+    candidates = candidates.sort((a, b) => {
+      const aIsPreferred = a.name === recipientPreferredWallet;
+      const bIsPreferred = b.name === recipientPreferredWallet;
+      const aInRecipientWallets = recipientWallets.includes(a.name);
+      const bInRecipientWallets = recipientWallets.includes(b.name);
+      
+      // Preferred wallet first
+      if (aIsPreferred && !bIsPreferred) return -1;
+      if (!aIsPreferred && bIsPreferred) return 1;
+      
+      // Then any wallet recipient has
+      if (aInRecipientWallets && !bInRecipientWallets) return -1;
+      if (!aInRecipientWallets && bInRecipientWallets) return 1;
+      
+      return 0;
+    });
+  }
+  
   if (candidates.length === 0) {
     return {
       success: false,
@@ -276,8 +315,15 @@ export async function resolveIntent(
   const topupStep = resolution.steps.find(s => s.action === 'top_up');
   const topupAmount = topupStep?.amount || 0;
 
-  // Generate human-readable steps
-  const steps = generateHumanSteps(resolution, amount, chosenRail);
+  // Generate human-readable steps with recipient context for P2P
+  const steps = generateHumanSteps(
+    resolution, 
+    amount, 
+    chosenRail,
+    intent.type,
+    intent.payee_name,
+    recipientPreferredWallet
+  );
   const riskLevel = assignRiskLevel(amount, resolution.requiresConfirmation);
 
   const reasonCodes: string[] = [];
