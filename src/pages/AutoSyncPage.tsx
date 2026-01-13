@@ -17,7 +17,10 @@ import {
   Check, 
   ShieldCheck, 
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  CreditCard,
+  Smartphone,
+  Sparkles
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,13 +35,18 @@ interface AppConfig {
 
 // App configuration - centralized data
 const WALLET_APPS: AppConfig[] = [
-  { name: "TouchNGo", description: "E-wallet payments", icon: Wallet, recommended: true },
-  { name: "GrabPay", description: "Merchant payments", icon: Wallet },
+  { name: "TouchNGo", description: "Malaysia's #1 e-wallet", icon: Wallet, recommended: true },
+  { name: "GrabPay", description: "Merchant payments", icon: Wallet, recommended: true },
   { name: "Boost", description: "Cashback rewards", icon: Wallet },
 ];
 
 const BANK_APPS: AppConfig[] = [
   { name: "Maybank", description: "Bank transfers", icon: Landmark, recommended: true },
+];
+
+const BNPL_APPS: AppConfig[] = [
+  { name: "Atome", description: "Split payments, 0% interest", icon: CreditCard, recommended: true },
+  { name: "SPayLater", description: "Shopee Pay Later", icon: CreditCard },
 ];
 
 const BILL_APPS: AppConfig[] = [
@@ -47,7 +55,7 @@ const BILL_APPS: AppConfig[] = [
   { name: "Maxis", description: "Mobile", icon: Receipt },
 ];
 
-const ALL_APP_NAMES = [...WALLET_APPS, ...BANK_APPS, ...BILL_APPS].map(a => a.name);
+const ALL_APP_NAMES = [...WALLET_APPS, ...BANK_APPS, ...BNPL_APPS, ...BILL_APPS].map(a => a.name);
 
 interface AppItemProps {
   name: string;
@@ -137,7 +145,7 @@ const AutoSyncPage = () => {
         
         // Smart defaults: pre-select recommended apps not already connected
         const defaults = new Set<string>();
-        [...WALLET_APPS, ...BANK_APPS].forEach(app => {
+        [...WALLET_APPS, ...BANK_APPS, ...BNPL_APPS].forEach(app => {
           if (app.recommended && !connectedNames.includes(app.name)) {
             defaults.add(app.name);
           }
@@ -179,6 +187,14 @@ const AutoSyncPage = () => {
       GrabPay: 42.00,
       Boost: 25.00,
       Maybank: 1250.00,
+      Atome: 500.00,
+      SPayLater: 300.00,
+    };
+
+    // BNPL credit limits
+    const bnplLimits: Record<string, number> = {
+      Atome: 1500.00,
+      SPayLater: 1000.00,
     };
 
     let priority = 1;
@@ -187,9 +203,10 @@ const AutoSyncPage = () => {
       // Determine app type
       const isWallet = WALLET_APPS.some(w => w.name === appName);
       const isBank = BANK_APPS.some(b => b.name === appName);
+      const isBnpl = BNPL_APPS.some(b => b.name === appName);
       const isBiller = BILL_APPS.some(b => b.name === appName);
       
-      const connectorType = isWallet ? "wallet" : isBank ? "bank" : "biller";
+      const connectorType = isWallet ? "wallet" : isBank ? "bank" : isBnpl ? "bnpl" : "biller";
       
       // Create connector
       const capabilities: Record<string, boolean> = {};
@@ -200,6 +217,10 @@ const AutoSyncPage = () => {
       } else if (isBank) {
         capabilities.can_pay = true;
         capabilities.can_transfer = true;
+      } else if (isBnpl) {
+        capabilities.can_pay_qr = true;
+        capabilities.can_pay = true;
+        capabilities.can_installment = true;
       }
 
       await supabase.from("connectors").upsert({
@@ -211,20 +232,22 @@ const AutoSyncPage = () => {
         capabilities,
       }, { onConflict: "user_id,name" });
 
-      // Create funding source for wallets and banks
-      if (isWallet || isBank) {
+      // Create funding source for wallets, banks, and BNPL
+      if (isWallet || isBank || isBnpl) {
         const balance = defaultBalances[appName] || 50.00;
+        const sourceType = isWallet ? "wallet" : isBank ? "bank" : "bnpl";
+        
         await supabase.from("funding_sources").upsert({
           user_id: user.id,
           name: appName,
-          type: isWallet ? "wallet" : "bank",
-          balance,
+          type: sourceType,
+          balance: isBnpl ? bnplLimits[appName] || 500 : balance, // BNPL uses credit limit
           currency: "MYR",
-          priority,
+          priority: isBnpl ? priority + 10 : priority, // BNPL lower priority
           linked_status: "linked",
           available: true,
-          max_auto_topup_amount: isWallet ? 200 : 500,
-          require_extra_confirm_amount: isWallet ? 300 : 1000,
+          max_auto_topup_amount: isWallet ? 200 : isBank ? 500 : 0,
+          require_extra_confirm_amount: isWallet ? 300 : isBank ? 1000 : 200,
         }, { onConflict: "user_id,name" });
         priority++;
       }
@@ -315,8 +338,23 @@ const AutoSyncPage = () => {
           />
         ))}
 
+        {/* BNPL */}
+        <SectionHeader delay={0.4}>Buy Now Pay Later</SectionHeader>
+        {BNPL_APPS.map((app, i) => (
+          <AppItem
+            key={app.name}
+            name={app.name}
+            description={app.description}
+            icon={app.icon}
+            selected={selectedApps.has(app.name) || alreadyConnected.has(app.name)}
+            recommended={app.recommended}
+            onToggle={() => !alreadyConnected.has(app.name) && toggleApp(app.name)}
+            delay={0.45 + i * 0.05}
+          />
+        ))}
+
         {/* Bills */}
-        <SectionHeader delay={0.4}>Bills</SectionHeader>
+        <SectionHeader delay={0.5}>Bills</SectionHeader>
         {BILL_APPS.map((app, i) => (
           <AppItem
             key={app.name}
@@ -325,7 +363,7 @@ const AutoSyncPage = () => {
             icon={app.icon}
             selected={selectedApps.has(app.name) || alreadyConnected.has(app.name)}
             onToggle={() => !alreadyConnected.has(app.name) && toggleApp(app.name)}
-            delay={0.45 + i * 0.05}
+            delay={0.55 + i * 0.05}
           />
         ))}
       </div>

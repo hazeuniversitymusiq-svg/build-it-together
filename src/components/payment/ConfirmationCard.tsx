@@ -36,6 +36,7 @@ const railConfig: Record<FundingRailType, { icon: typeof Wallet; label: string }
   card: { icon: CreditCard, label: 'Card' },
   debit_card: { icon: CreditCard, label: 'Debit Card' },
   credit_card: { icon: CreditCard, label: 'Credit Card' },
+  bnpl: { icon: CreditCard, label: 'Buy Now Pay Later' },
 };
 
 const ConfirmationCard = ({

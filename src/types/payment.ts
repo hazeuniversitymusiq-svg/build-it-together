@@ -9,7 +9,7 @@
 // Funding Source Types
 // ============================================
 
-export type FundingRailType = 'wallet' | 'bank' | 'card' | 'debit_card' | 'credit_card';
+export type FundingRailType = 'wallet' | 'bank' | 'card' | 'debit_card' | 'credit_card' | 'bnpl';
 
 export interface FundingSource {
   id: string;
