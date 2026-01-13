@@ -36,10 +36,10 @@ const AuthPage = () => {
 
   useEffect(() => {
     // If user is already authenticated and we're on auth step, 
-    // skip to auto-sync (they've already completed onboarding)
+    // skip to quick connect (they've already completed onboarding)
     // But if we're on security step, let them complete it first
     if (user && !loading && step === 'auth') {
-      navigate('/auto-sync', { replace: true });
+      navigate('/connect', { replace: true });
     }
   }, [user, loading, navigate, step]);
 
@@ -136,7 +136,7 @@ const AuthPage = () => {
         return;
       }
 
-      navigate('/auto-sync', { replace: true });
+      navigate('/connect', { replace: true });
     } catch (error) {
       toast.error('Something went wrong');
     } finally {
