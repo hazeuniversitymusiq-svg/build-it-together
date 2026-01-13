@@ -1,7 +1,7 @@
 /**
  * FLOW Settings Page
  * 
- * iOS 26 Liquid Glass design - Payment sources, guardrails, security
+ * iOS 26 Liquid Glass design - Clean, minimal settings UI
  */
 
 import { useState } from "react";
@@ -18,7 +18,6 @@ import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
 import PaymentRailsManager from "@/components/settings/PaymentRailsManager";
 import CardLinkingManager from "@/components/settings/CardLinkingManager";
 import FallbackPreferenceSelector from "@/components/settings/FallbackPreferenceSelector";
-import { BankPartnerDemo } from "@/components/demo/BankPartnerDemo";
 import { Switch } from "@/components/ui/switch";
 import { 
   ChevronRight, 
@@ -28,15 +27,15 @@ import {
   Bell,
   DollarSign,
   LogOut,
-  FlaskConical,
   Smartphone,
   CreditCard,
   Building2,
   Route,
   ArrowLeftRight,
   ExternalLink,
-  Zap,
-  Clock
+  Clock,
+  Settings2,
+  Play
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -53,12 +52,7 @@ const SettingsPage = () => {
     loading: flagsLoading 
   } = useFeatureFlags();
   
-  const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
-  const [isBankDemoExpanded, setIsBankDemoExpanded] = useState(true);
-  const [isRailsExpanded, setIsRailsExpanded] = useState(false);
-  const [isCardsExpanded, setIsCardsExpanded] = useState(false);
-  const [isFallbackExpanded, setIsFallbackExpanded] = useState(false);
-  const [isFeatureFlagsExpanded, setIsFeatureFlagsExpanded] = useState(false);
+  const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -69,297 +63,96 @@ const SettingsPage = () => {
     <div className="min-h-screen bg-background safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <header className="px-6 pt-14 pb-6">
-        <p className="text-muted-foreground text-sm mb-1">Configuration</p>
+        <p className="text-muted-foreground text-sm mb-1">Account</p>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Settings</h1>
       </header>
 
-      {/* Quick Links */}
+      {/* Kill Switch - Primary Control */}
       <section className="px-6 mb-6">
-        <motion.button
+        <KillSwitch />
+      </section>
+
+      {/* Mode Toggle */}
+      <section className="px-6 mb-6">
+        <p className="text-sm font-medium text-muted-foreground mb-4">Mode</p>
+        <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          onClick={() => navigate('/activity')}
-          className="w-full glass-card rounded-2xl p-4 shadow-float flex items-center justify-between hover:bg-muted/30 transition-colors"
+          className={`glass-card rounded-2xl p-4 shadow-float transition-all ${
+            isFieldTest ? 'aurora-border' : ''
+          }`}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
-              <Clock className="w-5 h-5 text-aurora-blue" />
-            </div>
-            <div className="text-left">
-              <span className="text-foreground font-medium">Transaction History</span>
-              <p className="text-xs text-muted-foreground mt-0.5">View all your activity</p>
-            </div>
-          </div>
-          <ChevronRight size={20} className="text-muted-foreground" />
-        </motion.button>
-      </section>
-
-      {/* Feature Flags (Admin) */}
-      <section className="px-6 mb-6">
-        <button
-          onClick={() => setIsFeatureFlagsExpanded(!isFeatureFlagsExpanded)}
-          className="flex items-center justify-between w-full mb-4 group"
-        >
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-warning" />
-            <p className="text-sm font-medium text-muted-foreground">Feature Flags (Admin)</p>
-          </div>
-          <motion.div
-            animate={{ rotate: isFeatureFlagsExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </motion.div>
-        </button>
-        
-        <motion.div
-          initial={false}
-          animate={{ 
-            height: isFeatureFlagsExpanded ? "auto" : 0,
-            opacity: isFeatureFlagsExpanded ? 1 : 0 
-          }}
-          transition={{ duration: 0.3 }}
-          className="overflow-hidden"
-        >
-          <div className="glass-card rounded-2xl overflow-hidden shadow-float">
-            <div className="divide-y divide-border/30">
-              {/* Flow Card Enabled */}
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    isFlowCardEnabled ? 'aurora-gradient shadow-glow-blue' : 'bg-muted'
-                  }`}>
-                    <CreditCard className={`w-5 h-5 ${isFlowCardEnabled ? 'text-white' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <span className="text-foreground font-medium">Flow Card</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Enable digital card feature
-                    </p>
-                  </div>
-                </div>
-                <Switch 
-                  checked={isFlowCardEnabled} 
-                  onCheckedChange={(checked) => setFlag('flow_card_enabled', checked)}
-                  disabled={flagsLoading}
-                />
-              </div>
-
-              {/* Network Enabled */}
-              <div className={`flex items-center justify-between p-4 transition-opacity ${
-                !isFlowCardEnabled ? 'opacity-50' : ''
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                isFieldTest ? 'aurora-gradient shadow-glow-blue' : 'bg-muted'
               }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    isNetworkEnabled ? 'bg-aurora-purple/20' : 'bg-muted'
-                  }`}>
-                    <Smartphone className={`w-5 h-5 ${isNetworkEnabled ? 'text-aurora-purple' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <span className="text-foreground font-medium">Network Mode</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Virtual card network (Visa/MC)
-                    </p>
-                  </div>
-                </div>
-                <Switch 
-                  checked={isNetworkEnabled} 
-                  onCheckedChange={(checked) => setFlag('flow_card_network_enabled', checked)}
-                  disabled={flagsLoading || !isFlowCardEnabled}
-                />
+                <Smartphone className={`w-5 h-5 ${isFieldTest ? 'text-white' : 'text-muted-foreground'}`} />
               </div>
+              <div>
+                <span className="text-foreground font-medium">
+                  {isFieldTest ? "Field Test" : "Prototype"}
+                </span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isFieldTest 
+                    ? "Opens real wallet apps" 
+                    : "Simulates payment flow"}
+                </p>
+              </div>
+            </div>
+            <Switch 
+              checked={isFieldTest} 
+              onCheckedChange={toggleMode}
+            />
+          </div>
+        </motion.div>
+      </section>
 
-              {/* Provisioning Enabled */}
-              <div className={`flex items-center justify-between p-4 transition-opacity ${
-                !isNetworkEnabled ? 'opacity-50' : ''
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    isProvisioningEnabled ? 'bg-aurora-teal/20' : 'bg-muted'
-                  }`}>
-                    <Wallet className={`w-5 h-5 ${isProvisioningEnabled ? 'text-aurora-teal' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <span className="text-foreground font-medium">Push Provisioning</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Apple Pay / Google Pay
-                    </p>
-                  </div>
+      {/* Security */}
+      <section className="px-6 mb-6">
+        <p className="text-sm font-medium text-muted-foreground mb-4">Security</p>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="glass-card rounded-2xl overflow-hidden shadow-float"
+        >
+          <div className="divide-y divide-border/30">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-aurora-teal" />
                 </div>
-                <Switch 
-                  checked={isProvisioningEnabled} 
-                  onCheckedChange={(checked) => setFlag('flow_card_push_provisioning_enabled', checked)}
-                  disabled={flagsLoading || !isNetworkEnabled}
-                />
+                <span className="text-foreground">Face ID</span>
+              </div>
+              <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                isWebAuthnRegistered 
+                  ? "bg-success/10 text-success" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {isWebAuthnRegistered ? "Enabled" : "Not set up"}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-aurora-teal" />
+                </div>
+                <span className="text-foreground">Notifications</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">On</span>
+                <ChevronRight size={16} className="text-muted-foreground/50" />
               </div>
             </div>
           </div>
         </motion.div>
       </section>
 
-      {/* Bank Partner Demo - NEW */}
+      {/* Guardrails - Always visible, compact */}
       <section className="px-6 mb-6">
-        <button
-          onClick={() => setIsBankDemoExpanded(!isBankDemoExpanded)}
-          className="flex items-center justify-between w-full mb-4 group"
-        >
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-aurora-teal" />
-            <p className="text-sm font-medium text-muted-foreground">Bank Partner Demo</p>
-          </div>
-          <motion.div
-            animate={{ rotate: isBankDemoExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </motion.div>
-        </button>
-        
-        <motion.div
-          initial={false}
-          animate={{ 
-            height: isBankDemoExpanded ? "auto" : 0,
-            opacity: isBankDemoExpanded ? 1 : 0 
-          }}
-          transition={{ duration: 0.3 }}
-          className="overflow-hidden"
-        >
-          <div className="glass-card rounded-2xl p-4 shadow-float">
-            <BankPartnerDemo />
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Payment Rails - NEW */}
-      <section className="px-6 mb-6">
-        <button
-          onClick={() => setIsRailsExpanded(!isRailsExpanded)}
-          className="flex items-center justify-between w-full mb-4 group"
-        >
-          <div className="flex items-center gap-2">
-            <Route className="w-4 h-4 text-aurora-purple" />
-            <p className="text-sm font-medium text-muted-foreground">Payment Rails</p>
-          </div>
-          <motion.div
-            animate={{ rotate: isRailsExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </motion.div>
-        </button>
-        
-        <motion.div
-          initial={false}
-          animate={{ 
-            height: isRailsExpanded ? "auto" : 0,
-            opacity: isRailsExpanded ? 1 : 0 
-          }}
-          transition={{ duration: 0.3 }}
-          className="overflow-hidden"
-        >
-          <PaymentRailsManager />
-        </motion.div>
-      </section>
-
-      {/* Linked Cards - NEW */}
-      <section className="px-6 mb-6">
-        <button
-          onClick={() => setIsCardsExpanded(!isCardsExpanded)}
-          className="flex items-center justify-between w-full mb-4 group"
-        >
-          <div className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-indigo-500" />
-            <p className="text-sm font-medium text-muted-foreground">Linked Cards</p>
-          </div>
-          <motion.div
-            animate={{ rotate: isCardsExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </motion.div>
-        </button>
-        
-        <motion.div
-          initial={false}
-          animate={{ 
-            height: isCardsExpanded ? "auto" : 0,
-            opacity: isCardsExpanded ? 1 : 0 
-          }}
-          transition={{ duration: 0.3 }}
-          className="overflow-hidden"
-        >
-          <CardLinkingManager />
-        </motion.div>
-      </section>
-
-      {/* Fallback Preference - NEW */}
-      <section className="px-6 mb-6">
-        <button
-          onClick={() => setIsFallbackExpanded(!isFallbackExpanded)}
-          className="flex items-center justify-between w-full mb-4 group"
-        >
-          <div className="flex items-center gap-2">
-            <ArrowLeftRight className="w-4 h-4 text-primary" />
-            <p className="text-sm font-medium text-muted-foreground">Fallback Preference</p>
-          </div>
-          <motion.div
-            animate={{ rotate: isFallbackExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </motion.div>
-        </button>
-        
-        <motion.div
-          initial={false}
-          animate={{ 
-            height: isFallbackExpanded ? "auto" : 0,
-            opacity: isFallbackExpanded ? 1 : 0 
-          }}
-          transition={{ duration: 0.3 }}
-          className="overflow-hidden"
-        >
-          <FallbackPreferenceSelector />
-        </motion.div>
-      </section>
-
-      {/* Payment Sources - Expandable */}
-      <section className="px-6 mb-6">
-        <button
-          onClick={() => setIsSourcesExpanded(!isSourcesExpanded)}
-          className="flex items-center justify-between w-full mb-4 group"
-        >
-          <div className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-aurora-blue" />
-            <p className="text-sm font-medium text-muted-foreground">Payment Sources</p>
-          </div>
-          <motion.div
-            animate={{ rotate: isSourcesExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </motion.div>
-        </button>
-        
-        <motion.div
-          initial={false}
-          animate={{ 
-            height: isSourcesExpanded ? "auto" : 0,
-            opacity: isSourcesExpanded ? 1 : 0 
-          }}
-          transition={{ duration: 0.3 }}
-          className="overflow-hidden"
-        >
-          <PaymentSourcesManager />
-        </motion.div>
-      </section>
-
-      {/* Guardrails */}
-      <section className="px-6 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-aurora-purple" />
-          <p className="text-sm font-medium text-muted-foreground">Guardrails</p>
-        </div>
+        <p className="text-sm font-medium text-muted-foreground mb-4">Limits</p>
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -415,119 +208,177 @@ const SettingsPage = () => {
         </motion.div>
       </section>
 
-      {/* Kill Switch */}
+      {/* Advanced Settings - Single Collapsible */}
       <section className="px-6 mb-6">
-        <p className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-          Emergency Controls
-        </p>
-        <KillSwitch />
-      </section>
-
-      {/* Test Mode */}
-      <section className="px-6 mb-6">
-        <p className="text-sm font-medium text-muted-foreground mb-4">Mode</p>
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className={`glass-card rounded-2xl p-4 shadow-float transition-all ${
-            isFieldTest ? 'aurora-border' : ''
-          }`}
+        <button
+          onClick={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
+          className="flex items-center justify-between w-full mb-4 group"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isFieldTest ? 'aurora-gradient shadow-glow-blue' : 'bg-muted'
-              }`}>
-                {isFieldTest ? (
-                  <Smartphone className="w-5 h-5 text-white" />
-                ) : (
-                  <FlaskConical className="w-5 h-5 text-muted-foreground" />
-                )}
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground">Advanced</p>
+          </div>
+          <motion.div
+            animate={{ rotate: isAdvancedExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.div>
+        </button>
+        
+        <motion.div
+          initial={false}
+          animate={{ 
+            height: isAdvancedExpanded ? "auto" : 0,
+            opacity: isAdvancedExpanded ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden space-y-4"
+        >
+          {/* Feature Flags */}
+          <div className="glass-card rounded-2xl overflow-hidden shadow-float">
+            <div className="p-3 border-b border-border/30 bg-muted/20">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Feature Flags</span>
+            </div>
+            <div className="divide-y divide-border/30">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isFlowCardEnabled ? 'aurora-gradient shadow-glow-blue' : 'bg-muted'
+                  }`}>
+                    <CreditCard className={`w-5 h-5 ${isFlowCardEnabled ? 'text-white' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <span className="text-foreground font-medium">Flow Card</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">Digital card feature</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={isFlowCardEnabled} 
+                  onCheckedChange={(checked) => setFlag('flow_card_enabled', checked)}
+                  disabled={flagsLoading}
+                />
               </div>
+
+              <div className={`flex items-center justify-between p-4 transition-opacity ${!isFlowCardEnabled ? 'opacity-50' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isNetworkEnabled ? 'bg-aurora-purple/20' : 'bg-muted'
+                  }`}>
+                    <Route className={`w-5 h-5 ${isNetworkEnabled ? 'text-aurora-purple' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <span className="text-foreground font-medium">Network Mode</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">Virtual card network</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={isNetworkEnabled} 
+                  onCheckedChange={(checked) => setFlag('flow_card_network_enabled', checked)}
+                  disabled={flagsLoading || !isFlowCardEnabled}
+                />
+              </div>
+
+              <div className={`flex items-center justify-between p-4 transition-opacity ${!isNetworkEnabled ? 'opacity-50' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isProvisioningEnabled ? 'bg-aurora-teal/20' : 'bg-muted'
+                  }`}>
+                    <Wallet className={`w-5 h-5 ${isProvisioningEnabled ? 'text-aurora-teal' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <span className="text-foreground font-medium">Push Provisioning</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">Apple Pay / Google Pay</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={isProvisioningEnabled} 
+                  onCheckedChange={(checked) => setFlag('flow_card_push_provisioning_enabled', checked)}
+                  disabled={flagsLoading || !isNetworkEnabled}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Configuration */}
+          <div className="glass-card rounded-2xl overflow-hidden shadow-float">
+            <div className="p-3 border-b border-border/30 bg-muted/20">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Payment Configuration</span>
+            </div>
+            <div className="p-4 space-y-4">
               <div>
-                <span className="text-foreground font-medium">
-                  {isFieldTest ? "Field Test" : "Prototype"}
-                </span>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {isFieldTest 
-                    ? "Opens real wallet apps" 
-                    : "Simulates payment flow"}
-                </p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Route className="w-4 h-4 text-aurora-purple" />
+                  <span className="text-sm font-medium text-foreground">Payment Rails</span>
+                </div>
+                <PaymentRailsManager />
+              </div>
+              
+              <div className="border-t border-border/30 pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CreditCard className="w-4 h-4 text-indigo-500" />
+                  <span className="text-sm font-medium text-foreground">Linked Cards</span>
+                </div>
+                <CardLinkingManager />
+              </div>
+
+              <div className="border-t border-border/30 pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <ArrowLeftRight className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Fallback Preference</span>
+                </div>
+                <FallbackPreferenceSelector />
+              </div>
+
+              <div className="border-t border-border/30 pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="w-4 h-4 text-aurora-blue" />
+                  <span className="text-sm font-medium text-foreground">Payment Sources</span>
+                </div>
+                <PaymentSourcesManager />
               </div>
             </div>
-            <Switch 
-              checked={isFieldTest} 
-              onCheckedChange={toggleMode}
-            />
           </div>
         </motion.div>
       </section>
 
-      {/* Security */}
+      {/* Quick Links */}
       <section className="px-6 mb-6">
-        <p className="text-sm font-medium text-muted-foreground mb-4">Security</p>
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="glass-card rounded-2xl overflow-hidden shadow-float"
-        >
-          <div className="divide-y divide-border/30">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-aurora-teal" />
-                </div>
-                <span className="text-foreground">Face ID</span>
-              </div>
-              <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                isWebAuthnRegistered 
-                  ? "bg-success/10 text-success" 
-                  : "bg-muted text-muted-foreground"
-              }`}>
-                {isWebAuthnRegistered ? "Enabled" : "Not set up"}
-              </span>
+        <div className="flex gap-3">
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            onClick={() => navigate('/activity')}
+            className="flex-1 glass-card rounded-2xl p-4 shadow-float flex items-center gap-3 hover:bg-muted/30 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
+              <Clock className="w-5 h-5 text-aurora-blue" />
             </div>
-            
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-aurora-teal" />
-                </div>
-                <span className="text-foreground">Notifications</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">On</span>
-                <ChevronRight size={16} className="text-muted-foreground/50" />
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </section>
+            <span className="text-foreground font-medium text-sm">History</span>
+          </motion.button>
 
-      {/* Partner Portal Link */}
-      <div className="px-6 mb-6">
-        <motion.button 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.28 }}
-          onClick={() => navigate('/partner')}
-          className="w-full py-4 flex items-center justify-center gap-2 text-primary glass-card rounded-2xl shadow-float hover:bg-primary/5 transition-colors"
-        >
-          <Building2 className="w-5 h-5" />
-          <span className="font-medium">Bank Partner Portal</span>
-          <ExternalLink className="w-4 h-4 ml-1" />
-        </motion.button>
-      </div>
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            onClick={() => navigate('/partner')}
+            className="flex-1 glass-card rounded-2xl p-4 shadow-float flex items-center gap-3 hover:bg-muted/30 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-foreground" />
+            </div>
+            <span className="text-foreground font-medium text-sm">Partner</span>
+          </motion.button>
+        </div>
+      </section>
 
       {/* Sign Out */}
       <div className="px-6 pb-8">
         <motion.button 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.25 }}
           onClick={handleSignOut}
           className="w-full py-4 flex items-center justify-center gap-2 text-destructive glass-card rounded-2xl shadow-float hover:bg-destructive/5 transition-colors"
         >
@@ -538,8 +389,6 @@ const SettingsPage = () => {
           FLOW 1.0 • Liquid Glass
         </p>
       </div>
-      
-      
     </div>
   );
 };
