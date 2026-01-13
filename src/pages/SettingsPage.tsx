@@ -14,6 +14,7 @@ import { useSecurity } from "@/contexts/SecurityContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useTestMode } from "@/hooks/useTestMode";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { KillSwitch } from "@/components/settings/KillSwitch";
 import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
 import PaymentRailsManager from "@/components/settings/PaymentRailsManager";
@@ -35,7 +36,8 @@ import {
   ArrowLeftRight,
   Clock,
   Settings2,
-  Sliders
+  Sliders,
+  RotateCcw
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -51,6 +53,7 @@ const SettingsPage = () => {
     setFlag,
     loading: flagsLoading 
   } = useFeatureFlags();
+  const { resetOnboarding } = useOnboarding();
   
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false);
   const [isLimitsExpanded, setIsLimitsExpanded] = useState(false);
@@ -58,6 +61,11 @@ const SettingsPage = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleReplayOnboarding = () => {
+    resetOnboarding();
+    window.location.href = '/';
   };
 
   return (
@@ -416,12 +424,23 @@ const SettingsPage = () => {
         </div>
       </section>
 
-      {/* Sign Out */}
-      <div className="px-6 pb-8">
+      {/* Sign Out & Replay Onboarding */}
+      <div className="px-6 pb-8 space-y-3">
         <motion.button 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
+          onClick={handleReplayOnboarding}
+          className="w-full py-3 flex items-center justify-center gap-2 text-muted-foreground glass-card rounded-2xl shadow-float hover:bg-muted/30 transition-colors"
+        >
+          <RotateCcw className="w-4 h-4" />
+          <span className="font-medium text-sm">Replay Onboarding</span>
+        </motion.button>
+
+        <motion.button 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25 }}
           onClick={handleSignOut}
           className="w-full py-4 flex items-center justify-center gap-2 text-destructive glass-card rounded-2xl shadow-float hover:bg-destructive/5 transition-colors"
         >
