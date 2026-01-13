@@ -168,9 +168,14 @@ export function useFundingSources() {
     [rawSources]
   );
 
+  // Total balance only includes actual funds (wallets + banks), not credit/BNPL
   const totalBalance = useMemo(() => 
     rawSources
-      .filter(s => s.linked_status === 'linked' && s.available)
+      .filter(s => 
+        s.linked_status === 'linked' && 
+        s.available && 
+        (s.type === 'wallet' || s.type === 'bank')
+      )
       .reduce((sum, s) => sum + s.balance, 0),
     [rawSources]
   );
