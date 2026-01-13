@@ -2,13 +2,14 @@
  * Wallet Balance Card
  * 
  * Displays linked wallets with balances prominently on the home page.
- * Shows total balance and individual wallet breakdowns.
+ * Shows total balance and individual wallet breakdowns with branded icons.
  */
 
 import { motion } from 'framer-motion';
-import { Wallet, Plus, RefreshCw, ChevronRight, AlertCircle } from 'lucide-react';
+import { Plus, RefreshCw, ChevronRight, AlertCircle } from 'lucide-react';
 import { useFundingSources } from '@/hooks/useFundingSources';
 import { cn } from '@/lib/utils';
+import { getBrandedIcon } from '@/components/icons/BrandedIcons';
 
 interface WalletBalanceCardProps {
   className?: string;
@@ -102,49 +103,51 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
 
         {/* Wallet Breakdown */}
         <div className="space-y-2">
-          {linkedWallets.map((wallet, index) => (
-            <motion.div
-              key={wallet.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 + index * 0.05 }}
-              className="flex items-center justify-between py-2"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-aurora-teal/10 flex items-center justify-center">
-                  <Wallet className="w-4 h-4 text-aurora-teal" />
+          {linkedWallets.map((wallet, index) => {
+            const IconComponent = getBrandedIcon(wallet.name, 'wallet');
+            return (
+              <motion.div
+                key={wallet.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 + index * 0.05 }}
+                className="flex items-center justify-between py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <IconComponent size={32} />
+                  <span className="text-sm font-medium text-foreground">{wallet.name}</span>
                 </div>
-                <span className="text-sm font-medium text-foreground">{wallet.name}</span>
-              </div>
-              <span className={cn(
-                "text-sm font-semibold",
-                wallet.balance < 20 ? "text-amber-500" : "text-foreground"
-              )}>
-                RM {wallet.balance.toFixed(2)}
-              </span>
-            </motion.div>
-          ))}
+                <span className={cn(
+                  "text-sm font-semibold",
+                  wallet.balance < 20 ? "text-amber-500" : "text-foreground"
+                )}>
+                  RM {wallet.balance.toFixed(2)}
+                </span>
+              </motion.div>
+            );
+          })}
 
           {/* Bank Sources */}
-          {linkedBanks.slice(0, 2).map((bank, index) => (
-            <motion.div
-              key={bank.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.15 + index * 0.05 }}
-              className="flex items-center justify-between py-2 opacity-70"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-aurora-blue/10 flex items-center justify-center">
-                  <Wallet className="w-4 h-4 text-aurora-blue" />
+          {linkedBanks.slice(0, 2).map((bank, index) => {
+            const IconComponent = getBrandedIcon(bank.name, 'bank');
+            return (
+              <motion.div
+                key={bank.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 + index * 0.05 }}
+                className="flex items-center justify-between py-2 opacity-70"
+              >
+                <div className="flex items-center gap-3">
+                  <IconComponent size={32} />
+                  <span className="text-sm text-muted-foreground">{bank.name}</span>
                 </div>
-                <span className="text-sm text-muted-foreground">{bank.name}</span>
-              </div>
-              <span className="text-sm text-muted-foreground">
-                RM {bank.balance.toFixed(2)}
-              </span>
-            </motion.div>
-          ))}
+                <span className="text-sm text-muted-foreground">
+                  RM {bank.balance.toFixed(2)}
+                </span>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </motion.div>
