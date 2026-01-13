@@ -10,16 +10,16 @@
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Send, Receipt, User, Scan, CreditCard, Zap } from "lucide-react";
+import { Home, Send, Receipt, User, Scan, CreditCard, Zap, HandCoins } from "lucide-react";
 import { useState } from "react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
-// Base nav items
+// Base nav items - Now includes both Send and Receive
 const baseNavItems = [
   { path: "/home", icon: Home, label: "Home" },
   { path: "/send", icon: Send, label: "Send" },
   { path: "/scan", icon: Scan, label: "Scan", primary: true },
-  { path: "/bills", icon: Receipt, label: "Bills" },
+  { path: "/receive", icon: HandCoins, label: "Receive" },
   { path: "/settings", icon: User, label: "Me" },
 ];
 
