@@ -30,6 +30,7 @@ import PartnerPitchPage from "./pages/PartnerPitchPage";
 import FlowCardPage from "./pages/FlowCardPage";
 import FlowCardActivityPage from "./pages/FlowCardActivityPage";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import QuickConnectPage from "./pages/QuickConnectPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,9 +41,10 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Streamlined 4-Step Onboarding: Welcome → Auth + Security → Auto-Sync → Home */}
+        {/* Streamlined Onboarding: Welcome → Auth → Quick Connect → Home */}
         <Route path="/" element={<PageTransition><WelcomePage /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
+        <Route path="/connect" element={<PageTransition><QuickConnectPage /></PageTransition>} />
         <Route path="/auto-sync" element={<PageTransition><AutoSyncPage /></PageTransition>} />
         
         {/* Transaction Flow (No Bottom Nav - focused experience) */}
