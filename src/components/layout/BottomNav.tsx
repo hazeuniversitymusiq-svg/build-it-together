@@ -10,38 +10,24 @@
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Send, Receipt, User, Scan, CreditCard, Zap, HandCoins } from "lucide-react";
+import { Home, Clock, User, Scan, CreditCard, Zap } from "lucide-react";
 import { useState } from "react";
-import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
-// Base nav items - Now includes both Send and Receive
+// Base nav items - Cleaned: Home, Activity, Scan, Card, Me
 const baseNavItems = [
   { path: "/home", icon: Home, label: "Home" },
-  { path: "/send", icon: Send, label: "Send" },
+  { path: "/activity", icon: Clock, label: "Activity" },
   { path: "/scan", icon: Scan, label: "Scan", primary: true },
-  { path: "/receive", icon: HandCoins, label: "Receive" },
+  { path: "/flow-card", icon: CreditCard, label: "Card" },
   { path: "/settings", icon: User, label: "Me" },
 ];
-
-// Flow Card nav item (inserted when enabled)
-const flowCardNavItem = { path: "/flow-card", icon: CreditCard, label: "Card", primary: false };
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isFlowCardEnabled } = useFeatureFlags();
   const [showDemoHint, setShowDemoHint] = useState(false);
 
-  // Build nav items with optional Flow Card
-  const navItems = isFlowCardEnabled
-    ? [
-        baseNavItems[0], // Home
-        flowCardNavItem,  // Card (replaces Send when enabled)
-        baseNavItems[2], // Scan
-        baseNavItems[3], // Bills
-        baseNavItems[4], // Me
-      ]
-    : baseNavItems;
+  const navItems = baseNavItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">

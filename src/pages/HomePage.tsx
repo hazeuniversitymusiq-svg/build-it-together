@@ -4,25 +4,16 @@
  * Simplified, clean design - focus on core actions
  */
 
-import { forwardRef, useState, useEffect } from "react";
+import { forwardRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Send, Receipt, Clock } from "lucide-react";
+import { QrCode, Send, Receipt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
 import { useDeepLink } from "@/hooks/useDeepLink";
 
-interface Transaction {
-  id: string;
-  merchant_name: string | null;
-  recipient_name: string | null;
-  amount: number;
-  status: string;
-  intent_type: string;
-  created_at: string;
-}
 
 // Aurora color variants for action cards
 const actionCardStyles = {
@@ -61,46 +52,18 @@ ActionCard.displayName = "ActionCard";
 
 const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
-  const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
   
   useDeepLink();
 
   useEffect(() => {
-    const loadData = async () => {
+    const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
-        return;
-      }
-
-      const { data: transactions } = await supabase
-        .from("transaction_logs")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      if (transactions) {
-        setRecentActivity(transactions);
       }
     };
-
-    loadData();
+    checkAuth();
   }, [navigate]);
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
-  };
 
   return (
     <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
@@ -181,97 +144,7 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
       </motion.div>
 
       {/* Bill Reminder Surface - Only shows if there are upcoming bills */}
-      <BillReminderSurface className="mb-4" />
-
-      {/* Recent Activity Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="flex-1"
-      >
-        <h2 className="text-base font-semibold text-foreground mb-4">
-          Recent
-        </h2>
-
-        {recentActivity.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="flex flex-col items-center justify-center py-12 text-center glass-card rounded-3xl"
-          >
-            <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-              <Clock className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <p className="text-foreground font-medium mb-1">No activity yet</p>
-            <p className="text-sm text-muted-foreground">
-              Your payments will appear here
-            </p>
-          </motion.div>
-        ) : (
-          <div className="space-y-2">
-            {recentActivity.map((tx, index) => (
-              <motion.div
-                key={tx.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.45 + index * 0.05 }}
-                className="flex items-center justify-between p-4 rounded-2xl glass-card shadow-float"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    tx.status === "success" 
-                      ? "bg-success/10"
-                      : tx.status === "failed"
-                      ? "bg-destructive/10"
-                      : "bg-muted/50"
-                  }`}>
-                    {tx.intent_type === "PayMerchant" ? (
-                      <QrCode className={`w-5 h-5 ${
-                        tx.status === "success" ? "text-success" : 
-                        tx.status === "failed" ? "text-destructive" : "text-muted-foreground"
-                      }`} />
-                    ) : tx.intent_type === "SendMoney" ? (
-                      <Send className={`w-5 h-5 ${
-                        tx.status === "success" ? "text-success" : 
-                        tx.status === "failed" ? "text-destructive" : "text-muted-foreground"
-                      }`} />
-                    ) : (
-                      <Receipt className={`w-5 h-5 ${
-                        tx.status === "success" ? "text-success" : 
-                        tx.status === "failed" ? "text-destructive" : "text-muted-foreground"
-                      }`} />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground text-sm">
-                      {tx.merchant_name || tx.recipient_name || "Payment"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatTime(tx.created_at)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-foreground">
-                    RM {tx.amount.toFixed(2)}
-                  </p>
-                  <p className={`text-xs capitalize ${
-                    tx.status === "success" 
-                      ? "text-success"
-                      : tx.status === "failed"
-                      ? "text-destructive"
-                      : "text-muted-foreground"
-                  }`}>
-                    {tx.status}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </motion.div>
+      <BillReminderSurface />
     </div>
   );
 });
