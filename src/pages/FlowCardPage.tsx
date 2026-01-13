@@ -33,12 +33,14 @@ export default function FlowCardPage() {
     provisioning,
     loading,
     hasCard,
+    hasCredentials,
     isCardActive,
     isCardSuspended,
     pendingEvents,
     recentApproved,
     eligibleSources,
     simulateTerminalTap,
+    generateCredentials,
     approveEvent,
     declineEvent,
     suspendCard,
@@ -47,6 +49,7 @@ export default function FlowCardPage() {
 
   const [showCreateFlow, setShowCreateFlow] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Feature flag check
   if (!isFlowCardEnabled && !loading) {
@@ -180,6 +183,44 @@ export default function FlowCardPage() {
           cardBrand={profile?.card_brand}
           showCredentials={true}
         />
+
+        {/* Generate Credentials Button (for legacy cards) */}
+        {hasCard && !hasCredentials && isCardActive && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4"
+          >
+            <Button
+              className="w-full h-12 rounded-xl aurora-gradient text-white"
+              onClick={async () => {
+                setIsGenerating(true);
+                const success = await generateCredentials();
+                setIsGenerating(false);
+                if (success) {
+                  toast({
+                    title: 'Card Credentials Generated',
+                    description: 'Your virtual card is ready for Apple Pay / Google Pay',
+                  });
+                }
+              }}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                />
+              ) : (
+                <>
+                  <Plus size={18} className="mr-2" />
+                  Generate Card Credentials
+                </>
+              )}
+            </Button>
+          </motion.div>
+        )}
 
         {/* Quick Actions */}
         <div className="flex gap-3 mt-6">

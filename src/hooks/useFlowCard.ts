@@ -404,10 +404,42 @@ export function useFlowCard() {
     }
   }, [user?.id, profile, fetchProfile]);
 
+  // Generate/regenerate card credentials
+  const generateCredentials = useCallback(async (): Promise<boolean> => {
+    if (!user?.id || !profile) return false;
+
+    try {
+      const cardNumber = generateCardNumber();
+      const cardCvv = generateCVV();
+      const cardExpiry = generateExpiry();
+      const cardLastFour = cardNumber.slice(-4);
+
+      const { error: updateError } = await supabase
+        .from('flow_card_profiles')
+        .update({
+          card_number: cardNumber,
+          card_cvv: cardCvv,
+          card_expiry: cardExpiry,
+          card_last_four: cardLastFour,
+          card_brand: 'visa',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+      await fetchProfile();
+      return true;
+    } catch (err) {
+      console.error('Error generating credentials:', err);
+      return false;
+    }
+  }, [user?.id, profile, fetchProfile]);
+
   // Computed values
   const isCardActive = profile?.status === 'created';
   const isCardSuspended = profile?.status === 'suspended';
   const hasCard = !!profile && profile.status !== 'not_created';
+  const hasCredentials = !!(profile?.card_number && profile?.card_cvv && profile?.card_expiry);
   const pendingEvents = events.filter(e => e.event_status === 'evaluating');
   const recentApproved = events.filter(e => e.event_status === 'approved').slice(0, 5);
 
@@ -424,12 +456,14 @@ export function useFlowCard() {
     isCardActive,
     isCardSuspended,
     hasCard,
+    hasCredentials,
     pendingEvents,
     recentApproved,
     eligibleSources: sources.filter(s => s.isAvailable && s.isLinked),
     
     // Actions
     createFlowCard,
+    generateCredentials,
     simulateTerminalTap,
     approveEvent,
     declineEvent,
