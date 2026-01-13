@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SecurityProvider } from "@/contexts/SecurityContext";
 import { IntentProvider } from "@/contexts/IntentContext";
 import { OrchestrationProvider } from "@/contexts/OrchestrationContext";
+import { DemoProvider } from "@/contexts/DemoContext";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/layout/PageTransition";
 import AppLayout from "./components/layout/AppLayout";
@@ -82,7 +83,9 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <AnimatedRoutes />
+              <DemoProvider>
+                <AnimatedRoutes />
+              </DemoProvider>
             </BrowserRouter>
           </IntentProvider>
         </OrchestrationProvider>
