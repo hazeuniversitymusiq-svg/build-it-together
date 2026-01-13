@@ -7,7 +7,7 @@
 import { forwardRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Send, Receipt, Clock, HandCoins } from "lucide-react";
+import { QrCode, Send, Receipt, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
@@ -165,9 +165,9 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
           variant="send"
         />
         <ActionCard
-          icon={<HandCoins className="w-5 h-5 text-aurora-teal" />}
-          label="Request"
-          onClick={() => navigate("/send")}
+          icon={<QrCode className="w-5 h-5 text-aurora-teal" />}
+          label="Receive"
+          onClick={() => navigate("/receive")}
           delay={0.3}
           variant="request"
         />
