@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2 } from "lucide-react";
 
 const WelcomePage = () => {
   const navigate = useNavigate();
@@ -52,20 +51,6 @@ const WelcomePage = () => {
           </p>
         </motion.div>
 
-        {/* Permission note - Glass card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="glass-card p-5 mb-8"
-        >
-          <p className="text-sm text-foreground leading-relaxed font-medium">
-            You control what you connect.
-          </p>
-          <p className="text-sm text-muted-foreground leading-relaxed mt-1">
-            You can change this anytime.
-          </p>
-        </motion.div>
       </div>
 
       {/* Bottom section - fixed to bottom */}
@@ -95,15 +80,6 @@ const WelcomePage = () => {
           </button>
           .
         </p>
-        
-        {/* Bank Partner Link */}
-        <button 
-          onClick={() => navigate("/partner")}
-          className="mt-6 text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1"
-        >
-          <Building2 className="w-3 h-3" />
-          For Banks & Partners
-        </button>
       </motion.div>
     </div>
   );
