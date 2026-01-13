@@ -3,6 +3,7 @@
  * 
  * Manages demo mode state across the entire app.
  * When active, pages show contextual demo triggers.
+ * Also manages guided tour functionality.
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
@@ -50,11 +51,11 @@ const PAGE_DEMO_CONFIG: Record<string, PageDemoConfig> = {
 };
 
 interface DemoContextType {
-  // State
+  // Demo Mode State
   isDemoMode: boolean;
   currentPageConfig: PageDemoConfig | null;
   
-  // Actions
+  // Demo Mode Actions
   toggleDemoMode: () => void;
   enableDemoMode: () => void;
   disableDemoMode: () => void;
@@ -64,14 +65,31 @@ interface DemoContextType {
   registerPageAction: (action: DemoAction) => void;
   clearPageActions: () => void;
   triggerPageDemo: () => void;
+
+  // Guided Tour State
+  isTourActive: boolean;
+  currentTourStep: number;
+  
+  // Guided Tour Actions
+  startTour: () => void;
+  endTour: () => void;
+  nextTourStep: () => void;
+  prevTourStep: () => void;
+  goToTourStep: (step: number) => void;
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
+
+const TOTAL_TOUR_STEPS = 7; // Welcome + 5 pages + Complete
 
 export function DemoProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [pageActions, setPageActions] = useState<DemoAction[]>([]);
+  
+  // Tour state
+  const [isTourActive, setIsTourActive] = useState(false);
+  const [currentTourStep, setCurrentTourStep] = useState(0);
 
   const currentPageConfig = useMemo(() => {
     return PAGE_DEMO_CONFIG[location.pathname] || null;
@@ -108,6 +126,30 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     }
   }, [pageActions]);
 
+  // Tour controls
+  const startTour = useCallback(() => {
+    setIsTourActive(true);
+    setCurrentTourStep(0);
+    setIsDemoMode(true); // Enable demo mode during tour
+  }, []);
+
+  const endTour = useCallback(() => {
+    setIsTourActive(false);
+    setCurrentTourStep(0);
+  }, []);
+
+  const nextTourStep = useCallback(() => {
+    setCurrentTourStep(prev => Math.min(prev + 1, TOTAL_TOUR_STEPS - 1));
+  }, []);
+
+  const prevTourStep = useCallback(() => {
+    setCurrentTourStep(prev => Math.max(prev - 1, 0));
+  }, []);
+
+  const goToTourStep = useCallback((step: number) => {
+    setCurrentTourStep(Math.max(0, Math.min(step, TOTAL_TOUR_STEPS - 1)));
+  }, []);
+
   const value = useMemo(() => ({
     isDemoMode,
     currentPageConfig,
@@ -118,6 +160,14 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     registerPageAction,
     clearPageActions,
     triggerPageDemo,
+    // Tour
+    isTourActive,
+    currentTourStep,
+    startTour,
+    endTour,
+    nextTourStep,
+    prevTourStep,
+    goToTourStep,
   }), [
     isDemoMode,
     currentPageConfig,
@@ -128,6 +178,13 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     registerPageAction,
     clearPageActions,
     triggerPageDemo,
+    isTourActive,
+    currentTourStep,
+    startTour,
+    endTour,
+    nextTourStep,
+    prevTourStep,
+    goToTourStep,
   ]);
 
   return (
