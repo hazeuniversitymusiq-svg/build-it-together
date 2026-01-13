@@ -1,20 +1,13 @@
 /**
  * Flow Card Page
  * 
- * Main Flow Card home screen with card preview, status, and quick actions.
+ * Clean, focused card view with credentials and pending events only.
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Plus, 
-  History, 
-  Smartphone, 
-  Pause, 
-  Play,
-  Zap
-} from 'lucide-react';
+import { Plus, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -26,19 +19,15 @@ import { useToast } from '@/hooks/use-toast';
 export default function FlowCardPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isFlowCardEnabled, isNetworkEnabled } = useFeatureFlags();
+  const { isFlowCardEnabled } = useFeatureFlags();
   const {
     profile,
-    provisioning,
     loading,
     hasCard,
     hasCredentials,
     isCardActive,
     isCardSuspended,
     pendingEvents,
-    recentApproved,
-    eligibleSources,
-    simulateTerminalTap,
     generateCredentials,
     approveEvent,
     declineEvent,
@@ -47,7 +36,6 @@ export default function FlowCardPage() {
   } = useFlowCard();
 
   const [showCreateFlow, setShowCreateFlow] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Feature flag check
@@ -94,28 +82,6 @@ export default function FlowCardPage() {
     );
   }
 
-  const handleSimulateTap = async () => {
-    setIsSimulating(true);
-    const amount = Math.floor(Math.random() * 100) + 10;
-    const merchant = ['Coffee Shop', 'Grocery Store', 'Restaurant', 'Gas Station'][Math.floor(Math.random() * 4)];
-    
-    const result = await simulateTerminalTap(amount, merchant, 'retail');
-    setIsSimulating(false);
-
-    if (result.success) {
-      toast({
-        title: 'Tap Simulated',
-        description: `RM ${amount.toFixed(2)} at ${merchant} - Confirm below`,
-      });
-    } else {
-      toast({
-        title: 'Error',
-        description: result.error,
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleApprove = async (eventId: string) => {
     const success = await approveEvent(eventId);
     if (success) {
@@ -161,12 +127,14 @@ export default function FlowCardPage() {
               Your payment identity
             </p>
           </div>
+          {/* Subtle suspend/reactivate icon */}
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={() => navigate('/flow-card/activity')}
+            onClick={handleToggleSuspend}
+            className="text-muted-foreground hover:text-foreground"
           >
-            <History size={20} />
+            {isCardSuspended ? <Play size={20} /> : <Pause size={20} />}
           </Button>
         </div>
 
@@ -182,7 +150,7 @@ export default function FlowCardPage() {
           showCredentials={true}
         />
 
-        {/* Generate Credentials Button (for legacy cards) */}
+        {/* Generate Credentials Button (for legacy cards without credentials) */}
         {hasCard && !hasCredentials && isCardActive && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -198,7 +166,7 @@ export default function FlowCardPage() {
                 if (success) {
                   toast({
                     title: 'Card Credentials Generated',
-                    description: 'Your virtual card is ready for Apple Pay / Google Pay',
+                    description: 'Your virtual card is ready',
                   });
                 }
               }}
@@ -213,64 +181,17 @@ export default function FlowCardPage() {
               ) : (
                 <>
                   <Plus size={18} className="mr-2" />
-                  Generate Card Credentials
+                  Generate Credentials
                 </>
               )}
             </Button>
           </motion.div>
         )}
-
-        {/* Quick Actions */}
-        <div className="flex gap-3 mt-6">
-          <Button
-            variant="outline"
-            className="flex-1 h-12 rounded-xl"
-            onClick={handleToggleSuspend}
-          >
-            {isCardSuspended ? (
-              <>
-                <Play size={18} className="mr-2" />
-                Reactivate
-              </>
-            ) : (
-              <>
-                <Pause size={18} className="mr-2" />
-                Suspend
-              </>
-            )}
-          </Button>
-          
-          <Button
-            className="flex-1 h-12 rounded-xl aurora-gradient text-white"
-            onClick={handleSimulateTap}
-            disabled={!isCardActive || isSimulating}
-          >
-            {isSimulating ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-              />
-            ) : (
-              <>
-                <Zap size={18} className="mr-2" />
-                Simulate Tap
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Demo Explainer */}
-        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-          <p className="text-xs text-muted-foreground text-center">
-            <strong>Demo:</strong> Simulate Tap → Flow Decides → Approve
-          </p>
-        </div>
       </div>
 
-      {/* Pending Events */}
+      {/* Pending Events - Only shown when there are pending confirmations */}
       {pendingEvents.length > 0 && (
-        <div className="px-6 mb-6">
+        <div className="px-6">
           <h2 className="text-sm font-semibold text-muted-foreground mb-3">
             Pending Confirmation
           </h2>
@@ -283,99 +204,6 @@ export default function FlowCardPage() {
                 onDecline={() => handleDecline(event.id)}
               />
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Activity */}
-      {recentApproved.length > 0 && (
-        <div className="px-6 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-muted-foreground">
-              Recent Activity
-            </h2>
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="text-xs"
-              onClick={() => navigate('/flow-card/activity')}
-            >
-              View All
-            </Button>
-          </div>
-          <div className="space-y-3">
-            {recentApproved.slice(0, 3).map((event) => (
-              <FlowCardEventItem key={event.id} event={event} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Linked Sources */}
-      <div className="px-6">
-        <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-          Linked Sources ({eligibleSources.length})
-        </h2>
-        <div className="glass-card rounded-xl divide-y divide-border">
-          {eligibleSources.length > 0 ? (
-            eligibleSources.map((source, idx) => (
-              <div key={source.id} className="p-4 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
-                  {idx + 1}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{source.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{source.type}</p>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  RM {source.balance.toFixed(2)}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="p-6 text-center">
-              <p className="text-sm text-muted-foreground">No linked sources</p>
-              <Button
-                variant="link"
-                size="sm"
-                onClick={() => navigate('/settings')}
-              >
-                Link a source
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Network Status */}
-      {isNetworkEnabled && provisioning && (
-        <div className="px-6 mt-6">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-            Wallet Provisioning
-          </h2>
-          <div className="glass-card rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Smartphone size={20} className="text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Apple Pay</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {provisioning.apple_status.replace('_', ' ')}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between pt-3 border-t border-border">
-              <div className="flex items-center gap-3">
-                <Smartphone size={20} className="text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Google Pay</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {provisioning.google_status.replace('_', ' ')}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
