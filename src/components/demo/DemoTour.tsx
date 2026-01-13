@@ -145,110 +145,136 @@ export function DemoTour() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] pointer-events-none"
+        className="fixed inset-0 z-[100] flex flex-col"
       >
-        {/* Backdrop overlay */}
-        <div className="absolute inset-0 bg-black/40 pointer-events-auto" />
+        {/* Full screen backdrop - completely obscures page */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 bg-background/95 backdrop-blur-md"
+        />
         
-        {/* Tour Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 100 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 100 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="absolute bottom-24 left-4 right-4 pointer-events-auto"
-        >
-          <div className="glass-card rounded-3xl p-6 shadow-float-lg aurora-border">
-            {/* Close button */}
-            <button
-              onClick={endTour}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full glass-subtle flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Progress bar */}
-            <div className="h-1 bg-secondary rounded-full mb-5 overflow-hidden">
+        {/* Tour Content - Centered card */}
+        <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-12">
+          {/* Step indicator dots */}
+          <div className="flex items-center gap-2 mb-8">
+            {TOUR_STEPS.map((_, index) => (
               <motion.div
-                className="h-full aurora-gradient"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.3 }}
+                key={index}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  index === currentTourStep 
+                    ? 'w-8 aurora-gradient' 
+                    : index < currentTourStep 
+                      ? 'w-2 bg-aurora-blue/50' 
+                      : 'w-2 bg-muted'
+                }`}
               />
-            </div>
-
-            {/* Step counter */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-muted-foreground">
-                Step {currentTourStep + 1} of {TOUR_STEPS.length}
-              </span>
-            </div>
-
-            {/* Content */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-2xl aurora-gradient flex items-center justify-center text-white shrink-0">
-                    {currentStep.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-1">
-                      {currentStep.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {currentStep.description}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Try Demo Action button */}
-            {currentStep.highlightAction && pageActions.length > 0 && !isTransitioning && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mb-4"
-              >
-                <Button
-                  onClick={handleTryDemo}
-                  variant="outline"
-                  className="w-full rounded-2xl h-11 glass-card border-aurora-purple/30 text-aurora-purple hover:bg-aurora-purple/10"
-                >
-                  <Play className="w-4 h-4 mr-2" />
-                  Try: {pageActions[0]?.label}
-                </Button>
-              </motion.div>
-            )}
-
-            {/* Navigation */}
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={prevTourStep}
-                disabled={isFirstStep}
-                variant="outline"
-                className="rounded-2xl h-11 px-4 glass-card border-0 disabled:opacity-30"
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Back
-              </Button>
-              
-              <Button
-                onClick={handleNext}
-                className="flex-1 rounded-2xl h-11 aurora-gradient text-white border-0 shadow-glow-aurora"
-              >
-                {isLastStep ? "Finish Tour" : "Next"}
-                {!isLastStep && <ChevronRight className="w-4 h-4 ml-1" />}
-              </Button>
-            </div>
+            ))}
           </div>
-        </motion.div>
+
+          {/* Main Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="w-full max-w-sm"
+          >
+            <div className="glass-card rounded-3xl p-8 shadow-float-lg aurora-border text-center">
+              {/* Close button */}
+              <button
+                onClick={endTour}
+                className="absolute top-4 right-4 w-10 h-10 rounded-full glass-subtle flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Icon */}
+              <motion.div
+                key={`icon-${currentStep.id}`}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", damping: 15, stiffness: 300 }}
+                className="w-20 h-20 rounded-3xl aurora-gradient flex items-center justify-center text-white mx-auto mb-6 shadow-glow-aurora"
+              >
+                {currentStep.icon}
+              </motion.div>
+
+              {/* Content */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <h3 className="text-2xl font-bold text-foreground mb-3">
+                    {currentStep.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-6">
+                    {currentStep.description}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Try Demo Action button */}
+              {currentStep.highlightAction && pageActions.length > 0 && !isTransitioning && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6"
+                >
+                  <Button
+                    onClick={handleTryDemo}
+                    variant="outline"
+                    size="lg"
+                    className="w-full rounded-2xl h-12 glass-card border-aurora-purple/30 text-aurora-purple hover:bg-aurora-purple/10"
+                  >
+                    <Play className="w-5 h-5 mr-2" />
+                    Try: {pageActions[0]?.label}
+                  </Button>
+                </motion.div>
+              )}
+
+              {/* Step counter */}
+              <p className="text-xs text-muted-foreground mb-4">
+                Step {currentTourStep + 1} of {TOUR_STEPS.length}
+              </p>
+
+              {/* Navigation */}
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={prevTourStep}
+                  disabled={isFirstStep}
+                  variant="outline"
+                  size="lg"
+                  className="rounded-2xl h-12 px-6 glass-card border-0 disabled:opacity-30"
+                >
+                  <ChevronLeft className="w-5 h-5 mr-1" />
+                  Back
+                </Button>
+                
+                <Button
+                  onClick={handleNext}
+                  size="lg"
+                  className="flex-1 rounded-2xl h-12 aurora-gradient text-white border-0 shadow-glow-aurora"
+                >
+                  {isLastStep ? "Finish Tour" : "Next"}
+                  {!isLastStep && <ChevronRight className="w-5 h-5 ml-1" />}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Skip link */}
+          <button
+            onClick={endTour}
+            className="mt-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Skip tour
+          </button>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
