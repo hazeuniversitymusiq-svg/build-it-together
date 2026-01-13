@@ -172,6 +172,39 @@ const HandoffPage = () => {
         .single();
 
       if (transaction) {
+        // Log to activity feed
+        await supabase.from('transaction_logs').insert({
+          user_id: user.id,
+          intent_id: plan.intent_id,
+          intent_type: intent.type,
+          amount: Number(intent.amount),
+          currency: intent.currency,
+          status: 'success',
+          trigger: 'qr_scan',
+          rail_used: plan.chosen_rail,
+          merchant_name: intent.type === 'PayMerchant' ? intent.payee_name : null,
+          merchant_id: intent.type === 'PayMerchant' ? intent.payee_identifier : null,
+          recipient_name: intent.type === 'SendMoney' ? intent.payee_name : null,
+          recipient_id: intent.type === 'SendMoney' ? intent.payee_identifier : null,
+          reference: transaction.id.substring(0, 8).toUpperCase(),
+        });
+
+        // Update wallet balance
+        const { data: fundingSource } = await supabase
+          .from('funding_sources')
+          .select('id, balance')
+          .eq('user_id', user.id)
+          .eq('name', plan.chosen_rail)
+          .maybeSingle();
+
+        if (fundingSource) {
+          const newBalance = Math.max(0, fundingSource.balance - Number(intent.amount));
+          await supabase
+            .from('funding_sources')
+            .update({ balance: newBalance })
+            .eq('id', fundingSource.id);
+        }
+
         setState('complete');
         setTimeout(() => navigate(`/done/${transaction.id}`), 800);
         return;
@@ -188,8 +221,8 @@ const HandoffPage = () => {
     
     // Record as cancelled/incomplete
     const { data: { user } } = await supabase.auth.getUser();
-    if (user && plan) {
-      await supabase
+    if (user && plan && intent) {
+      const { data: transaction } = await supabase
         .from('transactions')
         .insert({
           user_id: user.id,
@@ -197,13 +230,33 @@ const HandoffPage = () => {
           plan_id: plan.id,
           status: 'cancelled',
           receipt: {
-            amount: Number(intent?.amount),
-            payee: intent?.payee_name,
+            amount: Number(intent.amount),
+            payee: intent.payee_name,
             rail: plan.chosen_rail,
             cancelledAt: new Date().toISOString(),
             userConfirmed: false,
           },
+        })
+        .select('id')
+        .single();
+
+      // Log to activity feed
+      if (transaction) {
+        await supabase.from('transaction_logs').insert({
+          user_id: user.id,
+          intent_id: plan.intent_id,
+          intent_type: intent.type,
+          amount: Number(intent.amount),
+          currency: intent.currency,
+          status: 'failed',
+          trigger: 'qr_scan',
+          rail_used: plan.chosen_rail,
+          merchant_name: intent.type === 'PayMerchant' ? intent.payee_name : null,
+          recipient_name: intent.type === 'SendMoney' ? intent.payee_name : null,
+          reference: transaction.id.substring(0, 8).toUpperCase(),
+          note: 'User cancelled handoff',
         });
+      }
     }
 
     setTimeout(() => navigate('/home'), 1500);

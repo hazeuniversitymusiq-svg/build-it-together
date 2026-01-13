@@ -177,6 +177,21 @@ async function executeSyncPlan(
           connectorCalls,
           { success: false, error: callResult.error }
         );
+
+        // Log failed transaction for activity feed
+        await supabase.from('transaction_logs').insert({
+          user_id: context.userId,
+          intent_id: plan.intent_id,
+          intent_type: intent.type,
+          amount: Number(intent.amount),
+          currency: intent.currency,
+          status: 'failed',
+          trigger: 'qr_scan',
+          rail_used: plan.chosen_rail,
+          merchant_name: intent.type === 'PayMerchant' ? intent.payee_name : null,
+          recipient_name: intent.type === 'SendMoney' ? intent.payee_name : null,
+          reference: transaction.id.substring(0, 8).toUpperCase(),
+        });
       }
 
       return {
@@ -236,6 +251,40 @@ async function executeSyncPlan(
     connectorCalls,
     { success: true, signatureId: context.signature?.id }
   );
+
+  // === CREATE TRANSACTION LOG FOR ACTIVITY FEED ===
+  await supabase.from('transaction_logs').insert({
+    user_id: context.userId,
+    intent_id: plan.intent_id,
+    intent_type: intent.type,
+    amount: Number(intent.amount),
+    currency: intent.currency,
+    status: 'success',
+    trigger: 'qr_scan',
+    rail_used: plan.chosen_rail,
+    merchant_name: intent.type === 'PayMerchant' ? intent.payee_name : null,
+    merchant_id: intent.type === 'PayMerchant' ? intent.payee_identifier : null,
+    recipient_name: intent.type === 'SendMoney' ? intent.payee_name : null,
+    recipient_id: intent.type === 'SendMoney' ? intent.payee_identifier : null,
+    reference: transaction.id.substring(0, 8).toUpperCase(),
+  });
+
+  // === UPDATE WALLET BALANCE (deduct amount) ===
+  // Find the funding source used and deduct balance
+  const { data: fundingSource } = await supabase
+    .from('funding_sources')
+    .select('id, balance, name')
+    .eq('user_id', context.userId)
+    .eq('name', plan.chosen_rail)
+    .maybeSingle();
+
+  if (fundingSource) {
+    const newBalance = Math.max(0, fundingSource.balance - Number(intent.amount));
+    await supabase
+      .from('funding_sources')
+      .update({ balance: newBalance })
+      .eq('id', fundingSource.id);
+  }
 
   // Post-payment audit log
   await postPaymentAuditLog(

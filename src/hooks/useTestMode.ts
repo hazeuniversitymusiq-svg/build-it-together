@@ -14,7 +14,8 @@ const STORAGE_KEY = 'flow_test_mode';
 export function useTestMode() {
   const [mode, setModeState] = useState<FlowTestMode>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return (stored as FlowTestMode) || 'field_test';
+    // Default to prototype for demo purposes
+    return (stored as FlowTestMode) || 'prototype';
   });
 
   useEffect(() => {
