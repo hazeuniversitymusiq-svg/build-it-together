@@ -5,7 +5,7 @@
  * Interactive Demo Layer - tap highlighted elements to learn.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { QrCode, Send, Receipt, Loader2 } from "lucide-react";
@@ -71,7 +71,7 @@ const HomePage = () => {
     checkAuth();
   }, [navigate]);
 
-  const simulateIncomingPayment = () => {
+  const simulateIncomingPayment = useCallback(() => {
     const senders = ['Sarah', 'Ahmad', 'Chen Wei', 'Priya'];
     const sender = senders[Math.floor(Math.random() * senders.length)];
     const amount = (Math.floor(Math.random() * 200) + 20).toFixed(2);
@@ -80,7 +80,7 @@ const HomePage = () => {
       title: `💸 Payment Received`,
       description: `${sender} sent you RM ${amount}`,
     });
-  };
+  }, [toast]);
 
   if (isLoading) {
     return (
