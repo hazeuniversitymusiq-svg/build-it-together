@@ -24,6 +24,7 @@ import ActivityPage from "./pages/ActivityPage";
 import SettingsPage from "./pages/SettingsPage";
 import DemoPage from "./pages/DemoPage";
 import RequestMoneySurface from "./components/surfaces/RequestMoneySurface";
+import PartnerPitchPage from "./pages/PartnerPitchPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const AnimatedRoutes = () => {
         <Route path="/done/:transactionId" element={<PageTransition><DonePage /></PageTransition>} />
         <Route path="/request" element={<PageTransition><RequestMoneySurface /></PageTransition>} />
         <Route path="/demo" element={<PageTransition><DemoPage /></PageTransition>} />
+        <Route path="/partner" element={<PageTransition><PartnerPitchPage /></PageTransition>} />
         
         {/* Main App Routes (With Bottom Nav) */}
         <Route element={<AppLayout />}>
