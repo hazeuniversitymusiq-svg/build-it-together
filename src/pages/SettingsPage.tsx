@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { DemoHighlight } from "@/components/demo/DemoHighlight";
 
 import { useOrchestration } from "@/contexts/OrchestrationContext";
 import { useSecurity } from "@/contexts/SecurityContext";
@@ -69,7 +70,13 @@ const SettingsPage = () => {
 
       {/* Kill Switch - Primary Control */}
       <section className="px-6 mb-6">
-        <KillSwitch />
+        <DemoHighlight
+          id="kill-switch"
+          title="Emergency Kill Switch"
+          description="Instantly pause all FLOW payments. Use this if you lose your phone or suspect fraud."
+        >
+          <KillSwitch />
+        </DemoHighlight>
       </section>
 
       {/* Security */}
@@ -266,69 +273,75 @@ const SettingsPage = () => {
           </div>
 
           {/* Feature Flags */}
-          <div className="glass-card rounded-2xl overflow-hidden shadow-float">
-            <div className="p-3 border-b border-border/30 bg-muted/20">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Feature Flags</span>
-            </div>
-            <div className="divide-y divide-border/30">
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    isFlowCardEnabled ? 'aurora-gradient shadow-glow-blue' : 'bg-muted'
-                  }`}>
-                    <CreditCard className={`w-5 h-5 ${isFlowCardEnabled ? 'text-white' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <span className="text-foreground font-medium">Flow Card</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">Digital card feature</p>
-                  </div>
-                </div>
-                <Switch 
-                  checked={isFlowCardEnabled} 
-                  onCheckedChange={(checked) => setFlag('flow_card_enabled', checked)}
-                  disabled={flagsLoading}
-                />
+          <DemoHighlight
+            id="feature-flags"
+            title="Feature Flags"
+            description="Enable or disable experimental features like Flow Card, Network Mode, and Push Provisioning."
+          >
+            <div className="glass-card rounded-2xl overflow-hidden shadow-float">
+              <div className="p-3 border-b border-border/30 bg-muted/20">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Feature Flags</span>
               </div>
+              <div className="divide-y divide-border/30">
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isFlowCardEnabled ? 'aurora-gradient shadow-glow-blue' : 'bg-muted'
+                    }`}>
+                      <CreditCard className={`w-5 h-5 ${isFlowCardEnabled ? 'text-white' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <span className="text-foreground font-medium">Flow Card</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Digital card feature</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={isFlowCardEnabled} 
+                    onCheckedChange={(checked) => setFlag('flow_card_enabled', checked)}
+                    disabled={flagsLoading}
+                  />
+                </div>
 
-              <div className={`flex items-center justify-between p-4 transition-opacity ${!isFlowCardEnabled ? 'opacity-50' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    isNetworkEnabled ? 'bg-aurora-purple/20' : 'bg-muted'
-                  }`}>
-                    <Route className={`w-5 h-5 ${isNetworkEnabled ? 'text-aurora-purple' : 'text-muted-foreground'}`} />
+                <div className={`flex items-center justify-between p-4 transition-opacity ${!isFlowCardEnabled ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isNetworkEnabled ? 'bg-aurora-purple/20' : 'bg-muted'
+                    }`}>
+                      <Route className={`w-5 h-5 ${isNetworkEnabled ? 'text-aurora-purple' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <span className="text-foreground font-medium">Network Mode</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Virtual card network</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-foreground font-medium">Network Mode</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">Virtual card network</p>
-                  </div>
+                  <Switch 
+                    checked={isNetworkEnabled} 
+                    onCheckedChange={(checked) => setFlag('flow_card_network_enabled', checked)}
+                    disabled={flagsLoading || !isFlowCardEnabled}
+                  />
                 </div>
-                <Switch 
-                  checked={isNetworkEnabled} 
-                  onCheckedChange={(checked) => setFlag('flow_card_network_enabled', checked)}
-                  disabled={flagsLoading || !isFlowCardEnabled}
-                />
-              </div>
 
-              <div className={`flex items-center justify-between p-4 transition-opacity ${!isNetworkEnabled ? 'opacity-50' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    isProvisioningEnabled ? 'bg-aurora-teal/20' : 'bg-muted'
-                  }`}>
-                    <Wallet className={`w-5 h-5 ${isProvisioningEnabled ? 'text-aurora-teal' : 'text-muted-foreground'}`} />
+                <div className={`flex items-center justify-between p-4 transition-opacity ${!isNetworkEnabled ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isProvisioningEnabled ? 'bg-aurora-teal/20' : 'bg-muted'
+                    }`}>
+                      <Wallet className={`w-5 h-5 ${isProvisioningEnabled ? 'text-aurora-teal' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <span className="text-foreground font-medium">Push Provisioning</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Apple Pay / Google Pay</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-foreground font-medium">Push Provisioning</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">Apple Pay / Google Pay</p>
-                  </div>
+                  <Switch 
+                    checked={isProvisioningEnabled} 
+                    onCheckedChange={(checked) => setFlag('flow_card_push_provisioning_enabled', checked)}
+                    disabled={flagsLoading || !isNetworkEnabled}
+                  />
                 </div>
-                <Switch 
-                  checked={isProvisioningEnabled} 
-                  onCheckedChange={(checked) => setFlag('flow_card_push_provisioning_enabled', checked)}
-                  disabled={flagsLoading || !isNetworkEnabled}
-                />
               </div>
             </div>
-          </div>
+          </DemoHighlight>
 
           {/* Payment Configuration */}
           <div className="glass-card rounded-2xl overflow-hidden shadow-float">
