@@ -18,6 +18,7 @@ interface DemoHighlightProps {
   onTryIt?: () => void;
   children: React.ReactNode;
   position?: "top" | "bottom" | "left" | "right";
+  className?: string;
 }
 
 export function DemoHighlight({ 
@@ -26,7 +27,8 @@ export function DemoHighlight({
   description, 
   onTryIt, 
   children,
-  position = "bottom" 
+  position = "bottom",
+  className
 }: DemoHighlightProps) {
   const { isDemoMode, activeHighlight, setActiveHighlight } = useDemo();
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
@@ -93,7 +95,7 @@ export function DemoHighlight({
       <motion.div
         ref={wrapperRef}
         onClick={handleClick}
-        className="relative cursor-pointer"
+        className={`relative cursor-pointer ${className || ''}`}
         animate={{
           scale: isActive ? 1.02 : 1,
         }}
