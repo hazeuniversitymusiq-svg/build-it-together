@@ -7,7 +7,7 @@
 import { forwardRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Send, Receipt, Clock, HandCoins, Building2, Zap, ShieldCheck } from "lucide-react";
+import { QrCode, Send, Receipt, Clock, HandCoins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
@@ -179,29 +179,6 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
           variant="bills"
         />
       </motion.div>
-
-      {/* Bank Partner Demo Banner */}
-      <motion.button
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.4 }}
-        onClick={() => navigate("/demo")}
-        className="w-full mb-4 p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-aurora-teal/10 border border-primary/20 flex items-center justify-between group hover:border-primary/40 transition-all"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-primary" />
-          </div>
-          <div className="text-left">
-            <p className="font-medium text-foreground text-sm">Bank Partner Demo</p>
-            <p className="text-xs text-muted-foreground">Experience Scan → Authorize → Done</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium text-primary group-hover:translate-x-0.5 transition-transform">Try it</span>
-        </div>
-      </motion.button>
 
       {/* Bill Reminder Surface - Only shows if there are upcoming bills */}
       <BillReminderSurface className="mb-4" />

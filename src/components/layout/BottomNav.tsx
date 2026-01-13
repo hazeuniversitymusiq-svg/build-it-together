@@ -10,7 +10,8 @@
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Send, Receipt, User, Scan, CreditCard } from "lucide-react";
+import { Home, Send, Receipt, User, Scan, CreditCard, Zap } from "lucide-react";
+import { useState } from "react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 // Base nav items
@@ -29,6 +30,7 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isFlowCardEnabled } = useFeatureFlags();
+  const [showDemoHint, setShowDemoHint] = useState(false);
 
   // Build nav items with optional Flow Card
   const navItems = isFlowCardEnabled
@@ -44,6 +46,20 @@ const BottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
       <div className="max-w-md mx-auto px-4 pb-4 safe-area-bottom">
+        {/* Demo Toggle - Subtle floating pill */}
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          onClick={() => navigate("/demo")}
+          onMouseEnter={() => setShowDemoHint(true)}
+          onMouseLeave={() => setShowDemoHint(false)}
+          className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full glass-card border border-primary/20 flex items-center gap-2 pointer-events-auto hover:border-primary/40 transition-all group"
+        >
+          <Zap className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-medium text-primary">Demo</span>
+        </motion.button>
+
         {/* Floating glass pill */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
