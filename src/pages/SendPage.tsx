@@ -2,6 +2,7 @@
  * FLOW Send Money Page
  * 
  * iOS 26 Liquid Glass design - Contact selection + amount entry
+ * With intelligent features: frequent contacts, send history, note field
  */
 
 import { forwardRef, useState, useEffect } from "react";
@@ -14,12 +15,15 @@ import {
   ChevronLeft,
   Loader2,
   Check,
-  Wallet
+  Wallet,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import FrequentContacts from "@/components/send/FrequentContacts";
+import ContactSendHistory from "@/components/send/ContactSendHistory";
 import type { Database } from "@/integrations/supabase/types";
 
 type Contact = Database['public']['Tables']['contacts']['Row'];
@@ -43,6 +47,7 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [selectedContact, setSelectedContact] = useState<ContactDisplayItem | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [hasContactsPermission, setHasContactsPermission] = useState(false);
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
@@ -172,6 +177,7 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
             recipientPreferredWallet: userSelectedWallet,
             userSelectedRail: userSelectedWallet,
             railsAvailable: railsAvailable,
+            note: note || undefined,
           },
         })
         .select("id")
@@ -279,6 +285,23 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col px-6"
           >
+            {/* Frequent Contacts */}
+            <FrequentContacts
+              onSelect={(contact) => {
+                setSelectedContact({
+                  id: contact.id,
+                  name: contact.name,
+                  phone: contact.phone,
+                  initial: contact.initial,
+                  supportedWallets: [],
+                  defaultWallet: "None",
+                });
+                setAmount(contact.suggestedAmount.toString());
+                setSelectedWallet("DuitNow");
+              }}
+              selectedId={selectedContact?.id}
+            />
+
             {/* Search */}
             <div className="relative mb-4">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -419,6 +442,17 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
               )}
             </AnimatePresence>
 
+            {/* Send History with Contact */}
+            <AnimatePresence>
+              {selectedContact && (
+                <ContactSendHistory
+                  contactId={selectedContact.id}
+                  contactName={selectedContact.name}
+                  contactPhone={selectedContact.phone}
+                />
+              )}
+            </AnimatePresence>
+
             {/* Amount Field */}
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -439,6 +473,26 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
                   className="pl-14 h-14 text-xl font-semibold rounded-2xl glass-card border-0 shadow-float"
                   step="0.01"
                   min="0"
+                />
+              </div>
+            </motion.div>
+
+            {/* Note Field */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="mb-4"
+            >
+              <label className="block text-sm text-muted-foreground mb-2">Note (optional)</label>
+              <div className="relative">
+                <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="What's this for?"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="pl-12 h-12 rounded-2xl glass-card border-0 shadow-float"
                 />
               </div>
             </motion.div>

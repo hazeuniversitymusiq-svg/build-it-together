@@ -2,6 +2,7 @@
  * FLOW Bills Page
  * 
  * iOS 26 Liquid Glass design - Linked billers and bill payments
+ * With intelligent features: payment history, auto-pay, spending insights
  */
 
 import { forwardRef, useState, useEffect } from "react";
@@ -22,6 +23,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays } from "date-fns";
+import BillPaymentHistory from "@/components/bills/BillPaymentHistory";
+import AutoPayToggle from "@/components/bills/AutoPayToggle";
 import type { Database } from "@/integrations/supabase/types";
 
 type BillerAccount = Database['public']['Tables']['biller_accounts']['Row'];
@@ -276,11 +279,23 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
                   className="px-5 pb-5"
                 >
                   {biller.dueDate && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 glass-subtle rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 glass-subtle rounded-xl px-3 py-2">
                       <Calendar className="w-4 h-4" />
                       <span>Due on {format(biller.dueDate, "MMM d, yyyy")}</span>
                     </div>
                   )}
+
+                  {/* Payment History */}
+                  <BillPaymentHistory 
+                    billerName={biller.name} 
+                    currentAmount={biller.dueAmount} 
+                  />
+
+                  {/* Auto-Pay Toggle */}
+                  <AutoPayToggle
+                    billerName={biller.name}
+                    accountRef={biller.accountRef || ''}
+                  />
                   
                   <Button
                     onClick={() => handlePayNow(biller)}

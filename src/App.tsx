@@ -24,6 +24,7 @@ import ActivityPage from "./pages/ActivityPage";
 import SettingsPage from "./pages/SettingsPage";
 import DemoPage from "./pages/DemoPage";
 import RequestMoneySurface from "./components/surfaces/RequestMoneySurface";
+import ReceivePage from "./pages/ReceivePage";
 import PartnerPitchPage from "./pages/PartnerPitchPage";
 import FlowCardPage from "./pages/FlowCardPage";
 import FlowCardActivityPage from "./pages/FlowCardActivityPage";
@@ -48,6 +49,7 @@ const AnimatedRoutes = () => {
         <Route path="/handoff/:planId" element={<PageTransition><HandoffPage /></PageTransition>} />
         <Route path="/done/:transactionId" element={<PageTransition><DonePage /></PageTransition>} />
         <Route path="/request" element={<PageTransition><RequestMoneySurface /></PageTransition>} />
+        <Route path="/receive" element={<PageTransition><ReceivePage /></PageTransition>} />
         <Route path="/demo" element={<PageTransition><DemoPage /></PageTransition>} />
         <Route path="/partner" element={<PageTransition><PartnerPitchPage /></PageTransition>} />
         
