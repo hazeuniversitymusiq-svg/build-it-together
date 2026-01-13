@@ -33,6 +33,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { useTestMode } from "@/hooks/useTestMode";
 import { useFundingSources } from "@/hooks/useFundingSources";
 import { useDemo } from "@/contexts/DemoContext";
+import { DemoHighlight } from "@/components/demo/DemoHighlight";
 import QRScanner from "@/components/scanner/QRScanner";
 import MyPaymentCode from "@/components/scanner/MyPaymentCode";
 import FundingSourcePicker from "@/components/scanner/FundingSourcePicker";
@@ -399,28 +400,35 @@ const ScanPage = () => {
               className="flex-1 flex flex-col items-center justify-center"
             >
               {/* Large Scan Button */}
-              <motion.button
-                onClick={() => setIsScannerOpen(true)}
-                className="relative w-52 h-52 rounded-[2.5rem] aurora-gradient-soft glass-card flex flex-col items-center justify-center gap-4 shadow-float-lg"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <DemoHighlight
+                id="scan-button"
+                title="QR Scanner"
+                description="Scan any merchant QR code to pay instantly. Supports DuitNow, Touch'n'Go, GrabPay, and Boost."
+                onTryIt={() => simulateTestScan('merchant')}
               >
-                {/* Aurora glow ring */}
-                <div className="absolute inset-0 rounded-[2.5rem] aurora-border opacity-50" />
-                
-                {/* Icon */}
-                <motion.div 
-                  className="w-20 h-20 rounded-2xl aurora-gradient flex items-center justify-center shadow-glow-aurora"
-                  animate={{ scale: [1, 1.03, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                <motion.button
+                  onClick={() => setIsScannerOpen(true)}
+                  className="relative w-52 h-52 rounded-[2.5rem] aurora-gradient-soft glass-card flex flex-col items-center justify-center gap-4 shadow-float-lg"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <Camera className="w-9 h-9 text-white" />
-                </motion.div>
-                
-                <span className="text-lg font-medium text-foreground">
-                  Open Scanner
-                </span>
-              </motion.button>
+                  {/* Aurora glow ring */}
+                  <div className="absolute inset-0 rounded-[2.5rem] aurora-border opacity-50" />
+                  
+                  {/* Icon */}
+                  <motion.div 
+                    className="w-20 h-20 rounded-2xl aurora-gradient flex items-center justify-center shadow-glow-aurora"
+                    animate={{ scale: [1, 1.03, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Camera className="w-9 h-9 text-white" />
+                  </motion.div>
+                  
+                  <span className="text-lg font-medium text-foreground">
+                    Open Scanner
+                  </span>
+                </motion.button>
+              </DemoHighlight>
 
               {/* Supported formats */}
               <motion.div
