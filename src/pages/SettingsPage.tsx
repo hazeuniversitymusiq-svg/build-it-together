@@ -12,6 +12,7 @@ import { useOrchestration } from "@/contexts/OrchestrationContext";
 import { useSecurity } from "@/contexts/SecurityContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useTestMode } from "@/hooks/useTestMode";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { KillSwitch } from "@/components/settings/KillSwitch";
 import PaymentSourcesManager from "@/components/settings/PaymentSourcesManager";
 import PaymentRailsManager from "@/components/settings/PaymentRailsManager";
@@ -33,7 +34,8 @@ import {
   Building2,
   Route,
   ArrowLeftRight,
-  ExternalLink
+  ExternalLink,
+  Zap
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -42,11 +44,20 @@ const SettingsPage = () => {
   const { isWebAuthnRegistered } = useSecurity();
   const { signOut } = useAuth();
   const { toggleMode, isFieldTest } = useTestMode();
+  const { 
+    isFlowCardEnabled, 
+    isNetworkEnabled, 
+    isProvisioningEnabled, 
+    setFlag,
+    loading: flagsLoading 
+  } = useFeatureFlags();
+  
   const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
   const [isBankDemoExpanded, setIsBankDemoExpanded] = useState(true);
   const [isRailsExpanded, setIsRailsExpanded] = useState(false);
   const [isCardsExpanded, setIsCardsExpanded] = useState(false);
   const [isFallbackExpanded, setIsFallbackExpanded] = useState(false);
+  const [isFeatureFlagsExpanded, setIsFeatureFlagsExpanded] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -60,6 +71,109 @@ const SettingsPage = () => {
         <p className="text-muted-foreground text-sm mb-1">Configuration</p>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Settings</h1>
       </header>
+
+      {/* Feature Flags (Admin) */}
+      <section className="px-6 mb-6">
+        <button
+          onClick={() => setIsFeatureFlagsExpanded(!isFeatureFlagsExpanded)}
+          className="flex items-center justify-between w-full mb-4 group"
+        >
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-warning" />
+            <p className="text-sm font-medium text-muted-foreground">Feature Flags (Admin)</p>
+          </div>
+          <motion.div
+            animate={{ rotate: isFeatureFlagsExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          </motion.div>
+        </button>
+        
+        <motion.div
+          initial={false}
+          animate={{ 
+            height: isFeatureFlagsExpanded ? "auto" : 0,
+            opacity: isFeatureFlagsExpanded ? 1 : 0 
+          }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden"
+        >
+          <div className="glass-card rounded-2xl overflow-hidden shadow-float">
+            <div className="divide-y divide-border/30">
+              {/* Flow Card Enabled */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isFlowCardEnabled ? 'aurora-gradient shadow-glow-blue' : 'bg-muted'
+                  }`}>
+                    <CreditCard className={`w-5 h-5 ${isFlowCardEnabled ? 'text-white' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <span className="text-foreground font-medium">Flow Card</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Enable digital card feature
+                    </p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={isFlowCardEnabled} 
+                  onCheckedChange={(checked) => setFlag('flow_card_enabled', checked)}
+                  disabled={flagsLoading}
+                />
+              </div>
+
+              {/* Network Enabled */}
+              <div className={`flex items-center justify-between p-4 transition-opacity ${
+                !isFlowCardEnabled ? 'opacity-50' : ''
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isNetworkEnabled ? 'bg-aurora-purple/20' : 'bg-muted'
+                  }`}>
+                    <Smartphone className={`w-5 h-5 ${isNetworkEnabled ? 'text-aurora-purple' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <span className="text-foreground font-medium">Network Mode</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Virtual card network (Visa/MC)
+                    </p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={isNetworkEnabled} 
+                  onCheckedChange={(checked) => setFlag('flow_card_network_enabled', checked)}
+                  disabled={flagsLoading || !isFlowCardEnabled}
+                />
+              </div>
+
+              {/* Provisioning Enabled */}
+              <div className={`flex items-center justify-between p-4 transition-opacity ${
+                !isNetworkEnabled ? 'opacity-50' : ''
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isProvisioningEnabled ? 'bg-aurora-teal/20' : 'bg-muted'
+                  }`}>
+                    <Wallet className={`w-5 h-5 ${isProvisioningEnabled ? 'text-aurora-teal' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <span className="text-foreground font-medium">Push Provisioning</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Apple Pay / Google Pay
+                    </p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={isProvisioningEnabled} 
+                  onCheckedChange={(checked) => setFlag('flow_card_push_provisioning_enabled', checked)}
+                  disabled={flagsLoading || !isNetworkEnabled}
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
 
       {/* Bank Partner Demo - NEW */}
       <section className="px-6 mb-6">
