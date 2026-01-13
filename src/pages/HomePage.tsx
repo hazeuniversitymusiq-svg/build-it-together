@@ -2,6 +2,7 @@
  * FLOW Home Page
  * 
  * Simplified, clean design - focus on core actions
+ * Demo actions registered with Global Demo Intelligence.
  */
 
 import { forwardRef, useEffect } from "react";
@@ -13,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
 import { useDeepLink } from "@/hooks/useDeepLink";
+import { useDemo } from "@/contexts/DemoContext";
+import { useToast } from "@/hooks/use-toast";
 
 
 // Aurora color variants for action cards
@@ -52,6 +55,8 @@ ActionCard.displayName = "ActionCard";
 
 const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { registerPageAction, clearPageActions } = useDemo();
   
   useDeepLink();
 
@@ -64,6 +69,29 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
     };
     checkAuth();
   }, [navigate]);
+
+  // Register demo actions for this page
+  useEffect(() => {
+    registerPageAction({
+      id: 'home-incoming-payment',
+      label: 'Simulate Incoming Payment',
+      description: 'Receive a payment notification',
+      action: async () => {
+        const senders = ['Sarah', 'Ahmad', 'Chen Wei', 'Priya'];
+        const sender = senders[Math.floor(Math.random() * senders.length)];
+        const amount = (Math.floor(Math.random() * 200) + 20).toFixed(2);
+        
+        toast({
+          title: `💸 Payment Received`,
+          description: `${sender} sent you RM ${amount}`,
+        });
+      },
+    });
+
+    return () => {
+      clearPageActions();
+    };
+  }, [registerPageAction, clearPageActions, toast]);
 
   return (
     <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
