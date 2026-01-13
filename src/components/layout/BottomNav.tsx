@@ -5,13 +5,16 @@
  * - 5 nav items with center elevated Scan button
  * - Clean minimal icons with labels
  * - Smooth active state transitions
+ * - Flow Card tab (feature-flagged)
  */
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Send, Receipt, User, Scan } from "lucide-react";
+import { Home, Send, Receipt, User, Scan, CreditCard } from "lucide-react";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
-const navItems = [
+// Base nav items
+const baseNavItems = [
   { path: "/home", icon: Home, label: "Home" },
   { path: "/send", icon: Send, label: "Send" },
   { path: "/scan", icon: Scan, label: "Scan", primary: true },
@@ -19,9 +22,24 @@ const navItems = [
   { path: "/settings", icon: User, label: "Me" },
 ];
 
+// Flow Card nav item (inserted when enabled)
+const flowCardNavItem = { path: "/flow-card", icon: CreditCard, label: "Card", primary: false };
+
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isFlowCardEnabled } = useFeatureFlags();
+
+  // Build nav items with optional Flow Card
+  const navItems = isFlowCardEnabled
+    ? [
+        baseNavItems[0], // Home
+        flowCardNavItem,  // Card (replaces Send when enabled)
+        baseNavItems[2], // Scan
+        baseNavItems[3], // Bills
+        baseNavItems[4], // Me
+      ]
+    : baseNavItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">

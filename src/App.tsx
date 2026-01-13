@@ -25,6 +25,8 @@ import SettingsPage from "./pages/SettingsPage";
 import DemoPage from "./pages/DemoPage";
 import RequestMoneySurface from "./components/surfaces/RequestMoneySurface";
 import PartnerPitchPage from "./pages/PartnerPitchPage";
+import FlowCardPage from "./pages/FlowCardPage";
+import FlowCardActivityPage from "./pages/FlowCardActivityPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +59,9 @@ const AnimatedRoutes = () => {
           <Route path="/bills" element={<PageTransition><BillsPage /></PageTransition>} />
           <Route path="/activity" element={<PageTransition><ActivityPage /></PageTransition>} />
           <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+          {/* Flow Card Routes (feature-flagged in component) */}
+          <Route path="/flow-card" element={<PageTransition><FlowCardPage /></PageTransition>} />
+          <Route path="/flow-card/activity" element={<PageTransition><FlowCardActivityPage /></PageTransition>} />
         </Route>
         
         {/* Catch-all */}
