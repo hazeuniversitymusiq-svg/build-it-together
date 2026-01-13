@@ -5,7 +5,7 @@
  * With intelligent features: payment history, auto-pay, spending insights
  */
 
-import { forwardRef, useState, useEffect } from "react";
+import { forwardRef, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -22,9 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, addDays } from "date-fns";
+import { format, addDays, differenceInDays } from "date-fns";
 import BillPaymentHistory from "@/components/bills/BillPaymentHistory";
 import AutoPayToggle from "@/components/bills/AutoPayToggle";
+import { useDemo } from "@/contexts/DemoContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type BillerAccount = Database['public']['Tables']['biller_accounts']['Row'];
@@ -48,6 +49,7 @@ const billerConfig: Record<string, { icon: React.ReactNode; gradient: string }> 
 const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { registerPageAction, clearPageActions } = useDemo();
 
   const [billers, setBillers] = useState<BillerInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +98,63 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
 
     loadBillers();
   }, [navigate]);
+
+  // Simulate paying a bill with auto-detection of due date
+  const simulateBillPayment = useCallback(() => {
+    // Find the bill with the soonest due date
+    const linkedBillers = billers.filter(b => b.isLinked && b.dueDate);
+    
+    if (linkedBillers.length === 0) {
+      // Auto-link TNB as demo
+      const demoBiller: BillerInfo = {
+        name: "TNB",
+        icon: <Zap className="w-6 h-6" />,
+        gradient: "from-yellow-500 to-orange-500",
+        isLinked: true,
+        accountRef: "TNB-12345678",
+        dueAmount: 127.50,
+        dueDate: addDays(new Date(), 3),
+      };
+      
+      setBillers(prev => prev.map(b => 
+        b.name === "TNB" ? demoBiller : b
+      ));
+      
+      toast({
+        title: "⚡ Demo: TNB Bill Detected",
+        description: `RM 127.50 due in 3 days`,
+      });
+      return;
+    }
+
+    // Find the most urgent bill
+    const sortedByDue = linkedBillers.sort((a, b) => 
+      (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)
+    );
+    const urgentBill = sortedByDue[0];
+    const daysUntilDue = differenceInDays(urgentBill.dueDate!, new Date());
+    
+    const urgency = daysUntilDue <= 3 ? "🔴 Urgent" : daysUntilDue <= 7 ? "🟡 Soon" : "🟢 Upcoming";
+    
+    toast({
+      title: `${urgency}: ${urgentBill.name} Bill`,
+      description: `RM ${urgentBill.dueAmount?.toFixed(2)} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`,
+    });
+  }, [billers, toast]);
+
+  // Register demo actions for this page
+  useEffect(() => {
+    registerPageAction({
+      id: 'bills-simulate-payment',
+      label: 'Simulate Bill Payment',
+      description: 'Detect and pay the most urgent bill',
+      action: simulateBillPayment,
+    });
+
+    return () => {
+      clearPageActions();
+    };
+  }, [registerPageAction, clearPageActions, simulateBillPayment]);
 
   const handleLinkBiller = async (billerName: string) => {
     if (!accountNumber.trim()) {
