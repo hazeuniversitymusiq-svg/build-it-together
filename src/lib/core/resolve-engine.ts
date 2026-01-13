@@ -2,13 +2,13 @@
  * FLOW Resolve Engine
  * 
  * The brain of FLOW - determines how to execute a payment.
- * Uses the pure resolver logic from orchestration module.
- * This module handles DB operations and persistence.
+ * Now uses smart resolution for intelligent rail selection.
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { checkResolutionGates, checkConsentGate, type GateResult } from './gates';
+import { checkResolutionGates, checkConsentGate } from './gates';
 import { resolvePayment, type ResolverContext } from '@/lib/orchestration/resolver';
+import { smartResolve, type SmartResolutionContext, type ScoredRail, type SmartResolutionResult } from '@/lib/orchestration/smart-resolver';
 import { DEFAULT_GUARDRAILS, getOrResetDailyState } from '@/lib/orchestration/guardrails';
 import type { Database } from '@/integrations/supabase/types';
 import type { 
@@ -186,7 +186,7 @@ function generateHumanSteps(
 /**
  * ResolveEngine
  * Main resolution logic - determines how to execute a payment
- * Uses the pure resolver from orchestration module
+ * Now uses smart resolution for intelligent rail selection
  */
 export async function resolveIntent(
   userId: string,
@@ -227,38 +227,28 @@ export async function resolveIntent(
   const recipientWallets = metadata?.recipientWallets as string[] | undefined;
   const recipientPreferredWallet = metadata?.recipientPreferredWallet as string | undefined;
 
-  // Get candidate rails
-  let candidates = await getCandidateRails(userId, intent.type, railsAvailable);
-  
-  // For SendMoney: prioritize rails that match recipient's wallets
-  if (intent.type === 'SendMoney' && recipientWallets && recipientWallets.length > 0) {
-    // Sort candidates to prioritize recipient's preferred wallet, then other recipient wallets
-    candidates = candidates.sort((a, b) => {
-      const aIsPreferred = a.name === recipientPreferredWallet;
-      const bIsPreferred = b.name === recipientPreferredWallet;
-      const aInRecipientWallets = recipientWallets.includes(a.name);
-      const bInRecipientWallets = recipientWallets.includes(b.name);
-      
-      // Preferred wallet first
-      if (aIsPreferred && !bIsPreferred) return -1;
-      if (!aIsPreferred && bIsPreferred) return 1;
-      
-      // Then any wallet recipient has
-      if (aInRecipientWallets && !bInRecipientWallets) return -1;
-      if (!aInRecipientWallets && bInRecipientWallets) return 1;
-      
-      return 0;
-    });
-  }
-  
-  if (candidates.length === 0) {
+  // ========================================
+  // NEW: Use Smart Resolution
+  // ========================================
+  const smartContext: SmartResolutionContext = {
+    userId,
+    amount,
+    intentType: intent.type,
+    merchantRails: railsAvailable,
+    recipientWallets,
+    recipientPreferredWallet,
+  };
+
+  const smartResult = await smartResolve(smartContext);
+
+  if (!smartResult.success || !smartResult.recommendedRail) {
     return {
       success: false,
-      error: 'No payment methods available for this transaction',
+      error: smartResult.explanation,
     };
   }
 
-  // Get funding sources
+  // Get funding sources for fallback resolver
   const fundingSources = await getFundingSources(userId);
   if (fundingSources.length === 0) {
     return {
@@ -276,14 +266,14 @@ export async function resolveIntent(
     ? getOrResetDailyState(JSON.parse(storedState))
     : { dailyAutoApproved: 0, lastResetDate: new Date().toISOString().split('T')[0] };
 
-  // Create payment request for resolver
+  // Create payment request for guardrails check
   const paymentRequest: PaymentRequest = {
     amount,
     currency: intent.currency,
     intentId,
   };
 
-  // Build resolver context
+  // Build resolver context for guardrails
   const resolverContext: ResolverContext = {
     sources: fundingSources,
     config: DEFAULT_GUARDRAILS,
@@ -291,39 +281,38 @@ export async function resolveIntent(
     fallbackPreference,
   };
 
-  // Run pure resolver logic
+  // Run pure resolver for guardrails check
   const resolution = resolvePayment(paymentRequest, resolverContext);
 
   // Handle blocked resolution
-  if (resolution.action === 'BLOCKED' || resolution.action === 'INSUFFICIENT_FUNDS') {
+  if (resolution.action === 'BLOCKED') {
     return {
       success: false,
       error: resolution.blockedReason || 'Unable to process payment',
     };
   }
 
-  // Check consent for primary candidate
-  const primaryCandidate = candidates[0];
-  const consentResult = await checkConsentGate(userId, primaryCandidate.id);
+  // Use smart resolver's recommended rail
+  const recommendedRail = smartResult.recommendedRail;
+  const chosenRail = recommendedRail.name;
+  const fallbackRail = smartResult.alternatives[0]?.name;
 
-  // Determine chosen rail
-  const chosenRail = primaryCandidate.name;
-  const fallbackRail = candidates.length > 1 ? candidates[1].name : undefined;
+  // Determine if top-up is needed from smart result
+  const topupNeeded = smartResult.requiresTopUp;
+  const topupAmount = smartResult.topUpAmount || 0;
 
-  // Determine if top-up is needed
-  const topupNeeded = resolution.action === 'TOP_UP_WALLET';
-  const topupStep = resolution.steps.find(s => s.action === 'top_up');
-  const topupAmount = topupStep?.amount || 0;
+  // Check consent for chosen connector
+  const consentResult = await checkConsentGate(userId, recommendedRail.connectorId);
 
-  // Generate human-readable steps with recipient context for P2P
-  const steps = generateHumanSteps(
-    resolution, 
-    amount, 
-    chosenRail,
+  // Generate human-readable steps
+  const steps = generateSmartSteps(
+    recommendedRail,
+    smartResult,
+    amount,
     intent.type,
-    intent.payee_name,
-    recipientPreferredWallet
+    intent.payee_name
   );
+  
   const riskLevel = assignRiskLevel(amount, resolution.requiresConfirmation);
 
   const reasonCodes: string[] = [];
@@ -331,6 +320,9 @@ export async function resolveIntent(
   if (riskLevel === 'high') reasonCodes.push('HIGH_VALUE');
   if (!consentResult.passed) reasonCodes.push('CONSENT_NEEDED');
   if (resolution.requiresConfirmation) reasonCodes.push('CONFIRMATION_REQUIRED');
+  
+  // Add smart resolution metadata
+  reasonCodes.push(`SCORE_${Math.round(recommendedRail.totalScore)}`);
 
   const plan: ResolutionPlan = {
     intentId,
@@ -377,6 +369,42 @@ export async function resolveIntent(
 }
 
 /**
+ * Generate steps from smart resolution result
+ */
+function generateSmartSteps(
+  rail: ScoredRail,
+  result: SmartResolutionResult,
+  amount: number,
+  intentType: string,
+  payeeName: string
+): ResolutionStep[] {
+  const steps: ResolutionStep[] = [];
+  const isP2P = intentType === 'SendMoney';
+
+  // Add top-up step if needed
+  if (result.requiresTopUp && result.topUpAmount && result.topUpSource) {
+    steps.push({
+      action: 'TOP_UP',
+      description: `Add RM ${result.topUpAmount.toFixed(2)} to ${rail.name} from ${result.topUpSource}`,
+      amount: result.topUpAmount,
+      source: result.topUpSource,
+    });
+  }
+
+  // Add payment step
+  steps.push({
+    action: 'PAY',
+    description: isP2P 
+      ? `Send RM ${amount.toFixed(2)} to ${payeeName} via ${rail.name}`
+      : `Pay RM ${amount.toFixed(2)} using ${rail.name}`,
+    amount,
+    source: rail.name,
+  });
+
+  return steps;
+}
+
+/**
  * Get human-readable explanation of a resolution plan
  */
 export function explainPlan(plan: ResolutionPlan): string {
@@ -389,4 +417,25 @@ export function explainPlan(plan: ResolutionPlan): string {
   }
 
   return parts.join('. Then ');
+}
+
+/**
+ * Get smart resolution preview (for UI to show alternatives)
+ */
+export async function getSmartResolutionPreview(
+  userId: string,
+  amount: number,
+  intentType: 'PayMerchant' | 'SendMoney' | 'RequestMoney' | 'PayBill',
+  merchantRails?: string[],
+  recipientWallets?: string[],
+  recipientPreferredWallet?: string
+) {
+  return smartResolve({
+    userId,
+    amount,
+    intentType,
+    merchantRails,
+    recipientWallets,
+    recipientPreferredWallet,
+  });
 }

@@ -32,3 +32,16 @@ export {
   resolvePayment,
   explainResolution,
 } from './resolver';
+
+// Smart Resolver
+export {
+  smartResolve,
+  getResolutionSummary,
+} from './smart-resolver';
+
+export type {
+  RailCandidate,
+  ScoredRail,
+  SmartResolutionContext,
+  SmartResolutionResult,
+} from './smart-resolver';
