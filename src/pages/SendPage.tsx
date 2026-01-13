@@ -41,6 +41,7 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [contacts, setContacts] = useState<ContactDisplayItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContact, setSelectedContact] = useState<ContactDisplayItem | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [hasContactsPermission, setHasContactsPermission] = useState(false);
@@ -147,15 +148,14 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
         return;
       }
 
-      // Determine available rails based on recipient's wallets
-      // If recipient has wallets, use those. If not, fallback to DuitNow (cross-wallet)
+      // Use user-selected wallet as the preferred rail
       const recipientWallets = selectedContact.supportedWallets;
-      const recipientPreferred = selectedContact.defaultWallet;
+      const userSelectedWallet = selectedWallet || "DuitNow";
       
       // Available rails = recipient's wallets + DuitNow as universal fallback
       const railsAvailable = recipientWallets.length > 0 
         ? [...recipientWallets, "DuitNow"] 
-        : ["DuitNow"]; // DuitNow works even if we don't know their wallet
+        : ["DuitNow"];
 
       const { data: intent, error } = await supabase
         .from("intents")
@@ -169,7 +169,8 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
           metadata: {
             recipientId: selectedContact.id,
             recipientWallets: recipientWallets,
-            recipientPreferredWallet: recipientPreferred,
+            recipientPreferredWallet: userSelectedWallet,
+            userSelectedRail: userSelectedWallet,
             railsAvailable: railsAvailable,
           },
         })
@@ -299,9 +300,22 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedContact(
-                    selectedContact?.id === contact.id ? null : contact
-                  )}
+                  onClick={() => {
+                    if (selectedContact?.id === contact.id) {
+                      setSelectedContact(null);
+                      setSelectedWallet(null);
+                    } else {
+                      setSelectedContact(contact);
+                      // Auto-select default wallet or first available
+                      if (contact.defaultWallet !== "None") {
+                        setSelectedWallet(contact.defaultWallet);
+                      } else if (contact.supportedWallets.length > 0) {
+                        setSelectedWallet(contact.supportedWallets[0]);
+                      } else {
+                        setSelectedWallet("DuitNow"); // Universal fallback
+                      }
+                    }
+                  }}
                   className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all shadow-float ${
                     selectedContact?.id === contact.id
                       ? "aurora-gradient-soft aurora-border"
@@ -351,6 +365,59 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
                 </div>
               )}
             </div>
+
+            {/* Wallet Selector - shown when contact has multiple options */}
+            <AnimatePresence>
+              {selectedContact && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-4 overflow-hidden"
+                >
+                  <label className="block text-sm text-muted-foreground mb-2">
+                    Deliver to {selectedContact.name}'s
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Show recipient's wallets + DuitNow as options */}
+                    {[...selectedContact.supportedWallets, ...(selectedContact.supportedWallets.length > 0 ? [] : ["DuitNow"])].map((wallet) => (
+                      <motion.button
+                        key={wallet}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedWallet(wallet)}
+                        className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                          selectedWallet === wallet
+                            ? "aurora-gradient text-white shadow-glow-blue"
+                            : "glass-card hover:bg-white/60 dark:hover:bg-white/10 text-foreground"
+                        }`}
+                      >
+                        <Wallet className="w-4 h-4" />
+                        {wallet}
+                        {selectedContact.defaultWallet === wallet && (
+                          <span className="text-[10px] opacity-70">(preferred)</span>
+                        )}
+                      </motion.button>
+                    ))}
+                    {/* Always show DuitNow as universal option if recipient has wallets */}
+                    {selectedContact.supportedWallets.length > 0 && (
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedWallet("DuitNow")}
+                        className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                          selectedWallet === "DuitNow"
+                            ? "aurora-gradient text-white shadow-glow-blue"
+                            : "glass-card hover:bg-white/60 dark:hover:bg-white/10 text-foreground"
+                        }`}
+                      >
+                        <Wallet className="w-4 h-4" />
+                        DuitNow
+                        <span className="text-[10px] opacity-70">(universal)</span>
+                      </motion.button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Amount Field */}
             <motion.div 
