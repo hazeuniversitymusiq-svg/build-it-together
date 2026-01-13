@@ -37,10 +37,11 @@ const AuthPage = () => {
   useEffect(() => {
     // If user is already authenticated and we're on auth step, 
     // skip to auto-sync (they've already completed onboarding)
-    if (user && !loading) {
+    // But if we're on security step, let them complete it first
+    if (user && !loading && step === 'auth') {
       navigate('/auto-sync', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, step]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +76,9 @@ const AuthPage = () => {
           return;
         }
 
-        toast.success('Account created! Check your email to confirm.');
+        // Move to security step for new signups
+        toast.success('Account created!');
+        setStep('security');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
