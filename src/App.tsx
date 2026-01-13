@@ -29,6 +29,7 @@ import ReceivePage from "./pages/ReceivePage";
 import PartnerPitchPage from "./pages/PartnerPitchPage";
 import FlowCardPage from "./pages/FlowCardPage";
 import FlowCardActivityPage from "./pages/FlowCardActivityPage";
+import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <DemoProvider>
+                <OnboardingFlow />
                 <AnimatedRoutes />
               </DemoProvider>
             </BrowserRouter>
