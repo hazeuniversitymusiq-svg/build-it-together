@@ -25,8 +25,48 @@ export interface FlowCardProfile {
   mode: FlowCardMode;
   device_binding_status: DeviceBindingStatus;
   last_device_id: string | null;
+  card_number: string | null;
+  card_cvv: string | null;
+  card_expiry: string | null;
+  card_last_four: string | null;
+  card_brand: 'visa' | 'mastercard' | null;
   created_at: string;
   updated_at: string;
+}
+
+// Card credential generation utilities
+function generateCardNumber(): string {
+  // Visa prefix: 4, generate remaining 15 digits
+  const prefix = '4';
+  let number = prefix;
+  for (let i = 0; i < 14; i++) {
+    number += Math.floor(Math.random() * 10).toString();
+  }
+  // Luhn checksum
+  let sum = 0;
+  let isEven = false;
+  for (let i = number.length - 1; i >= 0; i--) {
+    let digit = parseInt(number[i], 10);
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    isEven = !isEven;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return number + checkDigit.toString();
+}
+
+function generateCVV(): string {
+  return Math.floor(100 + Math.random() * 900).toString();
+}
+
+function generateExpiry(): string {
+  const now = new Date();
+  const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+  const year = String((now.getFullYear() + 3) % 100).padStart(2, '0');
+  return `${month}/${year}`;
 }
 
 export interface CardPaymentEvent {
@@ -151,7 +191,13 @@ export function useFlowCard() {
     try {
       setError(null);
 
-      // Create profile
+      // Generate virtual card credentials
+      const cardNumber = generateCardNumber();
+      const cardCvv = generateCVV();
+      const cardExpiry = generateExpiry();
+      const cardLastFour = cardNumber.slice(-4);
+
+      // Create profile with credentials
       const { data: profileData, error: profileError } = await supabase
         .from('flow_card_profiles')
         .insert({
@@ -160,6 +206,11 @@ export function useFlowCard() {
           mode: 'in_app',
           device_binding_status: 'bound',
           last_device_id: deviceId,
+          card_number: cardNumber,
+          card_cvv: cardCvv,
+          card_expiry: cardExpiry,
+          card_last_four: cardLastFour,
+          card_brand: 'visa',
         })
         .select()
         .single();
@@ -167,13 +218,13 @@ export function useFlowCard() {
       if (profileError) throw profileError;
       setProfile(profileData as FlowCardProfile);
 
-      // Create provisioning stub
+      // Create provisioning stub (ready for wallet linking)
       const { data: provData, error: provError } = await supabase
         .from('card_provisioning')
         .insert({
           user_id: user.id,
-          apple_status: 'not_available',
-          google_status: 'not_available',
+          apple_status: 'ready',
+          google_status: 'ready',
         })
         .select()
         .single();
