@@ -3,6 +3,10 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { App as CapApp } from '@capacitor/app';
+import { toast } from 'sonner';
+
+const NATIVE_OAUTH_REDIRECT = 'flow://auth/callback';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -10,7 +14,9 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   const refreshSession = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     setSession(session);
     setUser(session?.user ?? null);
     setLoading(false);
@@ -18,13 +24,13 @@ export function useAuth() {
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     // THEN check for existing session
     refreshSession();
@@ -43,36 +49,93 @@ export function useAuth() {
     };
   }, [refreshSession]);
 
+  // Native OAuth callback handler (deep link)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listener: { remove: () => void } | null = null;
+
+    // Capacitor listener registration is async
+    CapApp.addListener('appUrlOpen', async ({ url }) => {
+      try {
+        if (!url || !url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
+
+        const parsed = new URL(url);
+        const errorDescription =
+          parsed.searchParams.get('error_description') || parsed.searchParams.get('error');
+        const code = parsed.searchParams.get('code');
+
+        if (errorDescription) {
+          toast.error(decodeURIComponent(errorDescription));
+          return;
+        }
+
+        if (!code) {
+          toast.error('Missing OAuth code');
+          return;
+        }
+
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+
+        toast.success('Signed in');
+        refreshSession();
+      } catch (e) {
+        console.error('[OAuth callback]', e);
+      } finally {
+        // Close the in-app browser if it's still open
+        await Browser.close().catch(() => undefined);
+      }
+    }).then((h) => {
+      listener = h;
+    });
+
+    return () => {
+      listener?.remove();
+    };
+  }, [refreshSession]);
+
   const signInWithGoogle = async () => {
     const isNative = Capacitor.isNativePlatform();
-    
+
     if (isNative) {
-      // For native apps, get the OAuth URL and open in external browser
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `app.lovable.4f80439d456c47d48afef4444d0b35a2://`,
+          redirectTo: NATIVE_OAUTH_REDIRECT,
           skipBrowserRedirect: true,
         },
       });
-      
+
       if (error) return { error };
-      
-      if (data?.url) {
+      if (!data?.url) return { error: new Error('Missing OAuth URL') as any };
+
+      try {
+        // This opens an in-app Safari view on iOS (default browser setting doesn't matter)
         await Browser.open({ url: data.url });
+        return { error: null };
+      } catch (e) {
+        return {
+          error: (e instanceof Error
+            ? e
+            : new Error(
+                'Failed to open browser. Run `npx cap sync ios` then rebuild in Xcode.'
+              )) as any,
+        };
       }
-      
-      return { error: null };
-    } else {
-      // For web, use standard redirect
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        },
-      });
-      return { error };
     }
+
+    // Web
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    return { error };
   };
 
   const signOut = async () => {
