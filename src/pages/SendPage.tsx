@@ -147,7 +147,7 @@ const SendPage = () => {
     };
   }, [registerPageAction, clearPageActions, simulateSendDemo]);
 
-  const handleAllowContacts = async () => {
+  const handleAllowContacts = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -166,9 +166,9 @@ const SendPage = () => {
       title: "Contacts enabled",
       description: "You can now send money to your contacts",
     });
-  };
+  }, [toast]);
 
-  const handleResolveAndSend = async () => {
+  const handleResolveAndSend = useCallback(async () => {
     if (!selectedContact || !amount || parseFloat(amount) <= 0) {
       toast({
         title: "Missing details",
@@ -231,7 +231,7 @@ const SendPage = () => {
       });
       setIsCreatingIntent(false);
     }
-  };
+  }, [selectedContact, amount, selectedWallet, note, navigate, toast]);
 
   const filteredContacts = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
