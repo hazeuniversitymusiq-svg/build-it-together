@@ -10,7 +10,7 @@
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, User, Scan, CreditCard, Sparkles } from "lucide-react";
+import { Home, User, Scan, CreditCard, Sparkles, Play } from "lucide-react";
 import { useDemo } from "@/contexts/DemoContext";
 
 // Nav items: Home, Demo Toggle, Scan, Card, Me
@@ -25,7 +25,14 @@ const baseNavItems = [
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isDemoMode, toggleDemoMode, triggerPageDemo, pageActions } = useDemo();
+  const { 
+    isDemoMode, 
+    toggleDemoMode, 
+    triggerPageDemo, 
+    pageActions,
+    isTourActive,
+    startTour,
+  } = useDemo();
 
   const navItems = baseNavItems;
 
@@ -38,6 +45,9 @@ const BottomNav = () => {
     }
   };
 
+  // Hide bottom nav during tour
+  if (isTourActive) return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
       <div className="max-w-md mx-auto px-4 pb-4 safe-area-bottom">
@@ -45,16 +55,30 @@ const BottomNav = () => {
         {/* Demo Mode Active Banner */}
         <AnimatePresence>
           {isDemoMode && pageActions.length > 0 && (
-            <motion.button
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              onClick={triggerPageDemo}
-              className="w-full mb-2 py-3 px-4 glass rounded-2xl border border-aurora-blue/30 pointer-events-auto flex items-center justify-center gap-2 text-sm font-medium text-aurora-blue"
+              className="flex gap-2 mb-2 pointer-events-auto"
             >
-              <Sparkles size={16} className="animate-pulse" />
-              <span>{pageActions[0]?.label || 'Run Demo'}</span>
-            </motion.button>
+              {/* Run Demo Action */}
+              <motion.button
+                onClick={triggerPageDemo}
+                className="flex-1 py-3 px-4 glass rounded-2xl border border-aurora-blue/30 flex items-center justify-center gap-2 text-sm font-medium text-aurora-blue"
+              >
+                <Sparkles size={16} className="animate-pulse" />
+                <span>{pageActions[0]?.label || 'Run Demo'}</span>
+              </motion.button>
+              
+              {/* Start Guided Tour */}
+              <motion.button
+                onClick={startTour}
+                className="py-3 px-4 glass rounded-2xl border border-aurora-purple/30 flex items-center justify-center gap-2 text-sm font-medium text-aurora-purple"
+              >
+                <Play size={16} />
+                <span>Tour</span>
+              </motion.button>
+            </motion.div>
           )}
         </AnimatePresence>
 
