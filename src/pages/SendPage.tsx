@@ -5,7 +5,7 @@
  * With intelligent features: frequent contacts, send history, note field
  */
 
-import { forwardRef, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -40,7 +40,16 @@ interface ContactDisplayItem {
   defaultWallet: DefaultWallet;
 }
 
-const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
+// Demo contacts - extracted to avoid recreation
+const DEMO_CONTACTS: ContactDisplayItem[] = [
+  { id: "1", name: "Sarah", phone: "+60123456789", initial: "S", supportedWallets: ["TouchNGo", "GrabPay"], defaultWallet: "TouchNGo" },
+  { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A", supportedWallets: ["GrabPay"], defaultWallet: "GrabPay" },
+  { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W", supportedWallets: ["TouchNGo", "Boost"], defaultWallet: "TouchNGo" },
+  { id: "4", name: "Nurul", phone: "+60123456792", initial: "N", supportedWallets: ["TouchNGo", "GrabPay", "Boost"], defaultWallet: "None" },
+  { id: "5", name: "Raj", phone: "+60123456793", initial: "R", supportedWallets: [], defaultWallet: "None" },
+];
+
+const SendPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { registerPageAction, clearPageActions } = useDemo();
@@ -90,14 +99,7 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
             defaultWallet: c.default_wallet,
           })));
         } else {
-          // Demo contacts with wallet data
-          setContacts([
-            { id: "1", name: "Sarah", phone: "+60123456789", initial: "S", supportedWallets: ["TouchNGo", "GrabPay"], defaultWallet: "TouchNGo" },
-            { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A", supportedWallets: ["GrabPay"], defaultWallet: "GrabPay" },
-            { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W", supportedWallets: ["TouchNGo", "Boost"], defaultWallet: "TouchNGo" },
-            { id: "4", name: "Nurul", phone: "+60123456792", initial: "N", supportedWallets: ["TouchNGo", "GrabPay", "Boost"], defaultWallet: "None" },
-            { id: "5", name: "Raj", phone: "+60123456793", initial: "R", supportedWallets: [], defaultWallet: "None" },
-          ]);
+          setContacts(DEMO_CONTACTS);
         }
       } else {
         setHasContactsPermission(false);
@@ -158,14 +160,7 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
     });
 
     setHasContactsPermission(true);
-    // Demo contacts with wallet data
-    setContacts([
-      { id: "1", name: "Sarah", phone: "+60123456789", initial: "S", supportedWallets: ["TouchNGo", "GrabPay"], defaultWallet: "TouchNGo" },
-      { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A", supportedWallets: ["GrabPay"], defaultWallet: "GrabPay" },
-      { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W", supportedWallets: ["TouchNGo", "Boost"], defaultWallet: "TouchNGo" },
-      { id: "4", name: "Nurul", phone: "+60123456792", initial: "N", supportedWallets: ["TouchNGo", "GrabPay", "Boost"], defaultWallet: "None" },
-      { id: "5", name: "Raj", phone: "+60123456793", initial: "R", supportedWallets: [], defaultWallet: "None" },
-    ]);
+    setContacts(DEMO_CONTACTS);
 
     toast({
       title: "Contacts enabled",
@@ -245,17 +240,14 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
 
   if (isLoading) {
     return (
-      <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full aurora-gradient opacity-30 animate-aurora" />
-          <Loader2 className="w-12 h-12 text-aurora-blue animate-spin" />
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <div className="px-6 pt-14 pb-2">
         <div className="flex items-center gap-4 mb-2">
@@ -567,7 +559,6 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
       </AnimatePresence>
     </div>
   );
-});
-SendPage.displayName = "SendPage";
+};
 
 export default SendPage;
