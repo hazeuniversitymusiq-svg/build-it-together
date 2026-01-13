@@ -15,9 +15,10 @@ interface QRScannerProps {
   onScan: (data: string) => void;
   onClose: () => void;
   isOpen: boolean;
+  onMyCodePress?: () => void;
 }
 
-const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
+const QRScanner = ({ onScan, onClose, isOpen, onMyCodePress }: QRScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -275,7 +276,10 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
           </p>
           
           {/* My Payment Code button */}
-          <button className="w-full py-4 glass-dark rounded-2xl flex items-center justify-center gap-3 text-white/90 hover:bg-white/10 transition-colors">
+          <button 
+            onClick={onMyCodePress}
+            className="w-full py-4 glass-dark rounded-2xl flex items-center justify-center gap-3 text-white/90 hover:bg-white/10 transition-colors"
+          >
             <QrCode className="w-5 h-5" />
             <span className="font-medium">My Payment Code</span>
           </button>
