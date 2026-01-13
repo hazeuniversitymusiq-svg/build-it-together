@@ -32,7 +32,8 @@ import {
   CreditCard,
   Building2,
   Route,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ExternalLink
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -369,6 +370,21 @@ const SettingsPage = () => {
           </div>
         </motion.div>
       </section>
+
+      {/* Partner Portal Link */}
+      <div className="px-6 mb-6">
+        <motion.button 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.28 }}
+          onClick={() => navigate('/partner')}
+          className="w-full py-4 flex items-center justify-center gap-2 text-primary glass-card rounded-2xl shadow-float hover:bg-primary/5 transition-colors"
+        >
+          <Building2 className="w-5 h-5" />
+          <span className="font-medium">Bank Partner Portal</span>
+          <ExternalLink className="w-4 h-4 ml-1" />
+        </motion.button>
+      </div>
 
       {/* Sign Out */}
       <div className="px-6 pb-8">

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Building2 } from "lucide-react";
 
 const WelcomePage = () => {
   const navigate = useNavigate();
@@ -94,6 +95,15 @@ const WelcomePage = () => {
           </button>
           .
         </p>
+        
+        {/* Bank Partner Link */}
+        <button 
+          onClick={() => navigate("/partner")}
+          className="mt-6 text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1"
+        >
+          <Building2 className="w-3 h-3" />
+          For Banks & Partners
+        </button>
       </motion.div>
     </div>
   );
