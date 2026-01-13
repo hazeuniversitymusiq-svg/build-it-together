@@ -2,15 +2,25 @@
  * FLOW Resolve Engine
  * 
  * The brain of FLOW - determines how to execute a payment.
- * Pure deterministic logic. No ML.
- * 
- * Uses centralized types from @/types
+ * Uses the pure resolver logic from orchestration module.
+ * This module handles DB operations and persistence.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { checkResolutionGates, checkConsentGate, type GateResult } from './gates';
+import { resolvePayment, type ResolverContext } from '@/lib/orchestration/resolver';
+import { DEFAULT_GUARDRAILS, getOrResetDailyState } from '@/lib/orchestration/guardrails';
 import type { Database } from '@/integrations/supabase/types';
-import type { ResolutionPlan, ResolutionStep, ResolveResult, RiskLevel } from '@/types';
+import type { 
+  ResolutionPlan, 
+  ResolutionStep, 
+  ResolveResult, 
+  RiskLevel,
+  FundingSource,
+  PaymentRequest,
+  UserPaymentState,
+  FallbackPreference,
+} from '@/types';
 
 type IntentType = Database['public']['Enums']['intent_type'];
 type ConnectorName = Database['public']['Enums']['connector_name'];
@@ -21,17 +31,6 @@ interface Connector {
   type: string;
   status: string;
   capabilities: Record<string, boolean>;
-}
-
-interface FundingSource {
-  id: string;
-  name: string;
-  type: string;
-  priority: number;
-  balance: number;
-  available: boolean;
-  maxAutoTopupAmount: number;
-  requireExtraConfirmAmount: number;
 }
 
 // Re-export types for consumers
@@ -79,7 +78,7 @@ async function getCandidateRails(
 }
 
 /**
- * Get funding sources sorted by priority
+ * Get funding sources from DB and convert to orchestration format
  */
 async function getFundingSources(userId: string): Promise<FundingSource[]> {
   const { data: sources } = await supabase
@@ -95,55 +94,76 @@ async function getFundingSources(userId: string): Promise<FundingSource[]> {
   return sources.map((s) => ({
     id: s.id,
     name: s.name,
-    type: s.type,
+    type: s.type === 'debit_card' || s.type === 'credit_card' ? 'card' : s.type,
     priority: s.priority,
     balance: Number(s.balance),
-    available: s.available,
-    maxAutoTopupAmount: Number(s.max_auto_topup_amount),
-    requireExtraConfirmAmount: Number(s.require_extra_confirm_amount),
+    isAvailable: s.available,
+    isLinked: s.linked_status === 'linked',
+    maxAutoTopUp: Number(s.max_auto_topup_amount),
+    requireConfirmAbove: Number(s.require_extra_confirm_amount),
+    currency: s.currency,
   }));
 }
 
 /**
- * Determine risk level based on amount and transaction context
+ * Get user's fallback preference from settings
  */
-function assignRiskLevel(amount: number, fundingSource: FundingSource): RiskLevel {
-  if (amount > fundingSource.requireExtraConfirmAmount) {
-    return 'high';
-  }
-  if (amount > fundingSource.maxAutoTopupAmount) {
-    return 'medium';
-  }
+async function getUserFallbackPreference(userId: string): Promise<FallbackPreference> {
+  const { data } = await supabase
+    .from('user_settings')
+    .select('fallback_preference')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  return (data?.fallback_preference as FallbackPreference) || 'use_card';
+}
+
+/**
+ * Determine risk level based on amount and resolution action
+ */
+function assignRiskLevel(amount: number, requiresConfirmation: boolean): RiskLevel {
+  if (amount > 500) return 'high';
+  if (amount > 100 || requiresConfirmation) return 'medium';
   return 'low';
 }
 
 /**
- * Generate human-readable steps (no technical language)
+ * Convert orchestration steps to human-readable steps
  */
 function generateHumanSteps(
+  resolution: { action: string; steps: Array<{ action: string; sourceType?: string; amount?: number }> },
   amount: number,
-  chosenRail: string,
-  topupNeeded: boolean,
-  topupAmount: number,
-  topupSource?: string
+  chosenRail: string
 ): ResolutionStep[] {
   const steps: ResolutionStep[] = [];
 
-  if (topupNeeded && topupSource) {
-    steps.push({
-      action: 'TOP_UP',
-      description: `Add RM${topupAmount.toFixed(2)} to your wallet from ${topupSource}`,
-      amount: topupAmount,
-      source: topupSource,
-    });
+  for (const step of resolution.steps) {
+    if (step.action === 'top_up') {
+      steps.push({
+        action: 'TOP_UP',
+        description: `Add RM${step.amount?.toFixed(2)} to your wallet from ${step.sourceType}`,
+        amount: step.amount,
+        source: step.sourceType,
+      });
+    } else if (step.action === 'charge') {
+      steps.push({
+        action: 'PAY',
+        description: `Pay RM${step.amount?.toFixed(2)} using ${chosenRail}`,
+        amount: step.amount,
+        source: chosenRail,
+      });
+    }
   }
 
-  steps.push({
-    action: 'PAY',
-    description: `Pay RM${amount.toFixed(2)} using ${chosenRail}`,
-    amount,
-    source: chosenRail,
-  });
+  // If no steps were generated, add a simple pay step
+  if (steps.length === 0) {
+    steps.push({
+      action: 'PAY',
+      description: `Pay RM${amount.toFixed(2)} using ${chosenRail}`,
+      amount,
+      source: chosenRail,
+    });
+  }
 
   return steps;
 }
@@ -151,6 +171,7 @@ function generateHumanSteps(
 /**
  * ResolveEngine
  * Main resolution logic - determines how to execute a payment
+ * Uses the pure resolver from orchestration module
  */
 export async function resolveIntent(
   userId: string,
@@ -207,64 +228,63 @@ export async function resolveIntent(
     };
   }
 
-  // Check consent for first candidate
-  const primaryCandidate = candidates[0];
-  const consentResult = await checkConsentGate(userId, primaryCandidate.id);
-  
-  // Select primary funding source (wallet preferred)
-  const walletSource = fundingSources.find((s) => s.type === 'wallet');
-  const primarySource = walletSource || fundingSources[0];
+  // Get user preferences
+  const fallbackPreference = await getUserFallbackPreference(userId);
 
-  // Determine if top-up is needed
-  let topupNeeded = false;
-  let topupAmount = 0;
-  let topupSource: string | undefined;
+  // Get user payment state from localStorage (or initialize)
+  const storedState = localStorage.getItem(`flow_payment_state_${userId}`);
+  const userState: UserPaymentState = storedState 
+    ? getOrResetDailyState(JSON.parse(storedState))
+    : { dailyAutoApproved: 0, lastResetDate: new Date().toISOString().split('T')[0] };
 
-  if (primarySource.balance < amount) {
-    const deficit = amount - primarySource.balance;
-    
-    // Find a source that can fund the top-up
-    const topupFundingSource = fundingSources.find(
-      (s) => s.type !== 'wallet' && s.balance >= deficit
-    );
+  // Create payment request for resolver
+  const paymentRequest: PaymentRequest = {
+    amount,
+    currency: intent.currency,
+    intentId,
+  };
 
-    if (topupFundingSource) {
-      // Check if within auto top-up limit
-      if (deficit <= primarySource.maxAutoTopupAmount) {
-        topupNeeded = true;
-        topupAmount = deficit;
-        topupSource = topupFundingSource.name;
-      } else {
-        // Need manual confirmation for large top-up
-        topupNeeded = true;
-        topupAmount = deficit;
-        topupSource = topupFundingSource.name;
-      }
-    } else {
-      // Cannot fund - try fallback to direct payment
-      const directSource = fundingSources.find(
-        (s) => s.type !== 'wallet' && s.balance >= amount
-      );
-      if (!directSource) {
-        return {
-          success: false,
-          error: 'Insufficient funds across all payment sources',
-        };
-      }
-      // Use direct payment instead
-      topupNeeded = false;
-    }
+  // Build resolver context
+  const resolverContext: ResolverContext = {
+    sources: fundingSources,
+    config: DEFAULT_GUARDRAILS,
+    userState,
+    fallbackPreference,
+  };
+
+  // Run pure resolver logic
+  const resolution = resolvePayment(paymentRequest, resolverContext);
+
+  // Handle blocked resolution
+  if (resolution.action === 'BLOCKED' || resolution.action === 'INSUFFICIENT_FUNDS') {
+    return {
+      success: false,
+      error: resolution.blockedReason || 'Unable to process payment',
+    };
   }
 
+  // Check consent for primary candidate
+  const primaryCandidate = candidates[0];
+  const consentResult = await checkConsentGate(userId, primaryCandidate.id);
+
+  // Determine chosen rail
   const chosenRail = primaryCandidate.name;
   const fallbackRail = candidates.length > 1 ? candidates[1].name : undefined;
-  const riskLevel = assignRiskLevel(amount, primarySource);
-  const steps = generateHumanSteps(amount, chosenRail, topupNeeded, topupAmount, topupSource);
+
+  // Determine if top-up is needed
+  const topupNeeded = resolution.action === 'TOP_UP_WALLET';
+  const topupStep = resolution.steps.find(s => s.action === 'top_up');
+  const topupAmount = topupStep?.amount || 0;
+
+  // Generate human-readable steps
+  const steps = generateHumanSteps(resolution, amount, chosenRail);
+  const riskLevel = assignRiskLevel(amount, resolution.requiresConfirmation);
 
   const reasonCodes: string[] = [];
   if (topupNeeded) reasonCodes.push('TOPUP_REQUIRED');
   if (riskLevel === 'high') reasonCodes.push('HIGH_VALUE');
   if (!consentResult.passed) reasonCodes.push('CONSENT_NEEDED');
+  if (resolution.requiresConfirmation) reasonCodes.push('CONFIRMATION_REQUIRED');
 
   const plan: ResolutionPlan = {
     intentId,

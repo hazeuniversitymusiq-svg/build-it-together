@@ -14,6 +14,7 @@ import QuickPayWidget from "@/components/surfaces/QuickPayWidget";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import NotificationSurface from "@/components/surfaces/NotificationSurface";
 import FlowIdentityCard from "@/components/identity/FlowIdentityCard";
+import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
 import { QuickBalanceSync } from "@/components/balance/QuickBalanceSync";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { useTestMode } from "@/hooks/useTestMode";
@@ -67,6 +68,7 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [showBalanceSync, setShowBalanceSync] = useState(false);
   const { isFieldTest } = useTestMode();
   
   useDeepLink();
@@ -153,15 +155,31 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
         </div>
       </motion.div>
 
-      {/* Flow Identity Card */}
-      <FlowIdentityCard className="mb-6" />
+      {/* Wallet Balance Card - Primary Focus */}
+      <WalletBalanceCard 
+        className="mb-4" 
+        onLinkWallet={() => navigate("/settings")}
+        onSyncBalance={() => setShowBalanceSync(true)}
+      />
+
+      {/* Balance Sync Overlay */}
+      {showBalanceSync && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="mb-4"
+        >
+          <QuickBalanceSync className="" />
+        </motion.div>
+      )}
 
       {/* Primary Actions - 2x2 grid */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.15 }}
-        className="grid grid-cols-2 gap-3 mt-6 mb-6"
+        className="grid grid-cols-2 gap-3 mb-4"
       >
         <ActionCard
           icon={<QrCode className="w-5 h-5 text-aurora-blue" />}
@@ -216,14 +234,14 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
         </div>
       </motion.button>
 
-      {/* Quick Balance Sync - FLOW Protocol Layer 2 */}
-      <QuickBalanceSync className="mb-4" />
-
       {/* Quick Pay Surface */}
       <QuickPayWidget className="mb-4" />
 
       {/* Bill Reminder Surface */}
       <BillReminderSurface className="mb-6" />
+
+      {/* Flow Identity Card - Moved lower */}
+      <FlowIdentityCard className="mb-6" />
 
       {/* Recent Activity Section */}
       <motion.div
