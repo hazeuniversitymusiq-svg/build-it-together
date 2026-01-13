@@ -13,7 +13,8 @@ import {
   Users, 
   ChevronLeft,
   Loader2,
-  Check
+  Check,
+  Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +23,15 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type Contact = Database['public']['Tables']['contacts']['Row'];
+type DefaultWallet = Database['public']['Enums']['default_wallet'];
 
 interface ContactDisplayItem {
   id: string;
   name: string;
   phone: string;
   initial: string;
+  supportedWallets: string[];
+  defaultWallet: DefaultWallet;
 }
 
 const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
@@ -73,14 +77,17 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
             name: c.name,
             phone: c.phone,
             initial: c.name.charAt(0).toUpperCase(),
+            supportedWallets: (c.supported_wallets as string[]) || [],
+            defaultWallet: c.default_wallet,
           })));
         } else {
+          // Demo contacts with wallet data
           setContacts([
-            { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
-            { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
-            { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W" },
-            { id: "4", name: "Nurul", phone: "+60123456792", initial: "N" },
-            { id: "5", name: "Raj", phone: "+60123456793", initial: "R" },
+            { id: "1", name: "Sarah", phone: "+60123456789", initial: "S", supportedWallets: ["TouchNGo", "GrabPay"], defaultWallet: "TouchNGo" },
+            { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A", supportedWallets: ["GrabPay"], defaultWallet: "GrabPay" },
+            { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W", supportedWallets: ["TouchNGo", "Boost"], defaultWallet: "TouchNGo" },
+            { id: "4", name: "Nurul", phone: "+60123456792", initial: "N", supportedWallets: ["TouchNGo", "GrabPay", "Boost"], defaultWallet: "None" },
+            { id: "5", name: "Raj", phone: "+60123456793", initial: "R", supportedWallets: [], defaultWallet: "None" },
           ]);
         }
       } else {
@@ -106,12 +113,13 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
     });
 
     setHasContactsPermission(true);
+    // Demo contacts with wallet data
     setContacts([
-      { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
-      { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
-      { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W" },
-      { id: "4", name: "Nurul", phone: "+60123456792", initial: "N" },
-      { id: "5", name: "Raj", phone: "+60123456793", initial: "R" },
+      { id: "1", name: "Sarah", phone: "+60123456789", initial: "S", supportedWallets: ["TouchNGo", "GrabPay"], defaultWallet: "TouchNGo" },
+      { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A", supportedWallets: ["GrabPay"], defaultWallet: "GrabPay" },
+      { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W", supportedWallets: ["TouchNGo", "Boost"], defaultWallet: "TouchNGo" },
+      { id: "4", name: "Nurul", phone: "+60123456792", initial: "N", supportedWallets: ["TouchNGo", "GrabPay", "Boost"], defaultWallet: "None" },
+      { id: "5", name: "Raj", phone: "+60123456793", initial: "R", supportedWallets: [], defaultWallet: "None" },
     ]);
 
     toast({
@@ -139,6 +147,16 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
         return;
       }
 
+      // Determine available rails based on recipient's wallets
+      // If recipient has wallets, use those. If not, fallback to DuitNow (cross-wallet)
+      const recipientWallets = selectedContact.supportedWallets;
+      const recipientPreferred = selectedContact.defaultWallet;
+      
+      // Available rails = recipient's wallets + DuitNow as universal fallback
+      const railsAvailable = recipientWallets.length > 0 
+        ? [...recipientWallets, "DuitNow"] 
+        : ["DuitNow"]; // DuitNow works even if we don't know their wallet
+
       const { data: intent, error } = await supabase
         .from("intents")
         .insert({
@@ -150,7 +168,9 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
           payee_identifier: selectedContact.phone,
           metadata: {
             recipientId: selectedContact.id,
-            railsAvailable: ["TouchNGo", "GrabPay", "DuitNow"],
+            recipientWallets: recipientWallets,
+            recipientPreferredWallet: recipientPreferred,
+            railsAvailable: railsAvailable,
           },
         })
         .select("id")
@@ -297,7 +317,21 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
                   </div>
                   <div className="flex-1 text-left">
                     <p className="font-medium text-foreground">{contact.name}</p>
-                    <p className="text-sm text-muted-foreground">{contact.phone}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {contact.supportedWallets.length > 0 ? (
+                        <>
+                          <Wallet className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {contact.defaultWallet !== "None" 
+                              ? contact.defaultWallet 
+                              : contact.supportedWallets.slice(0, 2).join(", ")}
+                            {contact.supportedWallets.length > 2 && contact.defaultWallet === "None" && " +more"}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{contact.phone}</span>
+                      )}
+                    </div>
                   </div>
                   {selectedContact?.id === contact.id && (
                     <motion.div
