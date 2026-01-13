@@ -46,6 +46,8 @@ const RAIL_ICONS: Record<string, React.ReactNode> = {
   BankTransfer: <Building2 className="w-4 h-4" />,
   Maybank: <Building2 className="w-4 h-4" />,
   VisaMastercard: <CreditCard className="w-4 h-4" />,
+  Atome: <CreditCard className="w-4 h-4" />,
+  SPayLater: <CreditCard className="w-4 h-4" />,
 };
 
 const RAIL_COLORS: Record<string, string> = {
@@ -56,6 +58,8 @@ const RAIL_COLORS: Record<string, string> = {
   BankTransfer: 'from-indigo-500 to-indigo-600',
   Maybank: 'from-yellow-500 to-yellow-600',
   VisaMastercard: 'from-purple-500 to-purple-600',
+  Atome: 'from-teal-500 to-teal-600',
+  SPayLater: 'from-orange-400 to-red-500',
 };
 
 function ScoreBar({ label, score, icon }: { label: string; score: number; icon: React.ReactNode }) {

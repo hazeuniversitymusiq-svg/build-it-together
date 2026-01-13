@@ -1135,8 +1135,16 @@ export type Database = {
         | "Unifi"
         | "TNB"
         | "Contacts"
+        | "Atome"
+        | "SPayLater"
       connector_status: "available" | "unavailable" | "degraded"
-      connector_type: "wallet" | "bank" | "card" | "biller" | "contacts"
+      connector_type:
+        | "wallet"
+        | "bank"
+        | "card"
+        | "biller"
+        | "contacts"
+        | "bnpl"
       consent_status: "active" | "revoked" | "expired"
       default_wallet: "TouchNGo" | "GrabPay" | "None"
       discovery_source: "simulated" | "manual" | "native"
@@ -1148,7 +1156,12 @@ export type Database = {
         | "risk_blocked"
         | "identity_blocked"
         | "unknown"
-      funding_source_type: "wallet" | "bank" | "debit_card" | "credit_card"
+      funding_source_type:
+        | "wallet"
+        | "bank"
+        | "debit_card"
+        | "credit_card"
+        | "bnpl"
       identity_status: "pending" | "active" | "suspended" | "revoked"
       intent_type: "PayMerchant" | "SendMoney" | "RequestMoney" | "PayBill"
       linked_status: "unlinked" | "linked" | "error"
@@ -1297,9 +1310,11 @@ export const Constants = {
         "Unifi",
         "TNB",
         "Contacts",
+        "Atome",
+        "SPayLater",
       ],
       connector_status: ["available", "unavailable", "degraded"],
-      connector_type: ["wallet", "bank", "card", "biller", "contacts"],
+      connector_type: ["wallet", "bank", "card", "biller", "contacts", "bnpl"],
       consent_status: ["active", "revoked", "expired"],
       default_wallet: ["TouchNGo", "GrabPay", "None"],
       discovery_source: ["simulated", "manual", "native"],
@@ -1312,7 +1327,13 @@ export const Constants = {
         "identity_blocked",
         "unknown",
       ],
-      funding_source_type: ["wallet", "bank", "debit_card", "credit_card"],
+      funding_source_type: [
+        "wallet",
+        "bank",
+        "debit_card",
+        "credit_card",
+        "bnpl",
+      ],
       identity_status: ["pending", "active", "suspended", "revoked"],
       intent_type: ["PayMerchant", "SendMoney", "RequestMoney", "PayBill"],
       linked_status: ["unlinked", "linked", "error"],
