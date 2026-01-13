@@ -17,6 +17,7 @@ import { CreateFlowCardFlow } from '@/components/flowcard/CreateFlowCardFlow';
 import { FlowCardEventItem } from '@/components/flowcard/FlowCardEventItem';
 import { useToast } from '@/hooks/use-toast';
 import { useDemo } from '@/contexts/DemoContext';
+import { DemoHighlight } from '@/components/demo/DemoHighlight';
 
 export default function FlowCardPage() {
   const navigate = useNavigate();
@@ -178,16 +179,29 @@ export default function FlowCardPage() {
         </div>
 
         {/* Card Visual with Credentials */}
-        <FlowCardVisual
-          status={profile?.status || 'not_created'}
-          mode={profile?.mode || 'in_app'}
-          lastFourDigits={profile?.card_last_four || undefined}
-          cardNumber={profile?.card_number}
-          cardCvv={profile?.card_cvv}
-          cardExpiry={profile?.card_expiry}
-          cardBrand={profile?.card_brand}
-          showCredentials={true}
-        />
+        <DemoHighlight
+          id="flow-card-visual"
+          title="Your Flow Card"
+          description="This is your virtual payment card. Tap to pay at any terminal that accepts contactless payments."
+          onTryIt={async () => {
+            if (isCardActive) {
+              const amount = Math.floor(Math.random() * 50) + 10;
+              await simulateTerminalTap(amount, 'Demo Merchant', 'retail');
+              toast({ title: 'Tap Simulated', description: `RM ${amount.toFixed(2)} payment` });
+            }
+          }}
+        >
+          <FlowCardVisual
+            status={profile?.status || 'not_created'}
+            mode={profile?.mode || 'in_app'}
+            lastFourDigits={profile?.card_last_four || undefined}
+            cardNumber={profile?.card_number}
+            cardCvv={profile?.card_cvv}
+            cardExpiry={profile?.card_expiry}
+            cardBrand={profile?.card_brand}
+            showCredentials={true}
+          />
+        </DemoHighlight>
 
         {/* Generate Credentials Button (for legacy cards without credentials) */}
         {hasCard && !hasCredentials && isCardActive && (

@@ -26,6 +26,7 @@ import { format, addDays, differenceInDays } from "date-fns";
 import BillPaymentHistory from "@/components/bills/BillPaymentHistory";
 import AutoPayToggle from "@/components/bills/AutoPayToggle";
 import { useDemo } from "@/contexts/DemoContext";
+import { DemoHighlight } from "@/components/demo/DemoHighlight";
 import type { Database } from "@/integrations/supabase/types";
 
 type BillerAccount = Database['public']['Tables']['biller_accounts']['Row'];
@@ -300,13 +301,21 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
       {/* Billers List */}
       <div className="flex-1 px-6 space-y-4">
         {billers.map((biller, index) => (
-          <motion.div
+          <DemoHighlight
             key={biller.name}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + index * 0.1 }}
-            className="glass-card rounded-3xl overflow-hidden shadow-float-lg"
+            id={`biller-${biller.name}`}
+            title={`${biller.name} Bill`}
+            description={biller.isLinked 
+              ? `Your ${biller.name} account is linked. Tap to see payment options.`
+              : `Link your ${biller.name} account to pay bills in one tap.`}
+            onTryIt={simulateBillPayment}
           >
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + index * 0.1 }}
+              className="glass-card rounded-3xl overflow-hidden shadow-float-lg"
+            >
             {/* Biller Header */}
             <div className="flex items-center gap-4 p-5">
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${biller.gradient} flex items-center justify-center text-white shadow-float`}>
@@ -437,6 +446,7 @@ const BillsPage = forwardRef<HTMLDivElement>((_, ref) => {
               )}
             </AnimatePresence>
           </motion.div>
+          </DemoHighlight>
         ))}
       </div>
     </div>

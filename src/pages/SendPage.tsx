@@ -19,6 +19,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import { useDemo } from "@/contexts/DemoContext";
+import { DemoHighlight } from "@/components/demo/DemoHighlight";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -324,21 +325,28 @@ const SendPage = forwardRef<HTMLDivElement>((_, ref) => {
             className="flex-1 flex flex-col px-6"
           >
             {/* Frequent Contacts */}
-            <FrequentContacts
-              onSelect={(contact) => {
-                setSelectedContact({
-                  id: contact.id,
-                  name: contact.name,
-                  phone: contact.phone,
-                  initial: contact.initial,
-                  supportedWallets: [],
-                  defaultWallet: "None",
-                });
-                setAmount(contact.suggestedAmount.toString());
-                setSelectedWallet("DuitNow");
-              }}
-              selectedId={selectedContact?.id}
-            />
+            <DemoHighlight
+              id="frequent-contacts"
+              title="Frequent Contacts"
+              description="Your most common recipients with smart amount suggestions based on past transfers."
+              onTryIt={simulateSendDemo}
+            >
+              <FrequentContacts
+                onSelect={(contact) => {
+                  setSelectedContact({
+                    id: contact.id,
+                    name: contact.name,
+                    phone: contact.phone,
+                    initial: contact.initial,
+                    supportedWallets: [],
+                    defaultWallet: "None",
+                  });
+                  setAmount(contact.suggestedAmount.toString());
+                  setSelectedWallet("DuitNow");
+                }}
+                selectedId={selectedContact?.id}
+              />
+            </DemoHighlight>
 
             {/* Search */}
             <div className="relative mb-4">
