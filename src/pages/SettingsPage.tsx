@@ -35,7 +35,8 @@ import {
   Route,
   ArrowLeftRight,
   ExternalLink,
-  Zap
+  Zap,
+  Clock
 } from "lucide-react";
 
 const SettingsPage = () => {
@@ -71,6 +72,27 @@ const SettingsPage = () => {
         <p className="text-muted-foreground text-sm mb-1">Configuration</p>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Settings</h1>
       </header>
+
+      {/* Quick Links */}
+      <section className="px-6 mb-6">
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => navigate('/activity')}
+          className="w-full glass-card rounded-2xl p-4 shadow-float flex items-center justify-between hover:bg-muted/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
+              <Clock className="w-5 h-5 text-aurora-blue" />
+            </div>
+            <div className="text-left">
+              <span className="text-foreground font-medium">Transaction History</span>
+              <p className="text-xs text-muted-foreground mt-0.5">View all your activity</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-muted-foreground" />
+        </motion.button>
+      </section>
 
       {/* Feature Flags (Admin) */}
       <section className="px-6 mb-6">
