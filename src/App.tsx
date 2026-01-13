@@ -7,7 +7,6 @@ import { SecurityProvider } from "@/contexts/SecurityContext";
 import { IntentProvider } from "@/contexts/IntentContext";
 import { OrchestrationProvider } from "@/contexts/OrchestrationContext";
 import { DemoProvider } from "@/contexts/DemoContext";
-import { DemoTour } from "@/components/demo/DemoTour";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/layout/PageTransition";
 import AppLayout from "./components/layout/AppLayout";
@@ -86,7 +85,6 @@ const App = () => (
             <BrowserRouter>
               <DemoProvider>
                 <AnimatedRoutes />
-                <DemoTour />
               </DemoProvider>
             </BrowserRouter>
           </IntentProvider>
