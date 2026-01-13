@@ -1,12 +1,12 @@
-import { forwardRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, Building2, Receipt, Landmark, Check, ShieldCheck, Link2, Info, ChevronRight, Camera, Sparkles } from "lucide-react";
+import { Wallet, Building2, Receipt, Landmark, Check, ShieldCheck, Link2, ChevronRight, Camera, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { useTestMode } from "@/hooks/useTestMode";
 import { ScreenshotBalanceSync } from "@/components/balance/ScreenshotBalanceSync";
 
 interface AvailableApp {
@@ -49,14 +49,17 @@ const availableApps: Omit<AvailableApp, "id" | "selected">[] = [
   { app_name: "Maxis", app_type: "biller", description: appDescriptions["Maxis"] },
 ];
 
-const AppCard = forwardRef<HTMLDivElement, {
+const AppCard = ({
+  app,
+  onToggle,
+  delay,
+}: {
   app: AvailableApp;
   onToggle: () => void;
   delay: number;
-}>(({ app, onToggle, delay }, ref) => {
+}) => {
   return (
     <motion.div
-      ref={ref}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
@@ -95,12 +98,12 @@ const AppCard = forwardRef<HTMLDivElement, {
       </div>
     </motion.div>
   );
-});
-AppCard.displayName = "AppCard";
+};
 
-const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
+const AutoSyncPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isFieldTest } = useTestMode();
   const [apps, setApps] = useState<AvailableApp[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState("popular");
@@ -265,14 +268,14 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
 
   if (isLoading) {
     return (
-      <div ref={ref} className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
       {/* Aurora background glow */}
       <div className="absolute top-20 right-0 w-64 h-64 bg-aurora-purple/15 blur-3xl rounded-full" />
       <div className="absolute bottom-60 left-0 w-48 h-48 bg-aurora-blue/10 blur-3xl rounded-full" />
@@ -457,20 +460,22 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
         </Tabs>
       </div>
 
-      {/* Info Footer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="py-3 relative z-10"
-      >
-        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 rounded-xl p-3">
-          <Info className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>
-            In production, linking would open each app to authorize FLOW. For now, this creates simulated connections.
-          </span>
-        </div>
-      </motion.div>
+      {/* Info Footer - Only show in prototype mode */}
+      {!isFieldTest && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="py-3 relative z-10"
+        >
+          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 rounded-xl p-3">
+            <Link2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              In production, linking would open each app to authorize FLOW. For now, this creates simulated connections.
+            </span>
+          </div>
+        </motion.div>
+      )}
 
       {/* Trust Footer */}
       <motion.div
@@ -511,7 +516,6 @@ const AutoSyncPage = forwardRef<HTMLDivElement>((_, ref) => {
       </motion.div>
     </div>
   );
-});
-AutoSyncPage.displayName = "AutoSyncPage";
+};
 
 export default AutoSyncPage;
