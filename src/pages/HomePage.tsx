@@ -5,10 +5,10 @@
  * Interactive Demo Layer - tap highlighted elements to learn.
  */
 
-import { forwardRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Send, Receipt } from "lucide-react";
+import { QrCode, Send, Receipt, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
@@ -18,7 +18,6 @@ import { useDemo } from "@/contexts/DemoContext";
 import { useToast } from "@/hooks/use-toast";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
 
-
 // Aurora color variants for action cards
 const actionCardStyles = {
   scan: "from-aurora-blue/20 to-aurora-cyan/10 hover:from-aurora-blue/30 hover:to-aurora-cyan/20",
@@ -27,20 +26,19 @@ const actionCardStyles = {
   bills: "from-aurora-pink/20 to-aurora-purple/10 hover:from-aurora-pink/30 hover:to-aurora-purple/20",
 };
 
-const ActionCard = forwardRef<HTMLButtonElement, {
+const ActionCard = ({
+  icon,
+  label,
+  onClick,
+  variant,
+}: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  delay: number;
   variant: keyof typeof actionCardStyles;
-}>((props, ref) => {
-  const { icon, label, onClick, delay, variant } = props;
+}) => {
   return (
     <motion.button
-      ref={ref}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
       onClick={onClick}
       whileTap={{ scale: 0.97 }}
       className={`flex flex-col items-center justify-center gap-3 p-5 rounded-3xl bg-gradient-to-br ${actionCardStyles[variant]} glass-card shadow-float transition-all duration-300`}
@@ -51,13 +49,13 @@ const ActionCard = forwardRef<HTMLButtonElement, {
       <span className="text-sm font-medium text-foreground">{label}</span>
     </motion.button>
   );
-});
-ActionCard.displayName = "ActionCard";
+};
 
-const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
+const HomePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isDemoMode } = useDemo();
+  const [isLoading, setIsLoading] = useState(true);
   
   useDeepLink();
 
@@ -66,6 +64,8 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
+      } else {
+        setIsLoading(false);
       }
     };
     checkAuth();
@@ -82,8 +82,16 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -149,7 +157,6 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
             icon={<QrCode className="w-5 h-5 text-aurora-blue" />}
             label="Scan"
             onClick={() => !isDemoMode && navigate("/scan")}
-            delay={0.2}
             variant="scan"
           />
         </DemoHighlight>
@@ -165,7 +172,6 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
             icon={<Send className="w-5 h-5 text-aurora-purple" />}
             label="Send"
             onClick={() => !isDemoMode && navigate("/send")}
-            delay={0.25}
             variant="send"
           />
         </DemoHighlight>
@@ -181,7 +187,6 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
             icon={<QrCode className="w-5 h-5 text-aurora-teal" />}
             label="Receive"
             onClick={() => !isDemoMode && navigate("/receive")}
-            delay={0.3}
             variant="request"
           />
         </DemoHighlight>
@@ -197,7 +202,6 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
             icon={<Receipt className="w-5 h-5 text-aurora-pink" />}
             label="Bills"
             onClick={() => !isDemoMode && navigate("/bills")}
-            delay={0.35}
             variant="bills"
           />
         </DemoHighlight>
@@ -207,7 +211,6 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
       <BillReminderSurface />
     </div>
   );
-});
-HomePage.displayName = "HomePage";
+};
 
 export default HomePage;
