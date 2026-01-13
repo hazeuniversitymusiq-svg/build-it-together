@@ -1,23 +1,18 @@
 /**
  * FLOW Home Page
  * 
- * iOS 26 Liquid Glass design - frosted cards, aurora accents, floating shadows
+ * Simplified, clean design - focus on core actions
  */
 
 import { forwardRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Send, Receipt, Clock, HandCoins, Smartphone, FlaskConical, Building2, Zap } from "lucide-react";
+import { QrCode, Send, Receipt, Clock, HandCoins, Building2, Zap, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import QuickPayWidget from "@/components/surfaces/QuickPayWidget";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
-import NotificationSurface from "@/components/surfaces/NotificationSurface";
-import FlowIdentityCard from "@/components/identity/FlowIdentityCard";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
-import { QuickBalanceSync } from "@/components/balance/QuickBalanceSync";
 import { useDeepLink } from "@/hooks/useDeepLink";
-import { useTestMode } from "@/hooks/useTestMode";
 
 interface Transaction {
   id: string;
@@ -67,9 +62,6 @@ ActionCard.displayName = "ActionCard";
 const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [showBalanceSync, setShowBalanceSync] = useState(false);
-  const { isFieldTest } = useTestMode();
   
   useDeepLink();
 
@@ -134,45 +126,22 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
             </h1>
           </div>
           
-          <div className="flex items-center gap-3">
-            <NotificationSurface 
-              onNotificationCount={setNotificationCount} 
-            />
-            <Badge 
-              variant="secondary"
-              className={`text-xs font-medium flex items-center gap-1.5 glass-card px-3 py-1.5 ${
-                isFieldTest ? "text-aurora-blue" : "text-muted-foreground"
-              }`}
-            >
-              {isFieldTest ? (
-                <Smartphone className="w-3 h-3" />
-              ) : (
-                <FlaskConical className="w-3 h-3" />
-              )}
-              {isFieldTest ? "Field" : "Proto"}
-            </Badge>
-          </div>
+          {/* Simple Active Status Badge */}
+          <Badge 
+            variant="secondary"
+            className="text-xs font-medium flex items-center gap-1.5 glass-card px-3 py-1.5"
+          >
+            <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            <span className="text-success">Active</span>
+          </Badge>
         </div>
       </motion.div>
 
       {/* Wallet Balance Card - Primary Focus */}
       <WalletBalanceCard 
         className="mb-4" 
-        onLinkWallet={() => navigate("/settings")}
-        onSyncBalance={() => setShowBalanceSync(true)}
+        onLinkWallet={() => navigate("/auto-sync")}
       />
-
-      {/* Balance Sync Overlay */}
-      {showBalanceSync && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="mb-4"
-        >
-          <QuickBalanceSync className="" />
-        </motion.div>
-      )}
 
       {/* Primary Actions - 2x2 grid */}
       <motion.div 
@@ -198,7 +167,7 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
         <ActionCard
           icon={<HandCoins className="w-5 h-5 text-aurora-teal" />}
           label="Request"
-          onClick={() => navigate("/request")}
+          onClick={() => navigate("/send")}
           delay={0.3}
           variant="request"
         />
@@ -234,14 +203,8 @@ const HomePage = forwardRef<HTMLDivElement>((_, ref) => {
         </div>
       </motion.button>
 
-      {/* Quick Pay Surface */}
-      <QuickPayWidget className="mb-4" />
-
-      {/* Bill Reminder Surface */}
-      <BillReminderSurface className="mb-6" />
-
-      {/* Flow Identity Card - Moved lower */}
-      <FlowIdentityCard className="mb-6" />
+      {/* Bill Reminder Surface - Only shows if there are upcoming bills */}
+      <BillReminderSurface className="mb-4" />
 
       {/* Recent Activity Section */}
       <motion.div

@@ -13,11 +13,10 @@ import { cn } from '@/lib/utils';
 interface WalletBalanceCardProps {
   className?: string;
   onLinkWallet?: () => void;
-  onSyncBalance?: () => void;
 }
 
-export function WalletBalanceCard({ className, onLinkWallet, onSyncBalance }: WalletBalanceCardProps) {
-  const { sources, walletBalance, totalBalance, loading, refetch } = useFundingSources();
+export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCardProps) {
+  const { sources, totalBalance, loading, refetch } = useFundingSources();
 
   const linkedWallets = sources.filter(s => s.isLinked && s.type === 'wallet');
   const linkedBanks = sources.filter(s => s.isLinked && s.type === 'bank');
@@ -72,7 +71,7 @@ export function WalletBalanceCard({ className, onLinkWallet, onSyncBalance }: Wa
       className={cn("glass-card overflow-hidden", className)}
     >
       {/* Main Balance Section */}
-      <div className="p-5 pb-4">
+      <div className="p-5">
         <div className="flex items-start justify-between mb-4">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Total Available</p>
@@ -148,23 +147,6 @@ export function WalletBalanceCard({ className, onLinkWallet, onSyncBalance }: Wa
           ))}
         </div>
       </div>
-
-      {/* Sync Balance CTA */}
-      <button
-        onClick={onSyncBalance}
-        className="w-full px-5 py-3 border-t border-white/10 flex items-center justify-between hover:bg-white/5 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg aurora-gradient flex items-center justify-center">
-            <RefreshCw className="w-3 h-3 text-white" />
-          </div>
-          <span className="text-sm font-medium text-foreground">Sync via Screenshot</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-aurora-purple/20 text-aurora-purple font-medium">
-            AI
-          </span>
-        </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-      </button>
     </motion.div>
   );
 }
