@@ -155,6 +155,90 @@ export type Database = {
           },
         ]
       }
+      card_payment_events: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          decision_json: Json
+          device_id: string | null
+          event_status: string
+          event_type: string
+          explainability_summary: string | null
+          id: string
+          intent_id: string | null
+          merchant_category: string | null
+          merchant_name: string | null
+          result_json: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          decision_json?: Json
+          device_id?: string | null
+          event_status?: string
+          event_type: string
+          explainability_summary?: string | null
+          id?: string
+          intent_id?: string | null
+          merchant_category?: string | null
+          merchant_name?: string | null
+          result_json?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          decision_json?: Json
+          device_id?: string | null
+          event_status?: string
+          event_type?: string
+          explainability_summary?: string | null
+          id?: string
+          intent_id?: string | null
+          merchant_category?: string | null
+          merchant_name?: string | null
+          result_json?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      card_provisioning: {
+        Row: {
+          apple_status: string
+          created_at: string
+          google_status: string
+          id: string
+          last_error: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          apple_status?: string
+          created_at?: string
+          google_status?: string
+          id?: string
+          last_error?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          apple_status?: string
+          created_at?: string
+          google_status?: string
+          id?: string
+          last_error?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       connectors: {
         Row: {
           capabilities: Json
@@ -367,6 +451,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feature_flags: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          flag_name: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          flag_name: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          flag_name?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      flow_card_profiles: {
+        Row: {
+          created_at: string
+          device_binding_status: string
+          id: string
+          last_device_id: string | null
+          mode: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_binding_status?: string
+          id?: string
+          last_device_id?: string | null
+          mode?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_binding_status?: string
+          id?: string
+          last_device_id?: string | null
+          mode?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       funding_sources: {
         Row: {
