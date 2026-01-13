@@ -3,19 +3,20 @@
  * 
  * Atome-inspired design with iOS 26 Liquid Glass styling
  * - 5 nav items with center elevated Scan button
+ * - Demo mode indicator (pulsing when active)
  * - Clean minimal icons with labels
  * - Smooth active state transitions
- * - Flow Card tab (feature-flagged)
  */
 
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Home, User, Scan, CreditCard, Zap } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Home, User, Scan, CreditCard, Sparkles } from "lucide-react";
+import { useDemo } from "@/contexts/DemoContext";
 
-// Nav items: Home, Demo, Scan, Card, Me
+// Nav items: Home, Demo Toggle, Scan, Card, Me
 const baseNavItems = [
   { path: "/home", icon: Home, label: "Home" },
-  { path: "/demo", icon: Zap, label: "Demo" },
+  { path: "demo-toggle", icon: Sparkles, label: "Demo", isDemo: true },
   { path: "/scan", icon: Scan, label: "Scan", primary: true },
   { path: "/flow-card", icon: CreditCard, label: "Card" },
   { path: "/settings", icon: User, label: "Me" },
@@ -24,31 +25,61 @@ const baseNavItems = [
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isDemoMode, toggleDemoMode, triggerPageDemo, pageActions } = useDemo();
 
   const navItems = baseNavItems;
+
+  const handleNavClick = (item: typeof baseNavItems[0]) => {
+    if (item.isDemo) {
+      // Toggle demo mode
+      toggleDemoMode();
+    } else {
+      navigate(item.path);
+    }
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
       <div className="max-w-md mx-auto px-4 pb-4 safe-area-bottom">
+
+        {/* Demo Mode Active Banner */}
+        <AnimatePresence>
+          {isDemoMode && pageActions.length > 0 && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              onClick={triggerPageDemo}
+              className="w-full mb-2 py-3 px-4 glass rounded-2xl border border-aurora-blue/30 pointer-events-auto flex items-center justify-center gap-2 text-sm font-medium text-aurora-blue"
+            >
+              <Sparkles size={16} className="animate-pulse" />
+              <span>{pageActions[0]?.label || 'Run Demo'}</span>
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* Floating glass pill */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="glass shadow-float-lg rounded-[2rem] border border-white/20 pointer-events-auto"
+          className={`glass shadow-float-lg rounded-[2rem] border pointer-events-auto transition-colors duration-300 ${
+            isDemoMode ? 'border-aurora-blue/40' : 'border-white/20'
+          }`}
         >
           <div className="flex items-center justify-around px-2 py-2">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path || 
-                (item.path === "/home" && location.pathname === "/");
+              const isActive = item.isDemo 
+                ? isDemoMode 
+                : (location.pathname === item.path || (item.path === "/home" && location.pathname === "/"));
               const Icon = item.icon;
               const isPrimary = item.primary;
+              const isDemo = item.isDemo;
 
               return (
                 <button
                   key={item.path}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => handleNavClick(item)}
                   className={`relative flex flex-col items-center justify-center transition-all duration-300 ${
                     isPrimary ? "px-1" : "py-2 px-3 min-w-[56px]"
                   }`}
@@ -88,9 +119,20 @@ const BottomNav = () => {
                         {/* Active indicator dot */}
                         {isActive && (
                           <motion.div
-                            layoutId="activeIndicator"
-                            className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-aurora-blue"
+                            layoutId={isDemo ? undefined : "activeIndicator"}
+                            className={`absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                              isDemo ? 'bg-aurora-purple' : 'bg-aurora-blue'
+                            }`}
                             transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                          />
+                        )}
+                        
+                        {/* Demo mode pulsing indicator */}
+                        {isDemo && isDemoMode && (
+                          <motion.div
+                            className="absolute inset-0 -m-2 rounded-full bg-aurora-purple/20"
+                            animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                            transition={{ duration: 2, repeat: Infinity }}
                           />
                         )}
                         
@@ -99,7 +141,9 @@ const BottomNav = () => {
                           strokeWidth={isActive ? 2.5 : 1.5}
                           className={`transition-all duration-200 ${
                             isActive 
-                              ? "text-aurora-blue drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" 
+                              ? isDemo 
+                                ? "text-aurora-purple drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]"
+                                : "text-aurora-blue drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" 
                               : "text-muted-foreground"
                           }`}
                         />
@@ -109,7 +153,7 @@ const BottomNav = () => {
                       <span
                         className={`text-[10px] mt-1.5 font-medium transition-all duration-200 ${
                           isActive 
-                            ? "text-aurora-blue" 
+                            ? isDemo ? "text-aurora-purple" : "text-aurora-blue" 
                             : "text-muted-foreground"
                         }`}
                       >
