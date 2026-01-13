@@ -5,23 +5,20 @@
  * Features: My QR code, pending requests, request history, amount presets
  */
 
-import { forwardRef, useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
   QrCode,
   ChevronLeft,
   Search,
-  ArrowRight,
   Loader2,
   Check,
   Copy,
   Share2,
   Clock,
   HandCoins,
-  History,
-  Wallet,
-  Users
+  History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +55,29 @@ interface RequestHistoryItem {
 // Amount presets
 const AMOUNT_PRESETS = [10, 20, 50, 100, 200];
 
-const ReceivePage = forwardRef<HTMLDivElement>((_, ref) => {
+// Demo contacts fallback
+const DEMO_CONTACTS: ContactDisplayItem[] = [
+  { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
+  { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
+  { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W" },
+  { id: "4", name: "Nurul", phone: "+60123456792", initial: "N" },
+];
+
+// Helper function to format relative time
+const formatTimeAgo = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+};
+
+const ReceivePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -99,13 +118,7 @@ const ReceivePage = forwardRef<HTMLDivElement>((_, ref) => {
           initial: c.name.charAt(0).toUpperCase(),
         })));
       } else {
-        // Demo contacts
-        setContacts([
-          { id: "1", name: "Sarah", phone: "+60123456789", initial: "S" },
-          { id: "2", name: "Ahmad", phone: "+60123456790", initial: "A" },
-          { id: "3", name: "Wei Ming", phone: "+60123456791", initial: "W" },
-          { id: "4", name: "Nurul", phone: "+60123456792", initial: "N" },
-        ]);
+        setContacts(DEMO_CONTACTS);
       }
 
       // Load pending requests (RequestMoney intents that haven't been paid)
@@ -154,7 +167,7 @@ const ReceivePage = forwardRef<HTMLDivElement>((_, ref) => {
     loadData();
   }, [navigate]);
 
-  const handleCreateRequest = async () => {
+  const handleCreateRequest = useCallback(async () => {
     if (!selectedContact || !amount || parseFloat(amount) <= 0) {
       toast({
         title: "Missing details",
@@ -224,9 +237,9 @@ const ReceivePage = forwardRef<HTMLDivElement>((_, ref) => {
     } finally {
       setIsCreating(false);
     }
-  };
+  }, [selectedContact, amount, note, navigate, toast]);
 
-  const handleCopyLink = async (link?: string) => {
+  const handleCopyLink = useCallback(async (link?: string) => {
     const linkToCopy = link || requestCreated?.link;
     if (!linkToCopy) return;
     
@@ -245,9 +258,9 @@ const ReceivePage = forwardRef<HTMLDivElement>((_, ref) => {
         variant: "destructive",
       });
     }
-  };
+  }, [requestCreated?.link, toast]);
 
-  const handleShare = async (link?: string, name?: string, amt?: number) => {
+  const handleShare = useCallback(async (link?: string, name?: string, amt?: number) => {
     const shareLink = link || requestCreated?.link;
     const shareName = name || selectedContact?.name;
     const shareAmount = amt || parseFloat(amount);
@@ -269,50 +282,34 @@ const ReceivePage = forwardRef<HTMLDivElement>((_, ref) => {
     } catch {
       // User cancelled share
     }
-  };
+  }, [requestCreated?.link, selectedContact?.name, amount, handleCopyLink]);
 
-  const handlePresetAmount = (preset: number) => {
+  const handlePresetAmount = useCallback((preset: number) => {
     setAmount(preset.toString());
-  };
+  }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setRequestCreated(null);
     setSelectedContact(null);
     setAmount("");
     setNote("");
-  };
+  }, []);
 
   const filteredContacts = contacts.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.phone.includes(searchQuery)
   );
 
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
-  };
-
   if (isLoading) {
     return (
-      <div ref={ref} className="min-h-screen bg-background flex items-center justify-center">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full aurora-gradient opacity-30 animate-aurora" />
-          <Loader2 className="w-12 h-12 text-aurora-blue animate-spin" />
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <div className="px-6 pt-14 pb-2">
         <div className="flex items-center justify-between mb-2">
@@ -714,7 +711,6 @@ const ReceivePage = forwardRef<HTMLDivElement>((_, ref) => {
       <MyPaymentCode isOpen={showMyCode} onClose={() => setShowMyCode(false)} />
     </div>
   );
-});
-ReceivePage.displayName = "ReceivePage";
+};
 
 export default ReceivePage;
