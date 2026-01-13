@@ -161,7 +161,11 @@ function parseEMVCoToIntent(qrData: string): ParsedQRIntent {
  */
 export async function createIntentFromParsedQR(
   userId: string,
-  parsedQR: ParsedQRIntent
+  parsedQR: ParsedQRIntent,
+  options?: {
+    selectedFundingSourceId?: string | null;
+    selectedFundingSourceName?: string;
+  }
 ): Promise<{ success: boolean; intentId?: string; error?: string }> {
   if (!parsedQR.success) {
     return { success: false, error: parsedQR.error };
@@ -184,6 +188,8 @@ export async function createIntentFromParsedQR(
           availableRails: parsedQR.availableRails,
           rawQR: parsedQR.rawQR,
           parsedAt: new Date().toISOString(),
+          userSelectedFundingSourceId: options?.selectedFundingSourceId,
+          userSelectedFundingSourceName: options?.selectedFundingSourceName,
         },
       })
       .select('id')
