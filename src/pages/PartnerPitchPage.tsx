@@ -24,12 +24,14 @@ import {
   Clock,
   FileCode,
   Server,
-  Layers
+  Layers,
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
+import { generatePartnerPitchPDF } from '@/lib/pdf/partner-pitch-pdf';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -88,6 +90,24 @@ export default function PartnerPitchPage() {
               Try Live Demo
             </Button>
           </div>
+          
+          {/* Download PDF Button */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6"
+          >
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-primary"
+              onClick={generatePartnerPitchPDF}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download PDF Summary
+            </Button>
+          </motion.div>
         </motion.div>
       </section>
 
