@@ -1,154 +1,170 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+/**
+ * FLOW Connect Apps Page
+ * 
+ * Apple-inspired minimal design - smart defaults, single action
+ * Clean unified list, no tabs, confidence-inspiring
+ */
+
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, Building2, Receipt, Landmark, Check, ShieldCheck, Link2, ChevronRight, Camera, Sparkles, Loader2 } from "lucide-react";
+import { 
+  Wallet, 
+  Building2, 
+  Receipt, 
+  Landmark, 
+  Check, 
+  ShieldCheck, 
+  Loader2,
+  ArrowLeft
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useTestMode } from "@/hooks/useTestMode";
-import { ScreenshotBalanceSync } from "@/components/balance/ScreenshotBalanceSync";
 
-interface AvailableApp {
-  id: string;
-  app_name: string;
-  app_type: "wallet" | "bank" | "biller";
+// App type definition
+interface AppConfig {
+  name: string;
   description: string;
-  selected: boolean;
+  icon: React.ElementType;
+  recommended?: boolean;
 }
 
-const appIcons: Record<string, React.ReactNode> = {
-  "TouchNGo": <Wallet className="w-5 h-5" />,
-  "GrabPay": <Wallet className="w-5 h-5" />,
-  "Boost": <Wallet className="w-5 h-5" />,
-  "Maybank": <Landmark className="w-5 h-5" />,
-  "DuitNow": <Building2 className="w-5 h-5" />,
-  "TNB": <Receipt className="w-5 h-5" />,
-  "Unifi": <Receipt className="w-5 h-5" />,
-  "Maxis": <Receipt className="w-5 h-5" />,
-};
-
-const appDescriptions: Record<string, string> = {
-  "TouchNGo": "Pay QR codes and send money to friends",
-  "GrabPay": "Pay at merchants and split bills",
-  "Boost": "Cashback rewards and payments",
-  "Maybank": "Direct bank transfers and payments",
-  "TNB": "Electricity bill payments",
-  "Unifi": "Internet and TV bill payments",
-  "Maxis": "Mobile phone bill payments",
-};
-
-// All available apps that users can connect
-const availableApps: Omit<AvailableApp, "id" | "selected">[] = [
-  { app_name: "TouchNGo", app_type: "wallet", description: appDescriptions["TouchNGo"] },
-  { app_name: "GrabPay", app_type: "wallet", description: appDescriptions["GrabPay"] },
-  { app_name: "Boost", app_type: "wallet", description: appDescriptions["Boost"] },
-  { app_name: "Maybank", app_type: "bank", description: appDescriptions["Maybank"] },
-  { app_name: "TNB", app_type: "biller", description: appDescriptions["TNB"] },
-  { app_name: "Unifi", app_type: "biller", description: appDescriptions["Unifi"] },
-  { app_name: "Maxis", app_type: "biller", description: appDescriptions["Maxis"] },
+// App configuration - centralized data
+const WALLET_APPS: AppConfig[] = [
+  { name: "TouchNGo", description: "E-wallet payments", icon: Wallet, recommended: true },
+  { name: "GrabPay", description: "Merchant payments", icon: Wallet },
+  { name: "Boost", description: "Cashback rewards", icon: Wallet },
 ];
 
-const AppCard = ({
-  app,
-  onToggle,
-  delay,
-}: {
-  app: AvailableApp;
+const BANK_APPS: AppConfig[] = [
+  { name: "Maybank", description: "Bank transfers", icon: Landmark, recommended: true },
+];
+
+const BILL_APPS: AppConfig[] = [
+  { name: "TNB", description: "Electricity", icon: Receipt },
+  { name: "Unifi", description: "Internet", icon: Receipt },
+  { name: "Maxis", description: "Mobile", icon: Receipt },
+];
+
+const ALL_APP_NAMES = [...WALLET_APPS, ...BANK_APPS, ...BILL_APPS].map(a => a.name);
+
+interface AppItemProps {
+  name: string;
+  description: string;
+  icon: React.ElementType;
+  selected: boolean;
+  recommended?: boolean;
   onToggle: () => void;
   delay: number;
-}) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay }}
-      onClick={onToggle}
-      className={`glass-card p-4 transition-all cursor-pointer ${
-        app.selected 
-          ? "ring-2 ring-aurora-blue/50 bg-aurora-blue/5" 
-          : "hover:bg-white/5"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-          app.app_type === "wallet" 
-            ? "bg-aurora-blue/20 text-aurora-blue"
-            : app.app_type === "bank"
-            ? "bg-aurora-purple/20 text-aurora-purple"
-            : "bg-aurora-pink/20 text-aurora-pink"
-        }`}>
-          {appIcons[app.app_name] || <Wallet className="w-5 h-5" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-foreground">{app.app_name}</h3>
-            {app.selected ? (
-              <div className="w-5 h-5 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
-                <Check className="w-3 h-3 text-white" />
-              </div>
-            ) : (
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {app.description}
-          </p>
-        </div>
+}
+
+const AppItem = ({ name, description, icon: Icon, selected, recommended, onToggle, delay }: AppItemProps) => (
+  <motion.button
+    initial={{ opacity: 0, x: -10 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ duration: 0.3, delay }}
+    onClick={onToggle}
+    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${
+      selected 
+        ? "bg-primary/5 ring-1 ring-primary/20" 
+        : "hover:bg-muted/50"
+    }`}
+  >
+    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+      selected 
+        ? "aurora-gradient shadow-glow-aurora" 
+        : "bg-muted"
+    }`}>
+      <Icon className={`w-5 h-5 ${selected ? "text-white" : "text-muted-foreground"}`} />
+    </div>
+    
+    <div className="flex-1 text-left">
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-foreground">{name}</span>
+        {recommended && !selected && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-aurora-blue/10 text-aurora-blue font-medium">
+            Recommended
+          </span>
+        )}
       </div>
-    </motion.div>
-  );
-};
+      <span className="text-sm text-muted-foreground">{description}</span>
+    </div>
+    
+    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+      selected 
+        ? "aurora-gradient shadow-glow-aurora" 
+        : "border-2 border-muted-foreground/30"
+    }`}>
+      {selected && <Check className="w-3.5 h-3.5 text-white" />}
+    </div>
+  </motion.button>
+);
+
+const SectionHeader = ({ children, delay }: { children: React.ReactNode; delay: number }) => (
+  <motion.p 
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay }}
+    className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 pt-6 pb-2"
+  >
+    {children}
+  </motion.p>
+);
 
 const AutoSyncPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isFieldTest } = useTestMode();
-  const [apps, setApps] = useState<AvailableApp[]>([]);
+  
+  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
+  const [alreadyConnected, setAlreadyConnected] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState("popular");
   const [isLoading, setIsLoading] = useState(true);
-  const [showBalanceSync, setShowBalanceSync] = useState(false);
 
-  // Initialize apps on mount
+  // Load existing connections and set smart defaults
   useEffect(() => {
-    const initApps = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Check which apps are already connected
-      let connectedNames: string[] = [];
       if (user) {
         const { data: existingConnectors } = await supabase
           .from("connectors")
           .select("name")
           .eq("user_id", user.id);
-        connectedNames = existingConnectors?.map(c => c.name) || [];
+        
+        const connectedNames: string[] = existingConnectors?.map(c => c.name as string) || [];
+        setAlreadyConnected(new Set(connectedNames));
+        
+        // Smart defaults: pre-select recommended apps not already connected
+        const defaults = new Set<string>();
+        [...WALLET_APPS, ...BANK_APPS].forEach(app => {
+          if (app.recommended && !connectedNames.includes(app.name)) {
+            defaults.add(app.name);
+          }
+        });
+        setSelectedApps(defaults);
       }
-
-      // Initialize apps with pre-selected popular ones (not already connected)
-      const popularApps = ["TouchNGo", "Maybank"];
-      const initialApps: AvailableApp[] = availableApps.map((app, index) => ({
-        ...app,
-        id: `app-${index}`,
-        selected: popularApps.includes(app.app_name) && !connectedNames.includes(app.app_name),
-      }));
-
-      setApps(initialApps);
+      
       setIsLoading(false);
     };
-
-    initApps();
+    init();
   }, []);
 
-  const toggleApp = (appId: string) => {
-    setApps(prev => 
-      prev.map(app => 
-        app.id === appId ? { ...app, selected: !app.selected } : app
-      )
-    );
-  };
+  const toggleApp = useCallback((name: string) => {
+    setSelectedApps(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }, []);
 
-  const connectSelectedApps = async () => {
+  const connectApps = useCallback(async () => {
+    if (selectedApps.size === 0) return;
+    
     setIsSyncing(true);
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -158,9 +174,6 @@ const AutoSyncPage = () => {
       return;
     }
 
-    const selectedApps = apps.filter(app => app.selected);
-
-    // Default balances for simulation
     const defaultBalances: Record<string, number> = {
       TouchNGo: 85.50,
       GrabPay: 42.00,
@@ -168,352 +181,191 @@ const AutoSyncPage = () => {
       Maybank: 1250.00,
     };
 
-    // Create connectors and funding sources for selected apps
     let priority = 1;
-    for (const app of selectedApps) {
-      const connectorType = app.app_type === "wallet" ? "wallet" 
-        : app.app_type === "bank" ? "bank" 
-        : "biller";
-
-      // Check if connector name is valid
-      const validConnectorNames = ["TouchNGo", "GrabPay", "Boost", "DuitNow", "BankTransfer", "Maybank", "VisaMastercard", "Maxis", "Unifi", "TNB", "Contacts"];
+    
+    for (const appName of selectedApps) {
+      // Determine app type
+      const isWallet = WALLET_APPS.some(w => w.name === appName);
+      const isBank = BANK_APPS.some(b => b.name === appName);
+      const isBiller = BILL_APPS.some(b => b.name === appName);
       
-      if (validConnectorNames.includes(app.app_name)) {
-        // Create connector with capabilities
-        const capabilities: Record<string, boolean> = {};
-        if (app.app_type === "wallet") {
-          capabilities.can_pay_qr = true;
-          capabilities.can_p2p = true;
-          capabilities.can_receive = true;
-        } else if (app.app_type === "bank") {
-          capabilities.can_pay = true;
-          capabilities.can_transfer = true;
-        }
+      const connectorType = isWallet ? "wallet" : isBank ? "bank" : "biller";
+      
+      // Create connector
+      const capabilities: Record<string, boolean> = {};
+      if (isWallet) {
+        capabilities.can_pay_qr = true;
+        capabilities.can_p2p = true;
+        capabilities.can_receive = true;
+      } else if (isBank) {
+        capabilities.can_pay = true;
+        capabilities.can_transfer = true;
+      }
 
-        const { error: connectorError } = await supabase.from("connectors").upsert({
+      await supabase.from("connectors").upsert({
+        user_id: user.id,
+        name: appName as any,
+        type: connectorType,
+        status: "available",
+        mode: "Prototype",
+        capabilities,
+      }, { onConflict: "user_id,name" });
+
+      // Create funding source for wallets and banks
+      if (isWallet || isBank) {
+        const balance = defaultBalances[appName] || 50.00;
+        await supabase.from("funding_sources").upsert({
           user_id: user.id,
-          name: app.app_name as any,
-          type: connectorType,
-          status: "available",
-          mode: "Prototype",
-          capabilities,
+          name: appName,
+          type: isWallet ? "wallet" : "bank",
+          balance,
+          currency: "MYR",
+          priority,
+          linked_status: "linked",
+          available: true,
+          max_auto_topup_amount: isWallet ? 200 : 500,
+          require_extra_confirm_amount: isWallet ? 300 : 1000,
         }, { onConflict: "user_id,name" });
+        priority++;
+      }
 
-        if (connectorError) {
-          console.error("Error creating connector:", connectorError);
-        }
-
-        // Create funding source for wallets and banks
-        if (app.app_type === "wallet" || app.app_type === "bank") {
-          const fundingType = app.app_type === "wallet" ? "wallet" : "bank";
-          const balance = defaultBalances[app.app_name] || 50.00;
-
-          const { error: fundingError } = await supabase.from("funding_sources").upsert({
-            user_id: user.id,
-            name: app.app_name,
-            type: fundingType,
-            balance,
-            currency: "MYR",
-            priority,
-            linked_status: "linked",
-            available: true,
-            max_auto_topup_amount: fundingType === "wallet" ? 200 : 500,
-            require_extra_confirm_amount: fundingType === "wallet" ? 300 : 1000,
-          }, { onConflict: "user_id,name" });
-
-          if (fundingError) {
-            console.error("Error creating funding source:", fundingError);
-          }
-          priority++;
-        }
-
-        // For billers, create biller_accounts
-        if (app.app_type === "biller") {
-          const { error: billerError } = await supabase.from("biller_accounts").upsert({
-            user_id: user.id,
-            biller_name: app.app_name,
-            account_reference: `ACC-${Date.now()}`,
-            status: "linked",
-          }, { onConflict: "user_id,biller_name" });
-
-          if (billerError) {
-            console.error("Error creating biller account:", billerError);
-          }
-        }
+      // Create biller account
+      if (isBiller) {
+        await supabase.from("biller_accounts").upsert({
+          user_id: user.id,
+          biller_name: appName,
+          account_reference: `ACC-${Date.now()}`,
+          status: "linked",
+        }, { onConflict: "user_id,biller_name" });
       }
     }
 
     toast({ 
-      title: "Connected!", 
-      description: `${selectedApps.length} app${selectedApps.length !== 1 ? 's' : ''} linked to FLOW` 
+      title: "Connected", 
+      description: `${selectedApps.size} app${selectedApps.size !== 1 ? 's' : ''} linked to FLOW` 
     });
     
-    setIsSyncing(false);
     navigate("/home");
-  };
-
-  const getFilteredApps = (type?: string) => {
-    if (!type || type === "popular") {
-      return apps.filter(app => ["TouchNGo", "Maybank", "GrabPay"].includes(app.app_name));
-    }
-    const typeMap: Record<string, string> = {
-      wallets: "wallet",
-      bills: "biller",
-      banks: "bank",
-    };
-    return apps.filter(app => app.app_type === typeMap[type]);
-  };
-
-  const selectedCount = apps.filter(app => app.selected).length;
+  }, [selectedApps, toast, navigate]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
+  const newAppsToConnect = [...selectedApps].filter(app => !alreadyConnected.has(app));
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-aurora-purple/5 flex flex-col px-6 safe-area-top safe-area-bottom relative overflow-hidden">
-      {/* Aurora background glow */}
-      <div className="absolute top-20 right-0 w-64 h-64 bg-aurora-purple/15 blur-3xl rounded-full" />
-      <div className="absolute bottom-60 left-0 w-48 h-48 bg-aurora-blue/10 blur-3xl rounded-full" />
-      
+    <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="pt-16 pb-4 relative z-10"
-      >
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2">
-          Connect Your Apps
-        </h1>
-        <p className="text-muted-foreground">
-          Choose which payment apps and bills you want FLOW to manage for you.
-        </p>
-      </motion.div>
+      <header className="px-6 pt-14 pb-2">
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-primary mb-4 -ml-1"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm">Back</span>
+        </button>
+        
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            Connect Apps
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Select payment apps for FLOW to use
+          </p>
+        </motion.div>
+      </header>
 
-      {/* FLOW Protocol - Balance Sync Option */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="relative z-10 mb-4"
-      >
-        <AnimatePresence mode="wait">
-          {!showBalanceSync ? (
-            <motion.button
-              key="trigger"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowBalanceSync(true)}
-              className="w-full glass-card p-4 flex items-center gap-3 hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <div className="w-10 h-10 rounded-xl aurora-gradient flex items-center justify-center shadow-glow-aurora">
-                <Camera className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-medium text-foreground flex items-center gap-2">
-                  Screenshot Balance Sync
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-aurora-purple/20 text-aurora-purple">NEW</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Upload a wallet screenshot → FLOW reads your balance
-                </p>
-              </div>
-              <Sparkles className="w-4 h-4 text-aurora-blue" />
-            </motion.button>
-          ) : (
-            <motion.div
-              key="sync"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <ScreenshotBalanceSync
-                onBalanceExtracted={(extraction) => {
-                  console.log("Balance extracted:", extraction);
-                }}
-                onApplyBalance={async (balance, walletName) => {
-                  const { data: { user } } = await supabase.auth.getUser();
-                  if (!user) return;
-                  
-                  // Update or create the funding source
-                  await supabase.from("funding_sources").upsert({
-                    user_id: user.id,
-                    name: walletName,
-                    type: "wallet",
-                    balance,
-                    currency: "MYR",
-                    priority: 1,
-                    linked_status: "linked",
-                    available: true,
-                    max_auto_topup_amount: 200,
-                    require_extra_confirm_amount: 300,
-                  }, { onConflict: "user_id,name" });
-                  
-                  toast({
-                    title: "Balance synced!",
-                    description: `${walletName}: RM ${balance.toFixed(2)}`,
-                  });
-                  setShowBalanceSync(false);
-                }}
-              />
-              <button
-                onClick={() => setShowBalanceSync(false)}
-                className="w-full mt-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cancel
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+      {/* App List */}
+      <div className="flex-1 overflow-y-auto px-2">
+        {/* Wallets */}
+        <SectionHeader delay={0.1}>Wallets</SectionHeader>
+        {WALLET_APPS.map((app, i) => (
+          <AppItem
+            key={app.name}
+            name={app.name}
+            description={app.description}
+            icon={app.icon}
+            selected={selectedApps.has(app.name) || alreadyConnected.has(app.name)}
+            recommended={app.recommended}
+            onToggle={() => !alreadyConnected.has(app.name) && toggleApp(app.name)}
+            delay={0.15 + i * 0.05}
+          />
+        ))}
 
-      {/* How it works hint */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.15 }}
-        className="glass-card p-3 mb-4 relative z-10"
-      >
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-aurora-blue/10 flex items-center justify-center shrink-0">
-            <Link2 className="w-4 h-4 text-aurora-blue" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">How linking works</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Tap to select apps → Connect them → FLOW will help you pay using these apps when you scan QR codes.
-            </p>
-          </div>
-        </div>
-      </motion.div>
+        {/* Banks */}
+        <SectionHeader delay={0.3}>Banks</SectionHeader>
+        {BANK_APPS.map((app, i) => (
+          <AppItem
+            key={app.name}
+            name={app.name}
+            description={app.description}
+            icon={app.icon}
+            selected={selectedApps.has(app.name) || alreadyConnected.has(app.name)}
+            recommended={app.recommended}
+            onToggle={() => !alreadyConnected.has(app.name) && toggleApp(app.name)}
+            delay={0.35 + i * 0.05}
+          />
+        ))}
 
-      {/* Main Content - App List */}
-      <div className="flex-1 flex flex-col relative z-10">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 h-12 mb-4 glass rounded-xl p-1">
-            <TabsTrigger value="popular" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Popular</TabsTrigger>
-            <TabsTrigger value="wallets" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Wallets</TabsTrigger>
-            <TabsTrigger value="bills" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Bills</TabsTrigger>
-            <TabsTrigger value="banks" className="text-xs rounded-lg data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Banks</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="popular" className="flex-1 mt-0">
-            <p className="text-sm font-medium text-foreground mb-3">
-              Most used in Malaysia
-            </p>
-            <div className="space-y-3">
-              {getFilteredApps("popular").map((app, index) => (
-                <AppCard
-                  key={app.id}
-                  app={app}
-                  onToggle={() => toggleApp(app.id)}
-                  delay={index * 0.1}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="wallets" className="flex-1 mt-0">
-            <div className="space-y-3">
-              {getFilteredApps("wallets").map((app, index) => (
-                <AppCard
-                  key={app.id}
-                  app={app}
-                  onToggle={() => toggleApp(app.id)}
-                  delay={index * 0.1}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="bills" className="flex-1 mt-0">
-            <div className="space-y-3">
-              {getFilteredApps("bills").map((app, index) => (
-                <AppCard
-                  key={app.id}
-                  app={app}
-                  onToggle={() => toggleApp(app.id)}
-                  delay={index * 0.1}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="banks" className="flex-1 mt-0">
-            <div className="space-y-3">
-              {getFilteredApps("banks").map((app, index) => (
-                <AppCard
-                  key={app.id}
-                  app={app}
-                  onToggle={() => toggleApp(app.id)}
-                  delay={index * 0.1}
-                />
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+        {/* Bills */}
+        <SectionHeader delay={0.4}>Bills</SectionHeader>
+        {BILL_APPS.map((app, i) => (
+          <AppItem
+            key={app.name}
+            name={app.name}
+            description={app.description}
+            icon={app.icon}
+            selected={selectedApps.has(app.name) || alreadyConnected.has(app.name)}
+            onToggle={() => !alreadyConnected.has(app.name) && toggleApp(app.name)}
+            delay={0.45 + i * 0.05}
+          />
+        ))}
       </div>
 
-      {/* Info Footer - Only show in prototype mode */}
-      {!isFieldTest && (
-        <motion.div
+      {/* Footer */}
+      <div className="px-6 pb-8 pt-4 space-y-4">
+        {/* Trust message */}
+        <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="py-3 relative z-10"
+          transition={{ delay: 0.5 }}
+          className="flex items-center justify-center gap-2 text-xs text-muted-foreground"
         >
-          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 rounded-xl p-3">
-            <Link2 className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              In production, linking would open each app to authorize FLOW. For now, this creates simulated connections.
-            </span>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Trust Footer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="py-2 relative z-10"
-      >
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <ShieldCheck className="w-4 h-4" />
-          <span>FLOW never moves money without your confirmation.</span>
-        </div>
-      </motion.div>
+          <span>FLOW never moves money without your confirmation</span>
+        </motion.div>
 
-      {/* Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="py-6 space-y-3 relative z-10"
-      >
-        <Button
-          onClick={connectSelectedApps}
-          disabled={isSyncing || selectedCount === 0}
-          className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity disabled:opacity-50"
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
         >
-          {isSyncing ? (
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-          ) : null}
-          {selectedCount > 0 ? `Connect ${selectedCount} app${selectedCount !== 1 ? 's' : ''}` : 'Select apps to connect'}
-        </Button>
-        <button
-          onClick={() => navigate("/home")}
-          className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Skip for now
-        </button>
-      </motion.div>
+          <Button
+            onClick={connectApps}
+            disabled={isSyncing || newAppsToConnect.length === 0}
+            className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora disabled:opacity-50 disabled:shadow-none"
+          >
+            {isSyncing ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : newAppsToConnect.length > 0 ? (
+              `Connect ${newAppsToConnect.length} App${newAppsToConnect.length !== 1 ? 's' : ''}`
+            ) : selectedApps.size > 0 ? (
+              "Already Connected"
+            ) : (
+              "Select Apps"
+            )}
+          </Button>
+        </motion.div>
+      </div>
     </div>
   );
 };
