@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pause, Play } from 'lucide-react';
+import { Plus, Pause, Play, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -28,6 +28,7 @@ export default function FlowCardPage() {
     isCardActive,
     isCardSuspended,
     pendingEvents,
+    simulateTerminalTap,
     generateCredentials,
     approveEvent,
     declineEvent,
@@ -37,6 +38,30 @@ export default function FlowCardPage() {
 
   const [showCreateFlow, setShowCreateFlow] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const handleSimulateTap = async () => {
+    setIsSimulating(true);
+    const amount = Math.floor(Math.random() * 100) + 10;
+    const merchants = ['Coffee Shop', 'Grocery Store', 'Restaurant', 'Gas Station'];
+    const merchant = merchants[Math.floor(Math.random() * merchants.length)];
+    
+    const result = await simulateTerminalTap(amount, merchant, 'retail');
+    setIsSimulating(false);
+
+    if (result.success) {
+      toast({
+        title: 'Tap Simulated',
+        description: `RM ${amount.toFixed(2)} at ${merchant}`,
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: result.error,
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Feature flag check
   if (!isFlowCardEnabled && !loading) {
@@ -191,7 +216,7 @@ export default function FlowCardPage() {
 
       {/* Pending Events - Only shown when there are pending confirmations */}
       {pendingEvents.length > 0 && (
-        <div className="px-6">
+        <div className="px-6 mb-6">
           <h2 className="text-sm font-semibold text-muted-foreground mb-3">
             Pending Confirmation
           </h2>
@@ -205,6 +230,30 @@ export default function FlowCardPage() {
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Demo: Simulate Tap */}
+      {isCardActive && (
+        <div className="px-6 pt-4">
+          <button
+            onClick={handleSimulateTap}
+            disabled={isSimulating}
+            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 transition-colors"
+          >
+            {isSimulating ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full"
+              />
+            ) : (
+              <>
+                <Zap size={16} />
+                Simulate Tap (Demo)
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>
