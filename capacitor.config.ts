@@ -32,8 +32,8 @@ const config: CapacitorConfig = {
   // iOS configuration  
   ios: {
     appendUserAgent: 'FLOW-App',
-    // Scheme for deep links
-    scheme: 'flow',
+    // Scheme for deep links (matches appId format for OAuth callback)
+    scheme: 'app.lovable.4f80439d456c47d48afef4444d0b35a2',
   }
 };
 
