@@ -569,55 +569,169 @@ export default function PartnerPitchPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Implementation Timeline */}
+      <section className="py-20 px-6 bg-muted/30">
+        <div className="max-w-5xl mx-auto">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            <Badge variant="secondary" className="mb-4">Implementation Timeline</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">From Handshake to Go-Live</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              A structured 12-week path to production deployment
+            </p>
+          </motion.div>
+
+          <motion.div 
+            className="relative"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            {/* Timeline line */}
+            <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-border md:-translate-x-0.5" />
+            
+            <div className="space-y-8">
+              {[
+                { week: 'Week 1-2', title: 'Discovery & Alignment', desc: 'Technical deep-dive, security review, API mapping' },
+                { week: 'Week 3-4', title: 'Sandbox Setup', desc: 'Test environment, mock data, OAuth configuration' },
+                { week: 'Week 5-8', title: 'Integration Development', desc: 'API integration, testing, error handling' },
+                { week: 'Week 9-10', title: 'UAT & Pilot', desc: 'User acceptance testing with 500 beta users' },
+                { week: 'Week 11-12', title: 'Go-Live', desc: 'Production deployment, monitoring, scaling' },
+              ].map((phase, index) => (
+                <motion.div
+                  key={index}
+                  className={`relative flex items-center gap-6 ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <div className={`flex-1 ${index % 2 === 0 ? 'md:text-right' : 'md:text-left'} pl-12 md:pl-0`}>
+                    <Badge variant="outline" className="mb-2">{phase.week}</Badge>
+                    <h4 className="font-semibold text-lg">{phase.title}</h4>
+                    <p className="text-sm text-muted-foreground">{phase.desc}</p>
+                  </div>
+                  <div className="absolute left-4 md:left-1/2 w-3 h-3 bg-primary rounded-full md:-translate-x-1.5 ring-4 ring-background" />
+                  <div className="flex-1 hidden md:block" />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Next Steps / CTA Section */}
       <section className="py-20 px-6 bg-primary/5">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-4xl mx-auto">
           <motion.div
+            className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Ready to Transform Payments?
+              Ready to Start?
             </h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join us in building Malaysia's unified payment future. 
-              Technical documentation and sandbox access available.
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Three ways to move forward with FLOW partnership
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-lg px-8" onClick={() => navigate('/demo')}>
-                Experience the Demo
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8" onClick={() => navigate('/')}>
-                Back to FLOW
-              </Button>
-            </div>
-            
-            <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                Full API spec available
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                Sandbox ready
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                Technical team on standby
-              </div>
-            </div>
           </motion.div>
+
+          <motion.div 
+            className="grid md:grid-cols-3 gap-6 mb-12"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+          >
+            <motion.div variants={fadeInUp}>
+              <Card className="h-full text-center bg-card/50 hover:border-primary/30 transition-colors">
+                <CardContent className="pt-6">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Zap className="w-6 h-6 text-primary" />
+                  </div>
+                  <h4 className="font-semibold mb-2">Try the Demo</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Experience the full Scan → Pay flow with our interactive demo
+                  </p>
+                  <Button className="w-full" onClick={() => navigate('/demo')}>
+                    Launch Demo
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={fadeInUp}>
+              <Card className="h-full text-center bg-card/50 hover:border-primary/30 transition-colors">
+                <CardContent className="pt-6">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <FileCode className="w-6 h-6 text-primary" />
+                  </div>
+                  <h4 className="font-semibold mb-2">Review API Spec</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Full technical documentation with code samples
+                  </p>
+                  <Button variant="outline" className="w-full" onClick={generatePartnerPitchPDF}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={fadeInUp}>
+              <Card className="h-full text-center border-primary bg-primary/5">
+                <CardContent className="pt-6">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Building2 className="w-6 h-6 text-primary" />
+                  </div>
+                  <h4 className="font-semibold mb-2">Schedule a Call</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Meet with our partnership team for a technical deep-dive
+                  </p>
+                  <Button className="w-full" asChild>
+                    <a href="mailto:partners@flow.my?subject=FLOW%20Partnership%20Inquiry">
+                      Contact Us
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+
+          <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              NDA & MOU templates ready
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              Sandbox in 48 hours
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              BNM license pathway mapped
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-border/50">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <div>© 2025 FLOW Payment Orchestration</div>
-          <div className="flex gap-6">
-            <span>Partnership Inquiries: partners@flow.my</span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">FLOW</span>
+            <span>© 2025 Payment Orchestration</span>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6">
+            <a href="mailto:partners@flow.my" className="hover:text-primary transition-colors">
+              partners@flow.my
+            </a>
+            <span>Kuala Lumpur, Malaysia</span>
           </div>
         </div>
       </footer>
