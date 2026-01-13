@@ -284,15 +284,19 @@ export class ConnectionEngine {
       }
     }
 
-    // In prototype mode, simulate detecting popular wallets
+    // Check user's app_mode, but default to Prototype behavior if no user record
     const { data: user } = await supabase
       .from('users')
       .select('app_mode')
       .eq('id', this.userId)
-      .single();
+      .maybeSingle();
 
-    if (user?.app_mode === 'Prototype') {
-      // Simulate that user has popular apps
+    // In prototype mode OR if no user record (default behavior), simulate detecting popular wallets
+    // This ensures the Quick Connect flow works immediately after signup
+    const isPrototypeMode = !user || user.app_mode === 'Prototype' || user.app_mode === 'Pilot';
+    
+    if (isPrototypeMode) {
+      // Simulate that user has popular apps installed
       for (const app of APP_CATALOG) {
         if (app.popular && !detected.find(d => d.name === app.name)) {
           detected.push(app);
