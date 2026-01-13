@@ -42,10 +42,12 @@ export function useAuth() {
   }, [refreshSession]);
 
   const signInWithGoogle = async () => {
+    // Use redirect flow instead of popup for native app compatibility
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/`,
+        skipBrowserRedirect: false,
       },
     });
     return { error };
