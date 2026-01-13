@@ -346,12 +346,59 @@ export class ConnectionEngine {
   }
 
   /**
+   * Ensure user record exists in users table
+   * Required because connectors has a foreign key to users
+   */
+  private async ensureUserExists(): Promise<boolean> {
+    try {
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', this.userId)
+        .maybeSingle();
+
+      if (existingUser) {
+        return true;
+      }
+
+      // Create user record with default prototype settings
+      const { error } = await supabase
+        .from('users')
+        .insert({
+          id: this.userId,
+          phone: '+60000000000', // Placeholder - required field
+          app_mode: 'Prototype',
+          identity_status: 'active',
+          biometric_enabled: false,
+          paused: false,
+        });
+
+      if (error) {
+        console.error('Failed to create user record:', error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Error ensuring user exists:', err);
+      return false;
+    }
+  }
+
+  /**
    * Connect a single app - creates connector and funding source
    */
   async connectApp(appName: ConnectorName): Promise<ConnectionResult> {
     const app = getAppByName(appName);
     if (!app) {
       return { success: false, appName, error: 'Unknown app' };
+    }
+
+    // Ensure user exists before creating connections
+    const userExists = await this.ensureUserExists();
+    if (!userExists) {
+      return { success: false, appName, error: 'Failed to initialize user profile' };
     }
 
     try {
@@ -455,6 +502,17 @@ export class ConnectionEngine {
    * Quick connect - auto-detect and connect all detected apps
    */
   async quickConnect(): Promise<SyncResult> {
+    // Ensure user exists upfront for efficiency
+    const userExists = await this.ensureUserExists();
+    if (!userExists) {
+      return {
+        success: false,
+        synced: 0,
+        failed: 0,
+        results: [],
+      };
+    }
+
     const detected = await this.detectInstalledApps();
     const results = await this.connectApps(detected.map(a => a.name));
 
