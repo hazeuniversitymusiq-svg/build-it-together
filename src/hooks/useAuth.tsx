@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 const NATIVE_OAUTH_REDIRECT = 'flow://auth/callback';
 
 // Web redirect used for browser flows
-const WEB_OAUTH_REDIRECT = `${typeof window !== 'undefined' ? window.location.origin : ''}/auth`;
+// Use a dedicated callback route so we can deterministically exchange the code and then route onward.
+const WEB_OAUTH_REDIRECT = `${typeof window !== 'undefined' ? window.location.origin : ''}/oauth/callback`;
 
 // Native OAuth needs an HTTPS redirect; we bridge back into the app via this backend function
 const NATIVE_OAUTH_BRIDGE_REDIRECT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-bridge`;
