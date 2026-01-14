@@ -51,6 +51,7 @@ const railIcons = {
   bank: Building2,
   debit_card: CreditCard,
   credit_card: CreditCard,
+  bnpl: CreditCard,
 };
 
 const typeLabels = {
@@ -58,6 +59,7 @@ const typeLabels = {
   bank: "Bank Account",
   debit_card: "Debit Card",
   credit_card: "Credit Card",
+  bnpl: "Buy Now Pay Later",
 };
 
 interface EditingState {

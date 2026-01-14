@@ -197,7 +197,9 @@ const AuthPage = () => {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`,
+        // Use origin-only here because the backend allowlist often permits the base URL
+        // while rejecting specific paths; the app will route the callback to /auth.
+        redirectTo: window.location.origin,
       });
 
       if (error) {
