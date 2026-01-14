@@ -57,10 +57,12 @@ export function useAuth() {
 
     // Capacitor listener registration is async
     CapApp.addListener('appUrlOpen', async ({ url }) => {
-      try {
-        if (!url || !url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
+      if (!url || !url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
 
+      try {
         const parsed = new URL(url);
+
+        // PKCE/code flow
         const errorDescription =
           parsed.searchParams.get('error_description') || parsed.searchParams.get('error');
         const code = parsed.searchParams.get('code');
@@ -70,19 +72,39 @@ export function useAuth() {
           return;
         }
 
-        if (!code) {
-          toast.error('Missing OAuth code');
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
+
+          toast.success('Signed in');
+          refreshSession();
           return;
         }
 
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          toast.error(error.message);
+        // Fallback: implicit flow (hash tokens)
+        const hashParams = new URLSearchParams(parsed.hash.replace(/^#/, ''));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
+
+          toast.success('Signed in');
+          refreshSession();
           return;
         }
 
-        toast.success('Signed in');
-        refreshSession();
+        toast.error('Missing OAuth response');
       } catch (e) {
         console.error('[OAuth callback]', e);
       } finally {
