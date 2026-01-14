@@ -48,14 +48,36 @@ const AuthPage = () => {
   }, [user, loading, navigate, step]);
 
   useEffect(() => {
-    // Password recovery links return with type=recovery in the URL
+    // Password recovery links can come in different formats:
+    // 1. Hash fragment: #access_token=...&type=recovery
+    // 2. Query params: ?type=recovery&access_token=...
+    // 3. After Supabase processes: the session will be set automatically
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     const search = typeof window !== 'undefined' ? window.location.search : '';
+    const fullUrl = hash + search;
 
-    if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+    // Check for recovery token in URL
+    if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery')) {
       setMode('signin');
       setStep('updatePassword');
+      return;
     }
+
+    // Also listen for auth state changes to catch recovery sessions
+    const checkRecoverySession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      // Supabase sets a special flag when the session came from a recovery link
+      if (session?.user?.recovery_sent_at) {
+        const recoveryTime = new Date(session.user.recovery_sent_at).getTime();
+        const now = Date.now();
+        // If recovery was sent within the last hour, show update password form
+        if (now - recoveryTime < 3600000) {
+          setStep('updatePassword');
+        }
+      }
+    };
+    
+    checkRecoverySession();
   }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
