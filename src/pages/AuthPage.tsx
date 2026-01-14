@@ -207,8 +207,11 @@ const AuthPage = () => {
         return;
       }
 
-      toast.success('Password reset email sent! Check your inbox.');
-    } catch (error) {
+      // Note: the auth backend intentionally returns success even if the email
+      // doesn't exist (to prevent account enumeration). So we message neutrally.
+      toast.success("If an account exists for that email, you'll receive a reset link shortly.");
+      setStep('reset');
+    } catch {
       toast.error('Something went wrong');
     } finally {
       setIsSubmitting(false);
@@ -479,16 +482,33 @@ const AuthPage = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-base text-muted-foreground mb-8"
             >
-              We sent a password reset link to <strong>{email}</strong>
+              If an account exists for <strong>{email}</strong>, you’ll receive a password reset link.
+              <br />
+              Please check spam/junk and wait 1–2 minutes.
             </motion.p>
 
-            <Button
-              onClick={() => setStep('auth')}
-              variant="outline"
-              className="w-full h-14 text-base font-medium rounded-2xl"
-            >
-              Back to sign in
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={handleForgotPassword}
+                variant="outline"
+                disabled={isSubmitting}
+                className="w-full h-14 text-base font-medium rounded-2xl"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Resend email'
+                )}
+              </Button>
+
+              <Button
+                onClick={() => setStep('auth')}
+                variant="ghost"
+                className="w-full h-14 text-base font-medium rounded-2xl"
+              >
+                Back to sign in
+              </Button>
+            </div>
           </motion.div>
         )}
 
