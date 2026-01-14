@@ -18,43 +18,18 @@ export default function OAuthCallbackPage() {
       | { type: "tokens"; access_token: string; refresh_token: string };
 
     const postResult = (payload: Payload) => {
-      // Primary: BroadcastChannel (works even when the opener is null due to noopener)
+      // Attempt BroadcastChannel first (fast path), but ALSO fall back to opener postMessage.
+      // In some browsers, browsing-context-group restrictions can prevent delivery.
       if (typeof BroadcastChannel !== "undefined") {
         try {
           const channel = new BroadcastChannel("flow_oauth");
           channel.postMessage(payload);
           channel.close();
-          return;
         } catch {
-          // fall through
+          // ignore
         }
       }
 
-      // Fallback: window.opener postMessage (requires popup NOT opened with noopener)
-      try {
-        if (payload.type === "code") {
-          window.opener?.postMessage({ type: "FLOW_OAUTH_CODE", code: payload.code }, window.location.origin);
-          return;
-        }
-        if (payload.type === "tokens") {
-          window.opener?.postMessage(
-            { type: "FLOW_OAUTH_TOKENS", access_token: payload.access_token, refresh_token: payload.refresh_token },
-            window.location.origin
-          );
-          return;
-        }
-
-        window.opener?.postMessage(
-          {
-            type: payload.type === "done" ? "FLOW_OAUTH_DONE" : "FLOW_OAUTH_ERROR",
-            message: payload.type === "error" ? payload.message : undefined,
-          },
-          window.location.origin
-        );
-      } catch {
-        // ignore
-      }
-    };
 
     const run = async () => {
       try {

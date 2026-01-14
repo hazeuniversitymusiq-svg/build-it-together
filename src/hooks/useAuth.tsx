@@ -194,6 +194,7 @@ export function useAuth() {
     const result = await new Promise<{ ok: true } | { ok: false; message: string }>((resolve) => {
       let settled = false;
       let popup: Window | null = null;
+      let closeGraceTimer: number | null = null;
       const cleanups: Array<() => void> = [];
 
       const finish = (r: { ok: true } | { ok: false; message: string }) => {
@@ -210,6 +211,7 @@ export function useAuth() {
       };
 
       const finalizeFromPayload = async (payload: any) => {
+        if (settled) return;
         try {
           if (!payload || typeof payload !== 'object') return;
 
@@ -244,46 +246,31 @@ export function useAuth() {
           }
         } catch (e) {
           finish({ ok: false, message: e instanceof Error ? e.message : 'Google sign-in failed' });
+        } finally {
+          // Close the popup if it's still open (best-effort).
+          try {
+            popup?.close();
+          } catch {
+            // ignore
+          }
         }
       };
 
-      const openPopup = (features: string) => window.open(oauthUrl, '_blank', features);
-
-      // Prefer BroadcastChannel (works even when the popup is opened with noopener)
+      // Listen via BOTH mechanisms:
+      // - BroadcastChannel (fast path)
+      // - postMessage (fallback + also works in some environments where BroadcastChannel is flaky)
       if (typeof BroadcastChannel !== 'undefined') {
         try {
           const channel = new BroadcastChannel('flow_oauth');
-          cleanups.push(() => channel.close());
-
           channel.onmessage = (event) => {
             void finalizeFromPayload(event.data);
           };
-
-          popup = openPopup('noopener,noreferrer');
-          if (!popup) {
-            finish({ ok: false, message: 'Popup blocked. Please allow popups, then try again.' });
-            return;
-          }
-
-          const poll = window.setInterval(() => {
-            if (popup && popup.closed) {
-              finish({ ok: false, message: 'Sign-in window was closed.' });
-            }
-          }, 400);
-          cleanups.push(() => window.clearInterval(poll));
-
-          const timer = window.setTimeout(() => {
-            finish({ ok: false, message: 'Timed out waiting for Google sign-in.' });
-          }, timeoutMs);
-          cleanups.push(() => window.clearTimeout(timer));
-
-          return;
+          cleanups.push(() => channel.close());
         } catch {
-          // fall through to postMessage fallback
+          // ignore
         }
       }
 
-      // Fallback (older browsers): requires opener, so we do NOT use noopener here
       const origin = window.location.origin;
       const onMessage = (event: MessageEvent) => {
         if (event.origin !== origin) return;
@@ -295,27 +282,35 @@ export function useAuth() {
         } else if (data.type === 'FLOW_OAUTH_TOKENS') {
           void finalizeFromPayload({ type: 'tokens', access_token: data.access_token, refresh_token: data.refresh_token });
         } else if (data.type === 'FLOW_OAUTH_DONE') {
-          finish({ ok: true });
+          void finalizeFromPayload({ type: 'done' });
         } else if (data.type === 'FLOW_OAUTH_ERROR') {
-          finish({ ok: false, message: String(data.message ?? 'Google sign-in failed') });
+          void finalizeFromPayload({ type: 'error', message: data.message });
         }
       };
-
       window.addEventListener('message', onMessage);
       cleanups.push(() => window.removeEventListener('message', onMessage));
 
-      popup = openPopup('');
+      // IMPORTANT: do NOT use noopener/noreferrer here.
+      // Those create a separate browsing-context group, which can break BroadcastChannel delivery.
+      popup = window.open(oauthUrl, '_blank');
       if (!popup) {
         finish({ ok: false, message: 'Popup blocked. Please allow popups, then try again.' });
         return;
       }
 
       const poll = window.setInterval(() => {
-        if (popup && popup.closed) {
-          finish({ ok: false, message: 'Sign-in window was closed.' });
+        if (!popup || settled) return;
+        if (popup.closed && closeGraceTimer == null) {
+          // Give messages a brief grace period to arrive after the window closes.
+          closeGraceTimer = window.setTimeout(() => {
+            finish({ ok: false, message: 'Sign-in window was closed.' });
+          }, 1200);
         }
-      }, 400);
+      }, 250);
       cleanups.push(() => window.clearInterval(poll));
+      cleanups.push(() => {
+        if (closeGraceTimer != null) window.clearTimeout(closeGraceTimer);
+      });
 
       const timer = window.setTimeout(() => {
         finish({ ok: false, message: 'Timed out waiting for Google sign-in.' });
