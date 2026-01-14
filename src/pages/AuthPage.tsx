@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import AuthDebugPanel from '@/components/auth/AuthDebugPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -20,7 +21,7 @@ type AuthMode = 'signin' | 'signup';
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, session, loading, signInWithGoogle } = useAuth();
   
   const [step, setStep] = useState<AuthStep>('auth');
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -355,6 +356,8 @@ const AuthPage = () => {
                 ? 'Sign in to continue to FLOW' 
                 : 'Get started with your FLOW account'}
             </motion.p>
+
+            <AuthDebugPanel user={user} session={session} loading={loading} />
 
             {/* Google Sign-In Button */}
             <motion.div
