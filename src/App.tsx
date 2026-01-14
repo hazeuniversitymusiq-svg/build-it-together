@@ -14,6 +14,7 @@ import PageTransition from "./components/layout/PageTransition";
 import AppLayout from "./components/layout/AppLayout";
 import WelcomePage from "./pages/WelcomePage";
 import AuthPage from "./pages/AuthPage";
+import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import AutoSyncPage from "./pages/AutoSyncPage";
 import HomePage from "./pages/HomePage";
 import ScanPage from "./pages/ScanPage";
@@ -58,7 +59,8 @@ const RecoveryRedirect = () => {
     fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery');
 
   // IMPORTANT: hooks must be called unconditionally; compute redirect decision first.
-  const shouldRedirect = isAuthCallback && location.pathname !== '/auth';
+  const shouldRedirect =
+    isAuthCallback && location.pathname !== '/auth' && location.pathname !== '/oauth/callback';
 
   useEffect(() => {
     // Listen for PASSWORD_RECOVERY event from auth
@@ -97,16 +99,17 @@ const queryClient = new QueryClient();
 
 const AnimatedRoutes = () => {
   const location = useLocation();
-  
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Streamlined Onboarding: Welcome → Auth → Quick Connect → Home */}
         <Route path="/" element={<PageTransition><WelcomePage /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
+        <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/connect" element={<PageTransition><QuickConnectPage /></PageTransition>} />
         <Route path="/auto-sync" element={<PageTransition><AutoSyncPage /></PageTransition>} />
-        
+
         {/* Transaction Flow (No Bottom Nav - focused experience) */}
         <Route path="/resolve/:intentId" element={<PageTransition><ResolvePage /></PageTransition>} />
         <Route path="/confirm/:planId" element={<PageTransition><ConfirmPage /></PageTransition>} />

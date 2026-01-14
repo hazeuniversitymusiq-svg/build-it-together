@@ -168,13 +168,20 @@ export function useAuth() {
       }
     }
 
-    // Web (also works reliably inside the Lovable preview iframe)
+    // Web (also works reliably inside embedded previews)
     const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+    // In embedded previews we must complete OAuth in a separate window/tab.
+    // We redirect that window back to /oauth/callback, which will broadcast the result
+    // back to this page (so the user ends up signed in *here*).
+    const redirectTo = isInIframe
+      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/oauth/callback`
+      : WEB_OAUTH_REDIRECT;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: WEB_OAUTH_REDIRECT,
+        redirectTo,
         // Handle navigation ourselves so the flow works even when the app is
         // embedded (OAuth providers often block running inside iframes).
         skipBrowserRedirect: true,
@@ -184,14 +191,116 @@ export function useAuth() {
     if (error) return { error };
     if (!data?.url) return { error: new Error('Missing OAuth URL') as any };
 
+    // Embedded: open a new window and wait for /oauth/callback to report back.
     if (isInIframe) {
-      const opened = window.open(data.url, '_blank', 'noopener,noreferrer');
-      if (!opened) {
-        toast.error('Popup blocked. Please allow popups, then try again.');
-      }
+      const oauthUrl = data.url;
+      const timeoutMs = 2 * 60 * 1000;
+
+      const result = await new Promise<{ ok: true } | { ok: false; message: string }>((resolve) => {
+        let settled = false;
+        let popup: Window | null = null;
+        const cleanups: Array<() => void> = [];
+
+        const finish = (r: { ok: true } | { ok: false; message: string }) => {
+          if (settled) return;
+          settled = true;
+          for (const fn of cleanups) {
+            try {
+              fn();
+            } catch {
+              // ignore
+            }
+          }
+          resolve(r);
+        };
+
+        const openPopup = (features: string) => window.open(oauthUrl, '_blank', features);
+
+        // Prefer BroadcastChannel (works even when the popup is opened with noopener)
+        if (typeof BroadcastChannel !== 'undefined') {
+          try {
+            const channel = new BroadcastChannel('flow_oauth');
+            cleanups.push(() => channel.close());
+
+            channel.onmessage = (event) => {
+              const data = event.data as any;
+              if (!data || typeof data !== 'object') return;
+
+              if (data.type === 'done') {
+                finish({ ok: true });
+              } else if (data.type === 'error') {
+                finish({ ok: false, message: String(data.message ?? 'Google sign-in failed') });
+              }
+            };
+
+            popup = openPopup('noopener,noreferrer');
+            if (!popup) {
+              finish({ ok: false, message: 'Popup blocked. Please allow popups, then try again.' });
+              return;
+            }
+
+            const poll = window.setInterval(() => {
+              if (popup && popup.closed) {
+                finish({ ok: false, message: 'Sign-in window was closed.' });
+              }
+            }, 400);
+            cleanups.push(() => window.clearInterval(poll));
+
+            const timer = window.setTimeout(() => {
+              finish({ ok: false, message: 'Timed out waiting for Google sign-in.' });
+            }, timeoutMs);
+            cleanups.push(() => window.clearTimeout(timer));
+
+            return;
+          } catch {
+            // fall through to postMessage fallback
+          }
+        }
+
+        // Fallback (older browsers): requires opener, so we do NOT use noopener here
+        const origin = window.location.origin;
+        const onMessage = (event: MessageEvent) => {
+          if (event.origin !== origin) return;
+          const data = event.data as any;
+          if (!data || typeof data !== 'object') return;
+
+          if (data.type === 'FLOW_OAUTH_DONE') {
+            finish({ ok: true });
+          } else if (data.type === 'FLOW_OAUTH_ERROR') {
+            finish({ ok: false, message: String(data.message ?? 'Google sign-in failed') });
+          }
+        };
+
+        window.addEventListener('message', onMessage);
+        cleanups.push(() => window.removeEventListener('message', onMessage));
+
+        popup = openPopup('');
+        if (!popup) {
+          finish({ ok: false, message: 'Popup blocked. Please allow popups, then try again.' });
+          return;
+        }
+
+        const poll = window.setInterval(() => {
+          if (popup && popup.closed) {
+            finish({ ok: false, message: 'Sign-in window was closed.' });
+          }
+        }, 400);
+        cleanups.push(() => window.clearInterval(poll));
+
+        const timer = window.setTimeout(() => {
+          finish({ ok: false, message: 'Timed out waiting for Google sign-in.' });
+        }, timeoutMs);
+        cleanups.push(() => window.clearTimeout(timer));
+      });
+
+      if (!result.ok) return { error: new Error('message' in result ? result.message : 'Google sign-in failed') as any };
+
+      toast.success('Signed in');
+      await refreshSession();
       return { error: null };
     }
 
+    // Top-level web: navigate normally
     window.location.assign(data.url);
     return { error: null };
   };
