@@ -181,7 +181,7 @@ const PaymentSourcesManager = () => {
             {sources
               .sort((a, b) => a.priority - b.priority)
               .map((source, index) => {
-                const Icon = railIcons[source.type];
+                const Icon = railIcons[source.type as keyof typeof railIcons] || Wallet;
                 const isEditing = editing?.sourceId === source.id;
                 
                 return (
