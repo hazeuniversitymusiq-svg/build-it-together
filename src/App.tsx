@@ -54,21 +54,17 @@ const RecoveryRedirect = () => {
     fullUrl.includes('error_code=') ||
     fullUrl.includes('error_description=');
 
-  const isRecovery = fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery');
+  const isRecovery =
+    fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery');
 
-  // Redirect during render (no flash of Welcome/Onboarding)
-  if (isAuthCallback && location.pathname !== '/auth') {
-    try {
-      sessionStorage.setItem('flow_auth_callback', isRecovery ? 'recovery' : 'auth');
-    } catch {
-      // ignore
-    }
-    return <Navigate to={`/auth${search}${hash}`} replace />;
-  }
+  // IMPORTANT: hooks must be called unconditionally; compute redirect decision first.
+  const shouldRedirect = isAuthCallback && location.pathname !== '/auth';
 
   useEffect(() => {
     // Listen for PASSWORD_RECOVERY event from auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         try {
           sessionStorage.setItem('flow_auth_callback', 'recovery');
@@ -83,6 +79,16 @@ const RecoveryRedirect = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate, location.pathname]);
+
+  // Redirect during render (no flash of Welcome/Onboarding)
+  if (shouldRedirect) {
+    try {
+      sessionStorage.setItem('flow_auth_callback', isRecovery ? 'recovery' : 'auth');
+    } catch {
+      // ignore
+    }
+    return <Navigate to={`/auth${search}${hash}`} replace />;
+  }
 
   return null;
 };

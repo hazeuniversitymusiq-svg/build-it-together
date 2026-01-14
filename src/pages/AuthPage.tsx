@@ -53,9 +53,26 @@ const AuthPage = () => {
     const search = typeof window !== 'undefined' ? window.location.search : '';
     const fullUrl = hash + search;
 
+    const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+    const searchParams = new URLSearchParams(search.replace(/^\?/, ''));
+
+    const urlType =
+      searchParams.get('type') ||
+      hashParams.get('type') ||
+      (fullUrl.includes('type%3Drecovery') ? 'recovery' : null);
+
+    const isRecoveryByUrl =
+      urlType === 'recovery' ||
+      fullUrl.includes('type=recovery') ||
+      fullUrl.includes('type%3Drecovery');
+
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+
     // If we were redirected here from an auth callback (set at app-level), honor it
+    let callbackType: string | null = null;
     try {
-      const callbackType = sessionStorage.getItem('flow_auth_callback');
+      callbackType = sessionStorage.getItem('flow_auth_callback');
       if (callbackType === 'recovery') {
         setMode('signin');
         setStep('updatePassword');
@@ -67,13 +84,32 @@ const AuthPage = () => {
     }
 
     // Direct URL-based detection (in case callback flag wasn't set)
-    if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery')) {
+    if (isRecoveryByUrl) {
       setMode('signin');
       setStep('updatePassword');
     }
 
+    // Ensure we establish a session from hash tokens when present (some recovery links
+    // land on the root URL and rely on hash-based implicit tokens).
+    // This makes supabase.auth.updateUser(...) reliable.
+    if ((callbackType === 'recovery' || isRecoveryByUrl) && accessToken && refreshToken) {
+      void supabase.auth
+        .setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) {
+            toast.error('Reset link is invalid or expired. Please request a new one.');
+            setStep('auth');
+            return;
+          }
+          // Drop tokens from the URL after consuming them
+          window.history.replaceState({}, document.title, '/auth');
+        });
+    }
+
     // Listen for PASSWORD_RECOVERY auth event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth event:', event, session?.user?.email);
 
       if (event === 'PASSWORD_RECOVERY') {
