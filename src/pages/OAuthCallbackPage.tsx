@@ -95,16 +95,23 @@ export default function OAuthCallbackPage() {
 
         if (cancelled) return;
         setStatus("success");
-        setMessage("Signed in. You can close this window.");
 
-        // Wait a bit longer before auto-closing to ensure message delivery
+        const hasOpener = !!window.opener;
+        setMessage(hasOpener ? "Signed in. You can close this window." : "Signed in. Redirecting…");
+
+        // If we were opened as a popup, try to close (best-effort).
+        // Otherwise (same-tab flow), continue into the app.
         window.setTimeout(() => {
           try {
-            window.close();
+            if (hasOpener) {
+              window.close();
+            } else {
+              window.location.replace("/connect");
+            }
           } catch {
-            // ignore
+            if (!hasOpener) window.location.assign("/connect");
           }
-        }, 800);
+        }, hasOpener ? 800 : 200);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Sign-in failed";
         if (cancelled) return;
