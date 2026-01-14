@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const liveReloadUrl = process.env.CAP_SERVER_URL;
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.4f80439d456c47d48afef4444d0b35a2',
+  appId: 'app.lovable.flow4f80439d456c47d48afef4444d0b35a2',
   appName: 'FLOW',
   webDir: 'dist',
   // For native testing, we default to bundled web assets (dist).
