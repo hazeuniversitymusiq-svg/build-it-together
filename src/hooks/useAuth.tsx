@@ -6,10 +6,14 @@ import { Browser } from '@capacitor/browser';
 import { App as CapApp } from '@capacitor/app';
 import { toast } from 'sonner';
 
-// For native apps, we use a web redirect that's allowed in the backend
-// The app will intercept this URL when it opens via universal link handling
+// Deep-link callback handled by the app (Capacitor appUrlOpen listener)
 const NATIVE_OAUTH_REDIRECT = 'flow://auth/callback';
+
+// Web redirect used for browser flows
 const WEB_OAUTH_REDIRECT = `${typeof window !== 'undefined' ? window.location.origin : ''}/auth`;
+
+// Native OAuth needs an HTTPS redirect; we bridge back into the app via this backend function
+const NATIVE_OAUTH_BRIDGE_REDIRECT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-bridge`;
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -134,13 +138,12 @@ export function useAuth() {
     const isNative = Capacitor.isNativePlatform();
 
     if (isNative) {
-      // For native, we use skipBrowserRedirect and open in-app browser
-      // The redirect goes to the web URL, but the in-app browser stays open
-      // and we can detect when the URL changes to include auth tokens
+      // On native, we must use an HTTPS redirect (required by the auth backend),
+      // then our oauth-bridge function bounces back into the app via flow://.
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: WEB_OAUTH_REDIRECT,
+          redirectTo: NATIVE_OAUTH_BRIDGE_REDIRECT,
           skipBrowserRedirect: true,
         },
       });
@@ -149,8 +152,7 @@ export function useAuth() {
       if (!data?.url) return { error: new Error('Missing OAuth URL') as any };
 
       try {
-        // Open in-app browser for OAuth
-        await Browser.open({ 
+        await Browser.open({
           url: data.url,
           windowName: '_self',
         });
