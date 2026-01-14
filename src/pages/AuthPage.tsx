@@ -159,6 +159,68 @@ const AuthPage = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      setErrors({ email: 'Please enter your email first' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success('Password reset email sent! Check your inbox.');
+    } catch (error) {
+      toast.error('Something went wrong');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+
+    if (newPassword.length < 6) {
+      setErrors({ password: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setErrors({ password: 'Passwords do not match' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success('Password updated! You can now sign in.');
+      setStep('auth');
+      setMode('signin');
+      setPassword(newPassword);
+    } catch (error) {
+      toast.error('Something went wrong');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -315,6 +377,20 @@ const AuthPage = () => {
                 )}
               </div>
 
+              {mode === 'signin' && (
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={handleForgotPassword}
+                    disabled={isSubmitting}
+                    className="text-sm text-muted-foreground p-0 h-auto"
+                  >
+                    Forgot password?
+                  </Button>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 disabled={isSubmitting || !email || !password}
@@ -347,6 +423,140 @@ const AuthPage = () => {
                   : 'Already have an account? Sign in'}
               </Button>
             </motion.div>
+          </motion.div>
+        )}
+
+        {step === 'reset' && (
+          <motion.div
+            key="reset-step"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full relative z-10"
+          >
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-3xl font-bold text-foreground tracking-tight mb-4"
+            >
+              Check your email
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-base text-muted-foreground mb-8"
+            >
+              We sent a password reset link to <strong>{email}</strong>
+            </motion.p>
+
+            <Button
+              onClick={() => setStep('auth')}
+              variant="outline"
+              className="w-full h-14 text-base font-medium rounded-2xl"
+            >
+              Back to sign in
+            </Button>
+          </motion.div>
+        )}
+
+        {step === 'updatePassword' && (
+          <motion.div
+            key="update-password-step"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full relative z-10"
+          >
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-3xl font-bold text-foreground tracking-tight mb-4"
+            >
+              Set new password
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-base text-muted-foreground mb-8"
+            >
+              Enter your new password below
+            </motion.p>
+
+            <motion.form
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              onSubmit={handleUpdatePassword}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  New Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="h-14 text-base pl-12 pr-12 rounded-2xl border-border"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-14 text-base pl-12 pr-12 rounded-2xl border-border"
+                    autoComplete="new-password"
+                  />
+                </div>
+                {errors.password && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-destructive"
+                  >
+                    {errors.password}
+                  </motion.p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting || !newPassword || !confirmPassword}
+                className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora hover:opacity-90 transition-opacity"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Update password'
+                )}
+              </Button>
+            </motion.form>
           </motion.div>
         )}
 
