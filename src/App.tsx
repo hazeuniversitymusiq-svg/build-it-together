@@ -35,37 +35,35 @@ import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import QuickConnectPage from "./pages/QuickConnectPage";
 import NotFound from "./pages/NotFound";
 
-// Component to handle password recovery redirects at app level
+// Component to handle password recovery redirects at app level - runs FIRST
 const RecoveryRedirect = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Check URL for recovery tokens
     const hash = window.location.hash;
     const search = window.location.search;
     const fullUrl = hash + search;
 
-    if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery')) {
+    // Immediately redirect recovery links to /auth BEFORE anything else renders
+    if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery') || 
+        fullUrl.includes('access_token=') || fullUrl.includes('token_hash=')) {
       if (location.pathname !== '/auth') {
         navigate(`/auth${search}${hash}`, { replace: true });
+        return;
       }
-      return;
     }
 
     // Listen for PASSWORD_RECOVERY event from Supabase auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // Supabase has processed the recovery link, redirect to /auth
         if (location.pathname !== '/auth') {
           navigate('/auth', { replace: true });
         }
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [navigate, location]);
 
   return null;
