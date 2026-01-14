@@ -6,7 +6,10 @@ import { Browser } from '@capacitor/browser';
 import { App as CapApp } from '@capacitor/app';
 import { toast } from 'sonner';
 
+// For native apps, we use a web redirect that's allowed in the backend
+// The app will intercept this URL when it opens via universal link handling
 const NATIVE_OAUTH_REDIRECT = 'flow://auth/callback';
+const WEB_OAUTH_REDIRECT = `${typeof window !== 'undefined' ? window.location.origin : ''}/auth`;
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -57,21 +60,30 @@ export function useAuth() {
 
     // Capacitor listener registration is async
     CapApp.addListener('appUrlOpen', async ({ url }) => {
-      if (!url || !url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
+      // Handle both custom scheme and universal link callbacks
+      if (!url) return;
+      
+      const isOAuthCallback = url.startsWith(NATIVE_OAUTH_REDIRECT) || 
+                               url.includes('/auth') && (url.includes('code=') || url.includes('access_token='));
+      
+      if (!isOAuthCallback) return;
 
       try {
         const parsed = new URL(url);
 
-        // PKCE/code flow
+        // Check for errors
         const errorDescription =
-          parsed.searchParams.get('error_description') || parsed.searchParams.get('error');
-        const code = parsed.searchParams.get('code');
+          parsed.searchParams.get('error_description') || 
+          parsed.searchParams.get('error') ||
+          parsed.hash && new URLSearchParams(parsed.hash.replace(/^#/, '')).get('error_description');
 
         if (errorDescription) {
           toast.error(decodeURIComponent(errorDescription));
           return;
         }
 
+        // PKCE/code flow
+        const code = parsed.searchParams.get('code');
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
@@ -103,8 +115,6 @@ export function useAuth() {
           refreshSession();
           return;
         }
-
-        toast.error('Missing OAuth response');
       } catch (e) {
         console.error('[OAuth callback]', e);
       } finally {
@@ -124,10 +134,13 @@ export function useAuth() {
     const isNative = Capacitor.isNativePlatform();
 
     if (isNative) {
+      // For native, we use skipBrowserRedirect and open in-app browser
+      // The redirect goes to the web URL, but the in-app browser stays open
+      // and we can detect when the URL changes to include auth tokens
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: NATIVE_OAUTH_REDIRECT,
+          redirectTo: WEB_OAUTH_REDIRECT,
           skipBrowserRedirect: true,
         },
       });
@@ -136,8 +149,11 @@ export function useAuth() {
       if (!data?.url) return { error: new Error('Missing OAuth URL') as any };
 
       try {
-        // This opens an in-app Safari view on iOS (default browser setting doesn't matter)
-        await Browser.open({ url: data.url });
+        // Open in-app browser for OAuth
+        await Browser.open({ 
+          url: data.url,
+          windowName: '_self',
+        });
         return { error: null };
       } catch (e) {
         return {
@@ -154,7 +170,7 @@ export function useAuth() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: WEB_OAUTH_REDIRECT,
       },
     });
     return { error };
