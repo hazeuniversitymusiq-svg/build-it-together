@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { SecurityProvider } from "@/contexts/SecurityContext";
 import { IntentProvider } from "@/contexts/IntentContext";
 import { OrchestrationProvider } from "@/contexts/OrchestrationContext";
@@ -34,23 +35,37 @@ import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import QuickConnectPage from "./pages/QuickConnectPage";
 import NotFound from "./pages/NotFound";
 
-// Component to handle password recovery redirects
+// Component to handle password recovery redirects at app level
 const RecoveryRedirect = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    // Check URL for recovery tokens
     const hash = window.location.hash;
     const search = window.location.search;
     const fullUrl = hash + search;
 
-    // Check if this is a password recovery link
     if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery')) {
-      // Redirect to /auth with the hash/search params preserved
       if (location.pathname !== '/auth') {
         navigate(`/auth${search}${hash}`, { replace: true });
       }
+      return;
     }
+
+    // Listen for PASSWORD_RECOVERY event from Supabase auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Supabase has processed the recovery link, redirect to /auth
+        if (location.pathname !== '/auth') {
+          navigate('/auth', { replace: true });
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate, location]);
 
   return null;

@@ -48,36 +48,45 @@ const AuthPage = () => {
   }, [user, loading, navigate, step]);
 
   useEffect(() => {
-    // Password recovery links can come in different formats:
-    // 1. Hash fragment: #access_token=...&type=recovery
-    // 2. Query params: ?type=recovery&access_token=...
-    // 3. After Supabase processes: the session will be set automatically
+    // Check URL for recovery tokens first
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     const search = typeof window !== 'undefined' ? window.location.search : '';
     const fullUrl = hash + search;
 
-    // Check for recovery token in URL
     if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery')) {
       setMode('signin');
       setStep('updatePassword');
-      return;
     }
 
-    // Also listen for auth state changes to catch recovery sessions
-    const checkRecoverySession = async () => {
+    // Listen for PASSWORD_RECOVERY auth event from Supabase
+    // This fires when user clicks recovery link and Supabase processes it
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, session?.user?.email);
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        // User came from a password reset link - show update password form
+        setStep('updatePassword');
+      }
+    });
+
+    // Also check if there's an existing session that came from recovery
+    const checkExistingRecoverySession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      // Supabase sets a special flag when the session came from a recovery link
       if (session?.user?.recovery_sent_at) {
         const recoveryTime = new Date(session.user.recovery_sent_at).getTime();
         const now = Date.now();
-        // If recovery was sent within the last hour, show update password form
-        if (now - recoveryTime < 3600000) {
+        // If recovery was sent within the last 10 minutes, show update password form
+        if (now - recoveryTime < 600000) {
           setStep('updatePassword');
         }
       }
     };
     
-    checkRecoverySession();
+    checkExistingRecoverySession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
