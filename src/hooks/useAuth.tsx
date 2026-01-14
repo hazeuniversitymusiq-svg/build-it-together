@@ -301,10 +301,10 @@ export function useAuth() {
       const poll = window.setInterval(() => {
         if (!popup || settled) return;
         if (popup.closed && closeGraceTimer == null) {
-          // Give messages a brief grace period to arrive after the window closes.
+          // Give messages a longer grace period to arrive after the window closes.
           closeGraceTimer = window.setTimeout(() => {
             finish({ ok: false, message: 'Sign-in window was closed.' });
-          }, 1200);
+          }, 2500);
         }
       }, 250);
       cleanups.push(() => window.clearInterval(poll));

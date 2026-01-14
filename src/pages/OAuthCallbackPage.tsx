@@ -17,34 +17,39 @@ export default function OAuthCallbackPage() {
       | { type: "code"; code: string }
       | { type: "tokens"; access_token: string; refresh_token: string };
 
-    const postResult = (payload: Payload) => {
-      // Attempt BroadcastChannel first (fast path), but ALSO fall back to opener postMessage.
-      if (typeof BroadcastChannel !== "undefined") {
-        try {
-          const channel = new BroadcastChannel("flow_oauth");
-          channel.postMessage(payload);
-          channel.close();
-        } catch {
-          // ignore
-        }
-      }
-
-      // Also try window.opener postMessage as fallback
-      if (window.opener) {
-        try {
-          if (payload.type === "tokens") {
-            window.opener.postMessage({ type: "FLOW_OAUTH_TOKENS", ...payload }, "*");
-          } else if (payload.type === "code") {
-            window.opener.postMessage({ type: "FLOW_OAUTH_CODE", code: payload.code }, "*");
-          } else if (payload.type === "error") {
-            window.opener.postMessage({ type: "FLOW_OAUTH_ERROR", message: payload.message }, "*");
-          } else {
-            window.opener.postMessage({ type: "FLOW_OAUTH_DONE" }, "*");
+    const postResult = (payload: Payload): Promise<void> => {
+      return new Promise((resolve) => {
+        // Post via BroadcastChannel
+        if (typeof BroadcastChannel !== "undefined") {
+          try {
+            const channel = new BroadcastChannel("flow_oauth");
+            channel.postMessage(payload);
+            channel.close();
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
-      }
+
+        // Also try window.opener postMessage as fallback
+        if (window.opener) {
+          try {
+            if (payload.type === "tokens") {
+              window.opener.postMessage({ type: "FLOW_OAUTH_TOKENS", ...payload }, "*");
+            } else if (payload.type === "code") {
+              window.opener.postMessage({ type: "FLOW_OAUTH_CODE", code: payload.code }, "*");
+            } else if (payload.type === "error") {
+              window.opener.postMessage({ type: "FLOW_OAUTH_ERROR", message: payload.message }, "*");
+            } else {
+              window.opener.postMessage({ type: "FLOW_OAUTH_DONE" }, "*");
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // Give time for message delivery before resolving
+        setTimeout(resolve, 100);
+      });
     };
 
     const run = async () => {
@@ -60,8 +65,7 @@ export default function OAuthCallbackPage() {
           throw new Error(decodeURIComponent(errorDescription));
         }
 
-        // In this top-level window (opened from /oauth/start), we can safely exchange
-        // the code for a session because the PKCE verifier lives in this same context.
+        // Exchange code for session in this top-level window
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
@@ -70,18 +74,20 @@ export default function OAuthCallbackPage() {
           const session = data.session;
           if (!session) throw new Error("No session found after redirect.");
 
-          postResult({
+          // Post tokens back to opener and wait for delivery
+          await postResult({
             type: "tokens",
             access_token: session.access_token,
             refresh_token: session.refresh_token,
           });
         } else {
+          // Check for hash tokens (implicit flow)
           const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
           const accessToken = hashParams.get("access_token");
           const refreshToken = hashParams.get("refresh_token");
 
           if (accessToken && refreshToken) {
-            postResult({ type: "tokens", access_token: accessToken, refresh_token: refreshToken });
+            await postResult({ type: "tokens", access_token: accessToken, refresh_token: refreshToken });
           } else {
             throw new Error("Missing OAuth response.");
           }
@@ -91,19 +97,20 @@ export default function OAuthCallbackPage() {
         setStatus("success");
         setMessage("Signed in. You can close this window.");
 
+        // Wait a bit longer before auto-closing to ensure message delivery
         window.setTimeout(() => {
           try {
             window.close();
           } catch {
             // ignore
           }
-        }, 250);
+        }, 800);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Sign-in failed";
         if (cancelled) return;
         setStatus("error");
         setMessage(msg);
-        postResult({ type: "error", message: msg });
+        await postResult({ type: "error", message: msg });
       }
     };
 
