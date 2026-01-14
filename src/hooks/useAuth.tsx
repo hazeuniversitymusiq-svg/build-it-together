@@ -168,14 +168,32 @@ export function useAuth() {
       }
     }
 
-    // Web
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Web (also works reliably inside the Lovable preview iframe)
+    const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: WEB_OAUTH_REDIRECT,
+        // Handle navigation ourselves so the flow works even when the app is
+        // embedded (OAuth providers often block running inside iframes).
+        skipBrowserRedirect: true,
       },
     });
-    return { error };
+
+    if (error) return { error };
+    if (!data?.url) return { error: new Error('Missing OAuth URL') as any };
+
+    if (isInIframe) {
+      const opened = window.open(data.url, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        toast.error('Popup blocked. Please allow popups, then try again.');
+      }
+      return { error: null };
+    }
+
+    window.location.assign(data.url);
+    return { error: null };
   };
 
   const signOut = async () => {
