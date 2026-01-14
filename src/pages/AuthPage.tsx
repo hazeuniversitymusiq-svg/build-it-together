@@ -15,7 +15,7 @@ import { z } from 'zod';
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
-type AuthStep = 'auth' | 'security';
+type AuthStep = 'auth' | 'security' | 'reset' | 'updatePassword';
 type AuthMode = 'signin' | 'signup';
 
 const AuthPage = () => {
@@ -29,6 +29,10 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  // Password recovery
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   // Security settings
   const [biometricEnabled, setBiometricEnabled] = useState(true);
@@ -42,6 +46,17 @@ const AuthPage = () => {
       navigate('/connect', { replace: true });
     }
   }, [user, loading, navigate, step]);
+
+  useEffect(() => {
+    // Password recovery links return with type=recovery in the URL
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+
+    if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+      setMode('signin');
+      setStep('updatePassword');
+    }
+  }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
