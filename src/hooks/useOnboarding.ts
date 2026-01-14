@@ -10,6 +10,24 @@ import { useState, useEffect, useCallback } from 'react';
 const ONBOARDING_KEY = 'flow_onboarding_completed';
 const ONBOARDING_STEP_KEY = 'flow_onboarding_step';
 
+// Check if URL contains recovery/auth tokens that should bypass onboarding
+function isAuthFlowUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hash = window.location.hash;
+  const search = window.location.search;
+  const fullUrl = hash + search;
+  
+  // Skip onboarding for password recovery, magic links, etc.
+  return (
+    fullUrl.includes('type=recovery') ||
+    fullUrl.includes('type%3Drecovery') ||
+    fullUrl.includes('type=signup') ||
+    fullUrl.includes('type=magiclink') ||
+    fullUrl.includes('access_token=') ||
+    fullUrl.includes('token_hash=')
+  );
+}
+
 export function useOnboarding() {
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(true);
@@ -17,6 +35,14 @@ export function useOnboarding() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Always skip onboarding for auth flow URLs (password reset, magic links, etc.)
+    if (isAuthFlowUrl()) {
+      setHasCompleted(true);
+      setIsFirstTime(false);
+      setIsLoading(false);
+      return;
+    }
+
     const completed = localStorage.getItem(ONBOARDING_KEY);
     const savedStep = localStorage.getItem(ONBOARDING_STEP_KEY);
     
