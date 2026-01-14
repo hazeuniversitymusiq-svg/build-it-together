@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { SecurityProvider } from "@/contexts/SecurityContext";
 import { IntentProvider } from "@/contexts/IntentContext";
 import { OrchestrationProvider } from "@/contexts/OrchestrationContext";
@@ -32,6 +33,28 @@ import FlowCardActivityPage from "./pages/FlowCardActivityPage";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import QuickConnectPage from "./pages/QuickConnectPage";
 import NotFound from "./pages/NotFound";
+
+// Component to handle password recovery redirects
+const RecoveryRedirect = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const search = window.location.search;
+    const fullUrl = hash + search;
+
+    // Check if this is a password recovery link
+    if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery')) {
+      // Redirect to /auth with the hash/search params preserved
+      if (location.pathname !== '/auth') {
+        navigate(`/auth${search}${hash}`, { replace: true });
+      }
+    }
+  }, [navigate, location]);
+
+  return null;
+};
 
 const queryClient = new QueryClient();
 
@@ -87,6 +110,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <DemoProvider>
+                <RecoveryRedirect />
                 <OnboardingFlow />
                 <AnimatedRoutes />
               </DemoProvider>
