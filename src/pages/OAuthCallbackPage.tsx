@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CircleCheck, CircleX } from "lucide-react";
 
 type Status = "working" | "success" | "error";
@@ -11,7 +10,13 @@ export default function OAuthCallbackPage() {
   useEffect(() => {
     let cancelled = false;
 
-    const postResult = (payload: { type: "done" } | { type: "error"; message: string }) => {
+    type Payload =
+      | { type: "done" }
+      | { type: "error"; message: string }
+      | { type: "code"; code: string }
+      | { type: "tokens"; access_token: string; refresh_token: string };
+
+    const postResult = (payload: Payload) => {
       // Primary: BroadcastChannel (works even when the opener is null due to noopener)
       if (typeof BroadcastChannel !== "undefined") {
         try {
@@ -26,8 +31,23 @@ export default function OAuthCallbackPage() {
 
       // Fallback: window.opener postMessage (requires popup NOT opened with noopener)
       try {
+        if (payload.type === "code") {
+          window.opener?.postMessage({ type: "FLOW_OAUTH_CODE", code: payload.code }, window.location.origin);
+          return;
+        }
+        if (payload.type === "tokens") {
+          window.opener?.postMessage(
+            { type: "FLOW_OAUTH_TOKENS", access_token: payload.access_token, refresh_token: payload.refresh_token },
+            window.location.origin
+          );
+          return;
+        }
+
         window.opener?.postMessage(
-          { type: payload.type === "done" ? "FLOW_OAUTH_DONE" : "FLOW_OAUTH_ERROR", message: "message" in payload ? payload.message : undefined },
+          {
+            type: payload.type === "done" ? "FLOW_OAUTH_DONE" : "FLOW_OAUTH_ERROR",
+            message: payload.type === "error" ? payload.message : undefined,
+          },
           window.location.origin
         );
       } catch {
@@ -48,33 +68,28 @@ export default function OAuthCallbackPage() {
           throw new Error(decodeURIComponent(errorDescription));
         }
 
+        // IMPORTANT:
+        // Do NOT exchange the code in this window.
+        // In embedded/iframe contexts, storage can be partitioned, and PKCE verifiers
+        // live in the original window. We send the OAuth payload back so the opener
+        // can finalize the session in the correct context.
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
+          postResult({ type: "code", code });
         } else {
           const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
           const accessToken = hashParams.get("access_token");
           const refreshToken = hashParams.get("refresh_token");
 
           if (accessToken && refreshToken) {
-            const { error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            if (error) throw error;
+            postResult({ type: "tokens", access_token: accessToken, refresh_token: refreshToken });
           } else {
-            // Last resort: maybe cookies were set by the auth server
-            const { data } = await supabase.auth.getSession();
-            if (!data.session) {
-              throw new Error("No session found after redirect.");
-            }
+            throw new Error("Missing OAuth response.");
           }
         }
 
         if (cancelled) return;
         setStatus("success");
-        setMessage("Signed in. You can close this window.");
-        postResult({ type: "done" });
+        setMessage("Almost done — return to the original tab to continue.");
 
         // Best-effort close (may be blocked if opened as a tab)
         window.setTimeout(() => {
