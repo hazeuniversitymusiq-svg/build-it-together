@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SecurityProvider } from "@/contexts/SecurityContext";
 import { IntentProvider } from "@/contexts/IntentContext";
@@ -40,23 +40,41 @@ const RecoveryRedirect = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const hash = window.location.hash;
-    const search = window.location.search;
-    const fullUrl = hash + search;
+  const hash = window.location.hash;
+  const search = window.location.search;
+  const fullUrl = hash + search;
 
-    // Immediately redirect recovery links to /auth BEFORE anything else renders
-    if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery') || 
-        fullUrl.includes('access_token=') || fullUrl.includes('token_hash=')) {
-      if (location.pathname !== '/auth') {
-        navigate(`/auth${search}${hash}`, { replace: true });
-        return;
-      }
+  const isAuthCallback =
+    fullUrl.includes('type=recovery') ||
+    fullUrl.includes('type%3Drecovery') ||
+    fullUrl.includes('access_token=') ||
+    fullUrl.includes('refresh_token=') ||
+    fullUrl.includes('token_hash=') ||
+    fullUrl.includes('code=') ||
+    fullUrl.includes('error_code=') ||
+    fullUrl.includes('error_description=');
+
+  const isRecovery = fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery');
+
+  // Redirect during render (no flash of Welcome/Onboarding)
+  if (isAuthCallback && location.pathname !== '/auth') {
+    try {
+      sessionStorage.setItem('flow_auth_callback', isRecovery ? 'recovery' : 'auth');
+    } catch {
+      // ignore
     }
+    return <Navigate to={`/auth${search}${hash}`} replace />;
+  }
 
-    // Listen for PASSWORD_RECOVERY event from Supabase auth
+  useEffect(() => {
+    // Listen for PASSWORD_RECOVERY event from auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
+        try {
+          sessionStorage.setItem('flow_auth_callback', 'recovery');
+        } catch {
+          // ignore
+        }
         if (location.pathname !== '/auth') {
           navigate('/auth', { replace: true });
         }
@@ -64,7 +82,7 @@ const RecoveryRedirect = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, location]);
+  }, [navigate, location.pathname]);
 
   return null;
 };

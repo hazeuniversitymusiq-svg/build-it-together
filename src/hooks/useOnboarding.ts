@@ -13,23 +13,34 @@ const ONBOARDING_STEP_KEY = 'flow_onboarding_step';
 // Check if URL contains recovery/auth tokens that should bypass onboarding
 function isAuthFlowUrl(): boolean {
   if (typeof window === 'undefined') return false;
-  
+
   const pathname = window.location.pathname;
   const hash = window.location.hash;
   const search = window.location.search;
   const fullUrl = hash + search + pathname;
-  
+
+  let hasCallbackFlag = false;
+  try {
+    hasCallbackFlag = !!sessionStorage.getItem('flow_auth_callback');
+  } catch {
+    // ignore
+  }
+
   // Skip onboarding for:
-  // 1. User is on /auth page
-  // 2. Password recovery, magic links, etc.
+  // 1) /auth page
+  // 2) Any auth callback in progress (recovery/magic link/etc.)
+  // 3) Common auth tokens in URL
   return (
     pathname === '/auth' ||
+    hasCallbackFlag ||
     fullUrl.includes('type=recovery') ||
     fullUrl.includes('type%3Drecovery') ||
     fullUrl.includes('type=signup') ||
     fullUrl.includes('type=magiclink') ||
     fullUrl.includes('access_token=') ||
+    fullUrl.includes('refresh_token=') ||
     fullUrl.includes('token_hash=') ||
+    fullUrl.includes('code=') ||
     fullUrl.includes('error_code=') ||
     fullUrl.includes('error_description=')
   );
