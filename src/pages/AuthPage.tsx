@@ -68,6 +68,8 @@ const AuthPage = () => {
 
     const accessToken = hashParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token');
+    const code = searchParams.get('code');
+    const tokenHash = searchParams.get('token_hash') || hashParams.get('token_hash');
 
     // If we were redirected here from an auth callback (set at app-level), honor it
     let callbackType: string | null = null;
@@ -89,21 +91,42 @@ const AuthPage = () => {
       setStep('updatePassword');
     }
 
-    // Ensure we establish a session from hash tokens when present (some recovery links
-    // land on the root URL and rely on hash-based implicit tokens).
-    // This makes supabase.auth.updateUser(...) reliable.
-    if ((callbackType === 'recovery' || isRecoveryByUrl) && accessToken && refreshToken) {
-      void supabase.auth
-        .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
+    // Establish a recovery session from whatever the email link provides.
+    // Older links: access_token/refresh_token in hash.
+    // Newer links: code=... (PKCE) or token_hash=... (OTP verification).
+    if (isRecoveryByUrl || callbackType === 'recovery') {
+      if (accessToken && refreshToken) {
+        void supabase.auth
+          .setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ error }) => {
+            if (error) {
+              toast.error('Reset link is invalid or expired. Please request a new one.');
+              setStep('auth');
+              return;
+            }
+            window.history.replaceState({}, document.title, '/auth');
+          });
+      } else if (code) {
+        void supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
           if (error) {
             toast.error('Reset link is invalid or expired. Please request a new one.');
             setStep('auth');
             return;
           }
-          // Drop tokens from the URL after consuming them
           window.history.replaceState({}, document.title, '/auth');
         });
+      } else if (tokenHash) {
+        void supabase.auth
+          .verifyOtp({ type: 'recovery', token_hash: tokenHash })
+          .then(({ error }) => {
+            if (error) {
+              toast.error('Reset link is invalid or expired. Please request a new one.');
+              setStep('auth');
+              return;
+            }
+            window.history.replaceState({}, document.title, '/auth');
+          });
+      }
     }
 
     // Listen for PASSWORD_RECOVERY auth event

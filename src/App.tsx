@@ -15,6 +15,7 @@ import AppLayout from "./components/layout/AppLayout";
 import WelcomePage from "./pages/WelcomePage";
 import AuthPage from "./pages/AuthPage";
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
+import OAuthStartPage from "./pages/OAuthStartPage";
 import AutoSyncPage from "./pages/AutoSyncPage";
 import HomePage from "./pages/HomePage";
 import ScanPage from "./pages/ScanPage";
@@ -106,6 +107,7 @@ const AnimatedRoutes = () => {
         {/* Streamlined Onboarding: Welcome → Auth → Quick Connect → Home */}
         <Route path="/" element={<PageTransition><WelcomePage /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
+        <Route path="/oauth/start" element={<OAuthStartPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/connect" element={<PageTransition><QuickConnectPage /></PageTransition>} />
         <Route path="/auto-sync" element={<PageTransition><AutoSyncPage /></PageTransition>} />
