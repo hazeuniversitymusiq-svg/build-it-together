@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CircleCheck, CircleX } from "lucide-react";
 
 type Status = "working" | "success" | "error";
@@ -68,13 +69,21 @@ export default function OAuthCallbackPage() {
           throw new Error(decodeURIComponent(errorDescription));
         }
 
-        // IMPORTANT:
-        // Do NOT exchange the code in this window.
-        // In embedded/iframe contexts, storage can be partitioned, and PKCE verifiers
-        // live in the original window. We send the OAuth payload back so the opener
-        // can finalize the session in the correct context.
+        // In this top-level window (opened from /oauth/start), we can safely exchange
+        // the code for a session because the PKCE verifier lives in this same context.
         if (code) {
-          postResult({ type: "code", code });
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+
+          const { data } = await supabase.auth.getSession();
+          const session = data.session;
+          if (!session) throw new Error("No session found after redirect.");
+
+          postResult({
+            type: "tokens",
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          });
         } else {
           const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
           const accessToken = hashParams.get("access_token");
@@ -89,9 +98,8 @@ export default function OAuthCallbackPage() {
 
         if (cancelled) return;
         setStatus("success");
-        setMessage("Almost done — return to the original tab to continue.");
+        setMessage("Signed in. You can close this window.");
 
-        // Best-effort close (may be blocked if opened as a tab)
         window.setTimeout(() => {
           try {
             window.close();

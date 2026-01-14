@@ -184,24 +184,11 @@ export function useAuth() {
     }
 
     // Embedded previews: complete OAuth in a separate top-level window.
-    // We redirect that window back to /oauth/callback, which will broadcast the OAuth
-    // payload (code/tokens) back here so *this* context can finalize the session.
-    const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/oauth/callback`;
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        // Handle navigation ourselves so the flow works even when the app is
-        // embedded (OAuth providers often block running inside iframes).
-        skipBrowserRedirect: true,
-      },
-    });
-
-    if (error) return { error };
-    if (!data?.url) return { error: new Error('Missing OAuth URL') as any };
-
-    const oauthUrl = data.url;
+    // We open an internal /oauth/start page in a new tab/window so PKCE storage
+    // lives in that top-level context (avoids storage partitioning issues in iframes).
+    // That page redirects to Google and back to /oauth/callback, which posts tokens
+    // back here so *this* context can finalize the session.
+    const oauthUrl = `${window.location.origin}/oauth/start`;
     const timeoutMs = 2 * 60 * 1000;
 
     const result = await new Promise<{ ok: true } | { ok: false; message: string }>((resolve) => {
