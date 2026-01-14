@@ -53,36 +53,33 @@ const AuthPage = () => {
     const search = typeof window !== 'undefined' ? window.location.search : '';
     const fullUrl = hash + search;
 
+    // If we were redirected here from an auth callback (set at app-level), honor it
+    try {
+      const callbackType = sessionStorage.getItem('flow_auth_callback');
+      if (callbackType === 'recovery') {
+        setMode('signin');
+        setStep('updatePassword');
+      }
+      // clear so it doesn't keep forcing state on future /auth visits
+      if (callbackType) sessionStorage.removeItem('flow_auth_callback');
+    } catch {
+      // ignore
+    }
+
+    // Direct URL-based detection (in case callback flag wasn't set)
     if (fullUrl.includes('type=recovery') || fullUrl.includes('type%3Drecovery')) {
       setMode('signin');
       setStep('updatePassword');
     }
 
-    // Listen for PASSWORD_RECOVERY auth event from Supabase
-    // This fires when user clicks recovery link and Supabase processes it
+    // Listen for PASSWORD_RECOVERY auth event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth event:', event, session?.user?.email);
-      
+
       if (event === 'PASSWORD_RECOVERY') {
-        // User came from a password reset link - show update password form
         setStep('updatePassword');
       }
     });
-
-    // Also check if there's an existing session that came from recovery
-    const checkExistingRecoverySession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.recovery_sent_at) {
-        const recoveryTime = new Date(session.user.recovery_sent_at).getTime();
-        const now = Date.now();
-        // If recovery was sent within the last 10 minutes, show update password form
-        if (now - recoveryTime < 600000) {
-          setStep('updatePassword');
-        }
-      }
-    };
-    
-    checkExistingRecoverySession();
 
     return () => {
       subscription.unsubscribe();
