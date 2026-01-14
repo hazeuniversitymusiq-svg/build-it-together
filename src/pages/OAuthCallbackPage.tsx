@@ -19,7 +19,6 @@ export default function OAuthCallbackPage() {
 
     const postResult = (payload: Payload) => {
       // Attempt BroadcastChannel first (fast path), but ALSO fall back to opener postMessage.
-      // In some browsers, browsing-context-group restrictions can prevent delivery.
       if (typeof BroadcastChannel !== "undefined") {
         try {
           const channel = new BroadcastChannel("flow_oauth");
@@ -30,6 +29,23 @@ export default function OAuthCallbackPage() {
         }
       }
 
+      // Also try window.opener postMessage as fallback
+      if (window.opener) {
+        try {
+          if (payload.type === "tokens") {
+            window.opener.postMessage({ type: "FLOW_OAUTH_TOKENS", ...payload }, "*");
+          } else if (payload.type === "code") {
+            window.opener.postMessage({ type: "FLOW_OAUTH_CODE", code: payload.code }, "*");
+          } else if (payload.type === "error") {
+            window.opener.postMessage({ type: "FLOW_OAUTH_ERROR", message: payload.message }, "*");
+          } else {
+            window.opener.postMessage({ type: "FLOW_OAUTH_DONE" }, "*");
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
 
     const run = async () => {
       try {
