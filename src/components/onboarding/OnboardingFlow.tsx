@@ -7,7 +7,7 @@
 
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Wallet, 
   CreditCard, 
@@ -92,6 +92,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 
 export function OnboardingFlow() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { enableDemoMode } = useDemo();
   const { 
     currentStep, 
@@ -130,7 +131,8 @@ export function OnboardingFlow() {
     navigate('/home');
   };
 
-  if (isLoading || hasCompleted) {
+  // Never show onboarding on /auth page
+  if (isLoading || hasCompleted || location.pathname === '/auth') {
     return null;
   }
 
