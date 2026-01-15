@@ -130,7 +130,6 @@ const AnimatedRoutes = () => {
         <Route path="/done/:transactionId" element={<PageTransition><DonePage /></PageTransition>} />
         <Route path="/request" element={<PageTransition><RequestMoneySurface /></PageTransition>} />
         <Route path="/receive" element={<PageTransition><ReceivePage /></PageTransition>} />
-        <Route path="/demo" element={<PageTransition><DemoPage /></PageTransition>} />
         <Route path="/partner" element={<PageTransition><PartnerPitchPage /></PageTransition>} />
         
         {/* Main App Routes (With Bottom Nav) */}
@@ -144,6 +143,8 @@ const AnimatedRoutes = () => {
           {/* Flow Card Routes (feature-flagged in component) */}
           <Route path="/flow-card" element={<PageTransition><FlowCardPage /></PageTransition>} />
           <Route path="/flow-card/activity" element={<PageTransition><FlowCardActivityPage /></PageTransition>} />
+          {/* Demo Page - needs bottom nav for navigation */}
+          <Route path="/demo" element={<PageTransition><DemoPage /></PageTransition>} />
         </Route>
         
         {/* Catch-all */}
