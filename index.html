@@ -26,6 +26,10 @@
       // Native/Capacitor fallback: if the JS bundle fails to start, show a diagnostic overlay.
       // This runs even when the module script below fails to load.
       (function () {
+        // Never show this in normal web (http/https) since it can trigger during slow loads.
+        var protocol = window.location.protocol;
+        if (protocol === 'http:' || protocol === 'https:') return;
+
         var errors = [];
         function asText(x) {
           try {
