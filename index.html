@@ -22,6 +22,101 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Native/Capacitor fallback: if the JS bundle fails to start, show a diagnostic overlay.
+      // This runs even when the module script below fails to load.
+      (function () {
+        var errors = [];
+        function asText(x) {
+          try {
+            if (typeof x === 'string') return x;
+            if (x && x.stack) return String(x.stack);
+            return JSON.stringify(x);
+          } catch (e) {
+            return String(x);
+          }
+        }
+
+        window.addEventListener(
+          'error',
+          function (e) {
+            errors.push(
+              'WINDOW.ERROR\n' +
+                'message: ' +
+                (e && e.message ? e.message : '(no message)') +
+                '\nfile: ' +
+                (e && e.filename ? e.filename : '') +
+                '\nline: ' +
+                (e && e.lineno ? e.lineno : '') +
+                ':' +
+                (e && e.colno ? e.colno : '')
+            );
+          },
+          true
+        );
+
+        window.addEventListener(
+          'unhandledrejection',
+          function (e) {
+            errors.push('UNHANDLED.REJECTION\nreason: ' + asText(e && e.reason));
+          },
+          true
+        );
+
+        window.setTimeout(function () {
+          var root = document.getElementById('root');
+          var empty = !root || root.childNodes.length === 0;
+          if (!empty) return;
+
+          var ov = document.createElement('div');
+          ov.id = 'flow-boot-overlay';
+          ov.style.position = 'fixed';
+          ov.style.left = '0';
+          ov.style.top = '0';
+          ov.style.right = '0';
+          ov.style.bottom = '0';
+          ov.style.zIndex = '2147483647';
+          ov.style.background = 'rgba(0,0,0,0.92)';
+          ov.style.color = '#fff';
+          ov.style.padding = '16px';
+          ov.style.overflow = 'auto';
+          ov.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+
+          var title = document.createElement('div');
+          title.style.fontSize = '14px';
+          title.style.fontWeight = '700';
+          title.style.marginBottom = '12px';
+          title.textContent = 'FLOW Native Boot Diagnostic';
+
+          var meta = document.createElement('div');
+          meta.style.opacity = '0.85';
+          meta.style.fontSize = '12px';
+          meta.style.marginBottom = '12px';
+          meta.textContent = 'url: ' + window.location.href;
+
+          var pre = document.createElement('pre');
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.style.fontSize = '12px';
+          pre.style.lineHeight = '1.35';
+          pre.textContent =
+            (errors.length ? errors.join('\n\n') : 'No JS errors captured. (Bundle may not be loading)') +
+            '\n\nuserAgent: ' +
+            navigator.userAgent;
+
+          var hint = document.createElement('div');
+          hint.style.opacity = '0.75';
+          hint.style.fontSize = '12px';
+          hint.style.marginTop = '12px';
+          hint.textContent = 'Screenshot this overlay and send it in chat.';
+
+          ov.appendChild(title);
+          ov.appendChild(meta);
+          ov.appendChild(pre);
+          ov.appendChild(hint);
+          document.body.appendChild(ov);
+        }, 2500);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
