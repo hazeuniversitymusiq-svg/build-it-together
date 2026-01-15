@@ -41,7 +41,7 @@ const ActionCard = ({
     <motion.button
       onClick={onClick}
       whileTap={{ scale: 0.97 }}
-      className={`flex flex-col items-center justify-center gap-3 p-5 rounded-3xl bg-gradient-to-br ${actionCardStyles[variant]} glass-card shadow-float transition-all duration-300`}
+      className={`flex flex-col items-center justify-center gap-3 p-5 rounded-3xl bg-gradient-to-br ${actionCardStyles[variant]} border border-white/40 shadow-float transition-all duration-300`}
     >
       <div className="w-11 h-11 rounded-2xl bg-white/80 dark:bg-white/10 flex items-center justify-center shadow-sm">
         {icon}
