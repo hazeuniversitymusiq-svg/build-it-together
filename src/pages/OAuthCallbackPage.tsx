@@ -32,15 +32,16 @@ export default function OAuthCallbackPage() {
 
         // Also try window.opener postMessage as fallback
         if (window.opener) {
+          const targetOrigin = window.location.origin;
           try {
             if (payload.type === "tokens") {
-              window.opener.postMessage({ type: "FLOW_OAUTH_TOKENS", ...payload }, "*");
+              window.opener.postMessage({ type: "FLOW_OAUTH_TOKENS", ...payload }, targetOrigin);
             } else if (payload.type === "code") {
-              window.opener.postMessage({ type: "FLOW_OAUTH_CODE", code: payload.code }, "*");
+              window.opener.postMessage({ type: "FLOW_OAUTH_CODE", code: payload.code }, targetOrigin);
             } else if (payload.type === "error") {
-              window.opener.postMessage({ type: "FLOW_OAUTH_ERROR", message: payload.message }, "*");
+              window.opener.postMessage({ type: "FLOW_OAUTH_ERROR", message: payload.message }, targetOrigin);
             } else {
-              window.opener.postMessage({ type: "FLOW_OAUTH_DONE" }, "*");
+              window.opener.postMessage({ type: "FLOW_OAUTH_DONE" }, targetOrigin);
             }
           } catch {
             // ignore

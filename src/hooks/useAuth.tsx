@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
@@ -20,6 +20,8 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const oauthPopupRef = useRef<Window | null>(null);
 
   const refreshSession = useCallback(async () => {
     const {
@@ -57,6 +59,82 @@ export function useAuth() {
     };
   }, [refreshSession]);
 
+  // Web (embedded iframe) OAuth receiver:
+  // Popup completes OAuth + exchanges code, then posts tokens back to this window.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleTokens = async (access_token: string, refresh_token: string) => {
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      try {
+        oauthPopupRef.current?.close();
+      } catch {
+        // ignore
+      } finally {
+        oauthPopupRef.current = null;
+      }
+
+      await refreshSession();
+    };
+
+    const onWindowMessage = async (event: MessageEvent) => {
+      const data = event.data as any;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'FLOW_OAUTH_TOKENS' && data.access_token && data.refresh_token) {
+        await handleTokens(String(data.access_token), String(data.refresh_token));
+      }
+
+      if (data.type === 'FLOW_OAUTH_ERROR' && data.message) {
+        toast.error(String(data.message));
+        try {
+          oauthPopupRef.current?.close();
+        } catch {
+          // ignore
+        } finally {
+          oauthPopupRef.current = null;
+        }
+      }
+    };
+
+    window.addEventListener('message', onWindowMessage);
+
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        channel = new BroadcastChannel('flow_oauth');
+        channel.onmessage = async (ev) => {
+          const payload = ev.data as any;
+          if (!payload || typeof payload !== 'object') return;
+
+          if (payload.type === 'tokens' && payload.access_token && payload.refresh_token) {
+            await handleTokens(String(payload.access_token), String(payload.refresh_token));
+          }
+
+          if (payload.type === 'error' && payload.message) {
+            toast.error(String(payload.message));
+          }
+        };
+      } catch {
+        channel = null;
+      }
+    }
+
+    return () => {
+      window.removeEventListener('message', onWindowMessage);
+      try {
+        channel?.close();
+      } catch {
+        // ignore
+      }
+    };
+  }, [refreshSession]);
+
   // Native OAuth callback handler (deep link)
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -67,10 +145,11 @@ export function useAuth() {
     CapApp.addListener('appUrlOpen', async ({ url }) => {
       // Handle both custom scheme and universal link callbacks
       if (!url) return;
-      
-      const isOAuthCallback = url.startsWith(NATIVE_OAUTH_REDIRECT) || 
-                               url.includes('/auth') && (url.includes('code=') || url.includes('access_token='));
-      
+
+      const isOAuthCallback =
+        url.startsWith(NATIVE_OAUTH_REDIRECT) ||
+        (url.includes('/auth') && (url.includes('code=') || url.includes('access_token=')));
+
       if (!isOAuthCallback) return;
 
       try {
@@ -78,9 +157,9 @@ export function useAuth() {
 
         // Check for errors
         const errorDescription =
-          parsed.searchParams.get('error_description') || 
+          parsed.searchParams.get('error_description') ||
           parsed.searchParams.get('error') ||
-          parsed.hash && new URLSearchParams(parsed.hash.replace(/^#/, '')).get('error_description');
+          (parsed.hash && new URLSearchParams(parsed.hash.replace(/^#/, '')).get('error_description'));
 
         if (errorDescription) {
           toast.error(decodeURIComponent(errorDescription));
@@ -162,9 +241,7 @@ export function useAuth() {
         return {
           error: (e instanceof Error
             ? e
-            : new Error(
-                'Failed to open browser. Run `npx cap sync ios` then rebuild in Xcode.'
-              )) as any,
+            : new Error('Failed to open browser. Run `npx cap sync ios` then rebuild in Xcode.')) as any,
         };
       }
     }
@@ -173,7 +250,6 @@ export function useAuth() {
     const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
     // Normal browser: let the auth client handle the redirect + URL parsing.
-    // (This avoids “returns to /auth but not signed in” when skipBrowserRedirect is true.)
     if (!isInIframe) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -184,11 +260,38 @@ export function useAuth() {
       return { error };
     }
 
-    // Embedded previews: complete OAuth in the SAME browsing context.
-    // Opening Google in a separate tab/window can sever window.opener due to COOP,
-    // preventing us from messaging tokens back to this iframe.
-    window.location.assign(`${window.location.origin}/oauth/start`);
-    return { error: null };
+    // Embedded previews (iframe): open a popup for Google (Google blocks iframe rendering),
+    // then receive tokens via postMessage/BroadcastChannel and set the session in THIS iframe.
+    const popupUrl = `${window.location.origin}/oauth/start`;
+
+    try {
+      const popup = window.open(
+        popupUrl,
+        'flow_oauth',
+        'popup=yes,width=520,height=680,top=80,left=80,scrollbars=yes,resizable=yes'
+      );
+
+      if (!popup) {
+        return { error: new Error('Popup blocked. Please allow popups and try again.') as any };
+      }
+
+      oauthPopupRef.current = popup;
+      try {
+        popup.focus();
+      } catch {
+        // ignore
+      }
+
+      return { error: null };
+    } catch {
+      // Fallback: try top navigation (may be blocked by iframe sandbox)
+      try {
+        window.top?.location.assign(popupUrl);
+        return { error: null };
+      } catch {
+        return { error: new Error('Unable to open sign-in window.') as any };
+      }
+    }
   };
 
   const signOut = async () => {
