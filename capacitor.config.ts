@@ -1,21 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const liveReloadUrl = process.env.CAP_SERVER_URL;
-
+// Native builds should load bundled web assets from /dist.
+// (Live reload can be added later, but keeping this off avoids white-screen issues
+// caused by a stale CAP_SERVER_URL pointing at an unreachable/locked page.)
 const config: CapacitorConfig = {
   appId: 'app.lovable.flow4f80439d456c47d48afef4444d0b35a2',
   appName: 'FLOW',
   webDir: 'dist',
-  // For native testing, we default to bundled web assets (dist).
-  // If you want live-reload, set CAP_SERVER_URL (e.g. http://localhost:8080)
-  ...(liveReloadUrl
-    ? {
-        server: {
-          url: liveReloadUrl,
-          cleartext: true,
-        },
-      }
-    : {}),
   plugins: {
     // Deep links and URL schemes
     App: {
