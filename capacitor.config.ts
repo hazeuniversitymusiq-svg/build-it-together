@@ -1,13 +1,21 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const liveReloadUrl = process.env.CAP_SERVER_URL;
+
 const config: CapacitorConfig = {
-  appId: 'app.lovable.4f80439d456c47d48afef4444d0b35a2',
+  appId: 'app.lovable.flow4f80439d456c47d48afef4444d0b35a2',
   appName: 'FLOW',
   webDir: 'dist',
-  server: {
-    url: 'https://4f80439d-456c-47d4-8afe-f4444d0b35a2.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
-  },
+  // For native testing, we default to bundled web assets (dist).
+  // If you want live-reload, set CAP_SERVER_URL (e.g. http://localhost:8080)
+  ...(liveReloadUrl
+    ? {
+        server: {
+          url: liveReloadUrl,
+          cleartext: true,
+        },
+      }
+    : {}),
   plugins: {
     // Deep links and URL schemes
     App: {
