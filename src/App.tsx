@@ -3,7 +3,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  HashRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { SecurityProvider } from "@/contexts/SecurityContext";
 import { IntentProvider } from "@/contexts/IntentContext";
@@ -36,6 +45,8 @@ import FlowCardActivityPage from "./pages/FlowCardActivityPage";
 import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
 import QuickConnectPage from "./pages/QuickConnectPage";
 import NotFound from "./pages/NotFound";
+
+const Router = Capacitor.isNativePlatform() ? HashRouter : BrowserRouter;
 
 // Component to handle password recovery redirects at app level - runs FIRST
 const RecoveryRedirect = () => {
@@ -150,13 +161,13 @@ const App = () => (
           <IntentProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <Router>
               <DemoProvider>
                 <RecoveryRedirect />
                 <OnboardingFlow />
                 <AnimatedRoutes />
               </DemoProvider>
-            </BrowserRouter>
+            </Router>
           </IntentProvider>
         </OrchestrationProvider>
       </SecurityProvider>
