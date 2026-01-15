@@ -38,9 +38,27 @@ const QRScanner = ({ onScan, onClose, isOpen, onMyCodePress }: QRScannerProps) =
     }
   }, []);
 
+  const [isSimulator, setIsSimulator] = useState(false);
+
   const startScanner = useCallback(async () => {
     setIsInitializing(true);
     setError(null);
+    setIsSimulator(false);
+
+    // Check if camera is available before trying to start
+    try {
+      const devices = await navigator.mediaDevices?.enumerateDevices?.();
+      const hasCamera = devices?.some(device => device.kind === 'videoinput');
+      
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !hasCamera) {
+        setIsInitializing(false);
+        setIsSimulator(true);
+        setError('Camera not available. Use test mode to simulate scans.');
+        return;
+      }
+    } catch {
+      // If we can't check, continue and let the scanner try
+    }
 
     try {
       if (!scannerRef.current) {
@@ -71,12 +89,19 @@ const QRScanner = ({ onScan, onClose, isOpen, onMyCodePress }: QRScannerProps) =
       console.error('Scanner start error:', e);
       setIsInitializing(false);
       
-      if (e.toString().includes('NotAllowedError') || e.toString().includes('Permission')) {
+      const errorStr = e?.toString?.() || '';
+      
+      if (errorStr.includes('NotAllowedError') || errorStr.includes('Permission')) {
         setError('Camera permission denied. Please allow camera access.');
-      } else if (e.toString().includes('NotFoundError')) {
-        setError('No camera found. Please ensure your device has a camera.');
+      } else if (errorStr.includes('NotFoundError') || errorStr.includes('NotReadableError')) {
+        setIsSimulator(true);
+        setError('Camera not available. Use test mode to simulate scans.');
+      } else if (errorStr.includes('not supported') || errorStr.includes('NotSupportedError')) {
+        setIsSimulator(true);
+        setError('Camera not supported in this environment. Use test mode.');
       } else {
-        setError('Failed to start camera. Please try again.');
+        setIsSimulator(true);
+        setError('Camera unavailable. Use test mode to test scanning.');
       }
     }
   }, [facingMode, onScan, stopScanner]);
@@ -254,12 +279,35 @@ const QRScanner = ({ onScan, onClose, isOpen, onMyCodePress }: QRScannerProps) =
                 <AlertCircle className="w-8 h-8 text-destructive" />
               </div>
               <p className="text-white mb-6">{error}</p>
-              <Button 
-                onClick={startScanner} 
-                className="aurora-gradient text-white border-0 shadow-glow-aurora"
-              >
-                Try Again
-              </Button>
+              <div className="flex flex-col gap-3">
+                {isSimulator ? (
+                  <>
+                    <Button 
+                      onClick={() => {
+                        onScan('flow://pay?merchant=TestMerchant&amount=25.00&currency=MYR');
+                        handleClose();
+                      }} 
+                      className="aurora-gradient text-white border-0 shadow-glow-aurora"
+                    >
+                      Simulate Test Scan
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={handleClose} 
+                      className="text-white border-white/20"
+                    >
+                      Close
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    onClick={startScanner} 
+                    className="aurora-gradient text-white border-0 shadow-glow-aurora"
+                  >
+                    Try Again
+                  </Button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
