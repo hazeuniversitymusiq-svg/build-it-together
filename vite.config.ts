@@ -5,6 +5,9 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Needed for Capacitor: when the app loads from file://, absolute "/assets/..." paths
+  // break and result in a blank screen. Relative asset paths fix this.
+  base: "./",
   server: {
     host: "::",
     port: 8080,
