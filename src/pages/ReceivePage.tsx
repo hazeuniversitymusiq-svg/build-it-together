@@ -32,13 +32,15 @@ import {
   CreditCard,
   CheckCircle2,
   PartyPopper,
-  Receipt
+  Receipt,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/useHaptics";
+import { SuccessCircle, SyncSpinner, PulsingDot } from "@/components/ui/micro-animations";
 
 // Destination wallet options (where receiver wants money to land)
 const DESTINATION_WALLETS = [
@@ -605,22 +607,18 @@ const ReceivePage = () => {
               </div>
             </div>
 
-            {/* Waiting Indicator */}
+            {/* Waiting Indicator with pulsing dot */}
             {isWaiting && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 mb-4"
+                className="flex items-center gap-3 mb-4 px-4 py-2 rounded-xl bg-aurora-purple/5"
               >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                >
-                  <RefreshCw className="w-5 h-5 text-aurora-purple" />
-                </motion.div>
+                <SyncSpinner size={20} className="text-aurora-purple" />
                 <p className="text-sm text-muted-foreground">
-                  Waiting for payment...
+                  Waiting for payment
                 </p>
+                <PulsingDot color="bg-aurora-purple" size="sm" />
               </motion.div>
             )}
 
@@ -698,21 +696,28 @@ const ReceivePage = () => {
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex-1 flex flex-col items-center justify-center px-6"
           >
-            {/* Success Animation */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
-              className="w-24 h-24 rounded-full bg-success/10 flex items-center justify-center mb-6"
-            >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                <CheckCircle2 className="w-14 h-14 text-success" />
-              </motion.div>
-            </motion.div>
+            {/* Success Animation with micro-animations */}
+            <div className="relative mb-6">
+              <SuccessCircle size={96} delay={0.1} />
+              
+              {/* Floating celebration sparkles */}
+              {[...Array(4)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ 
+                    opacity: [0, 1, 0],
+                    scale: [0, 1, 0.5],
+                    x: Math.cos(i * 90 * Math.PI / 180) * 50,
+                    y: Math.sin(i * 90 * Math.PI / 180) * 50,
+                  }}
+                  transition={{ delay: 0.6 + i * 0.1, duration: 0.8 }}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                >
+                  <Sparkles className="w-4 h-4 text-success" />
+                </motion.div>
+              ))}
+            </div>
 
             {/* Amount Received */}
             <motion.div

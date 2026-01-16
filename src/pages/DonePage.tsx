@@ -6,14 +6,15 @@
  */
 
 import { forwardRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
-import { Check, Share2, Home, Loader2, Receipt, Sparkles } from "lucide-react";
+import { Share2, Home, Loader2, Receipt, Sparkles, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import { format } from "date-fns";
+import { SuccessCircle, CountingNumber } from "@/components/ui/micro-animations";
 
 interface ReceiptData {
   amount: number;
@@ -159,50 +160,44 @@ const DonePage = forwardRef<HTMLDivElement>((_, ref) => {
       
       {/* Success Animation */}
       <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-        {/* Animated checkmark with glow */}
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ 
-            type: "spring",
-            stiffness: 200,
-            damping: 15,
-            delay: 0.1 
-          }}
-          className="relative mb-6"
-        >
-          {/* Outer glow ring */}
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1.2, opacity: 0.3 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="absolute inset-0 w-24 h-24 rounded-full bg-success blur-xl"
-          />
+        {/* Animated success with confetti-like sparkles */}
+        <div className="relative mb-6">
+          <SuccessCircle size={96} delay={0.1} />
           
-          {/* Main circle */}
-          <div className="relative w-24 h-24 rounded-full bg-success/20 flex items-center justify-center backdrop-blur-sm">
+          {/* Floating sparkles */}
+          {[...Array(6)].map((_, i) => (
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 300 }}
-              className="w-16 h-16 rounded-full bg-success flex items-center justify-center shadow-glow-success"
+              key={i}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ 
+                opacity: [0, 1, 0],
+                scale: [0, 1, 0.5],
+                x: Math.cos(i * 60 * Math.PI / 180) * 60,
+                y: Math.sin(i * 60 * Math.PI / 180) * 60,
+              }}
+              transition={{ 
+                delay: 0.5 + i * 0.1, 
+                duration: 1,
+                ease: "easeOut"
+              }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             >
-              <Check className="w-9 h-9 text-white" strokeWidth={3} />
+              <Sparkles className="w-4 h-4 text-success" />
             </motion.div>
-          </div>
+          ))}
           
-          {/* Sparkle */}
+          {/* Celebration particle */}
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="absolute -top-1 -right-1"
+            initial={{ scale: 0, opacity: 0, rotate: -20 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ delay: 0.7, type: "spring" }}
+            className="absolute -top-2 -right-4"
           >
-            <Sparkles className="w-6 h-6 text-success" />
+            <PartyPopper className="w-6 h-6 text-aurora-pink" />
           </motion.div>
-        </motion.div>
+        </div>
 
-        {/* Title */}
+        {/* Title with stagger */}
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -221,19 +216,43 @@ const DonePage = forwardRef<HTMLDivElement>((_, ref) => {
           Payment delivered successfully
         </motion.p>
 
-        {/* Receipt Card - Glass design */}
+        {/* Receipt Card - Glass design with counting animation */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="w-full max-w-sm glass-card rounded-3xl p-6 shadow-float-lg"
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
+          className="w-full max-w-sm glass-card rounded-3xl p-6 shadow-float-lg overflow-hidden relative"
         >
-          {/* Amount - Hero section */}
-          <div className="text-center pb-5 border-b border-border/50">
-            <p className="text-muted-foreground text-sm mb-2">Amount Paid</p>
-            <p className="text-4xl font-bold text-foreground tracking-tight">
-              {receiptData.currency} {receiptData.amount.toFixed(2)}
-            </p>
+          {/* Subtle shimmer on load */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+            initial={{ x: '-100%' }}
+            animate={{ x: '200%' }}
+            transition={{ delay: 0.8, duration: 1.2, ease: "easeInOut" }}
+          />
+          
+          {/* Amount - Hero section with counting effect */}
+          <div className="text-center pb-5 border-b border-border/50 relative">
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-muted-foreground text-sm mb-2"
+            >
+              Amount Paid
+            </motion.p>
+            <motion.p 
+              initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+              className="text-4xl font-bold text-foreground tracking-tight"
+            >
+              <CountingNumber 
+                value={receiptData.amount} 
+                prefix={`${receiptData.currency} `}
+                duration={0.8}
+              />
+            </motion.p>
           </div>
 
           {/* Details */}

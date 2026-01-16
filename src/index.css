@@ -556,4 +556,80 @@
   .flow-biometric-ring {
     animation: floatPulse 1.5s ease-in-out infinite;
   }
+
+  /* Ripple effect for buttons */
+  @keyframes ripple {
+    to {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+
+  /* Micro-animation: Pulse glow */
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--success) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 12px hsl(var(--success) / 0);
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  /* Micro-animation: Bounce in */
+  @keyframes bounceIn {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.15);
+    }
+    70% {
+      transform: scale(0.95);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-bounce-in {
+    animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  /* Micro-animation: Slide up fade */
+  @keyframes slideUpFade {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-up-fade {
+    animation: slideUpFade 0.4s ease-out;
+  }
+
+  /* Micro-animation: Count up blur */
+  @keyframes countBlur {
+    from {
+      filter: blur(8px);
+      opacity: 0;
+    }
+    to {
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-count-blur {
+    animation: countBlur 0.5s ease-out;
+  }
 }

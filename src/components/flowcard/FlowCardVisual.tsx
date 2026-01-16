@@ -8,8 +8,9 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, Fingerprint, Shield, Pause, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Wifi, Fingerprint, Shield, Pause, Eye, EyeOff, Copy, Check, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PulsingDot, ShimmerEffect } from '@/components/ui/micro-animations';
 import type { FlowCardStatus, FlowCardMode } from '@/hooks/useFlowCard';
 
 interface FlowCardVisualProps {
@@ -136,6 +137,20 @@ export function FlowCardVisual({
           {/* Glass overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-black/10" />
           
+          {/* Shimmer effect on active cards */}
+          {isActive && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ 
+                duration: 3, 
+                repeat: Infinity, 
+                repeatDelay: 2,
+                ease: "easeInOut" 
+              }}
+            />
+          )}
+          
           {/* Subtle pattern */}
           <div 
             className="absolute inset-0 opacity-5"
@@ -154,38 +169,54 @@ export function FlowCardVisual({
                 <p className="text-white/70 text-sm">{modeLabels[mode]}</p>
               </div>
               
-              {/* Status indicator */}
+              {/* Status indicator with pulse */}
               <motion.div 
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${
                   isActive ? 'bg-white/20' : 'bg-black/20'
                 }`}
-                animate={isActive ? { scale: [1, 1.02, 1] } : {}}
-                transition={{ duration: 2, repeat: Infinity }}
               >
-                <div className={`w-2 h-2 rounded-full ${
-                  isActive ? 'bg-green-400' : isSuspended ? 'bg-yellow-400' : 'bg-gray-400'
-                }`} />
+                <PulsingDot 
+                  color={isActive ? 'bg-green-400' : isSuspended ? 'bg-yellow-400' : 'bg-gray-400'} 
+                  size="sm" 
+                />
                 <span className="text-white text-xs font-medium">{config.label}</span>
               </motion.div>
             </div>
             
             {/* Chip & NFC */}
             <div className="flex items-center gap-4">
-              {/* Chip */}
-              <div className="w-12 h-9 rounded-md bg-gradient-to-br from-yellow-200/80 to-yellow-400/80 shadow-sm">
+              {/* Chip with subtle animation */}
+              <motion.div 
+                className="w-12 h-9 rounded-md bg-gradient-to-br from-yellow-200/80 to-yellow-400/80 shadow-sm overflow-hidden relative"
+                whileHover={{ scale: 1.05 }}
+              >
                 <div className="w-full h-full rounded-md border border-yellow-600/30 grid grid-cols-3 gap-0.5 p-1">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="bg-yellow-600/30 rounded-sm" />
+                    <motion.div 
+                      key={i} 
+                      className="bg-yellow-600/30 rounded-sm"
+                      initial={{ opacity: 0.3 }}
+                      animate={{ opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ duration: 2, delay: i * 0.1, repeat: Infinity }}
+                    />
                   ))}
                 </div>
-              </div>
+              </motion.div>
               
-              {/* NFC indicator */}
+              {/* NFC indicator with wave animation */}
               <motion.div
                 animate={isActive ? { opacity: [0.5, 1, 0.5] } : { opacity: 0.3 }}
                 transition={{ duration: 1.5, repeat: Infinity }}
+                className="relative"
               >
                 <Wifi size={24} className="text-white/80 rotate-90" />
+                {isActive && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-white/30"
+                    animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  />
+                )}
               </motion.div>
             </div>
             
