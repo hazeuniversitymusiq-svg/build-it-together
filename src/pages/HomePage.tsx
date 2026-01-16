@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Send, ArrowDownLeft, Receipt, Loader2 } from "lucide-react";
+import { Send, ArrowDownLeft, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
@@ -160,7 +160,7 @@ const HomePage = () => {
           position="bottom"
         >
           <QuickAction
-            icon={<Receipt className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
+            icon={<FileText className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
             label="Bills"
             onClick={() => !isDemoMode && navigate("/bills")}
           />

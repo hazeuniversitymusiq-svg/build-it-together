@@ -158,16 +158,10 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
         animate={{ opacity: 1, y: 0 }}
         className={className}
       >
-        <div
-          className={`p-4 rounded-2xl border ${
-            urgentBill.isUrgent
-              ? "bg-destructive/5 border-destructive/20"
-              : "bg-card border-border"
-          }`}
-        >
+        <div className="p-4 rounded-2xl bg-white dark:bg-gray-900/50 border border-border/40 shadow-sm">
           <div className="flex items-start gap-3">
-            {/* Biller Icon */}
-            <div className={`w-10 h-10 rounded-xl ${billerColors[urgentBill.billerName] || "bg-muted"} flex items-center justify-center text-white`}>
+            {/* Minimal Biller Icon */}
+            <div className={`w-10 h-10 rounded-xl ${billerColors[urgentBill.billerName] || "bg-gray-100"} flex items-center justify-center text-white`}>
               {billerIcons[urgentBill.billerName] || <Zap className="w-4 h-4" />}
             </div>
 
@@ -176,7 +170,7 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
               <div className="flex items-center gap-2">
                 <p className="font-medium text-foreground">{urgentBill.billerName}</p>
                 {urgentBill.isUrgent && (
-                  <AlertCircle className="w-4 h-4 text-destructive" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
@@ -184,12 +178,12 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
               </p>
             </div>
 
-            {/* Pay Button */}
+            {/* Minimal Blue Pay Button */}
             <Button
               size="sm"
               onClick={() => handlePayBill(urgentBill)}
               disabled={creatingFor === urgentBill.id}
-              className="rounded-xl"
+              className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white border-0"
             >
               {creatingFor === urgentBill.id ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -202,11 +196,11 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
             </Button>
           </div>
 
-          {/* More bills indicator */}
+          {/* More bills indicator - subtle */}
           {reminders.length > 1 && (
             <button
               onClick={() => navigate("/bills")}
-              className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="mt-3 text-xs text-muted-foreground hover:text-blue-500 transition-colors"
             >
               +{reminders.length - 1} more bill{reminders.length > 2 ? "s" : ""} due soon →
             </button>
