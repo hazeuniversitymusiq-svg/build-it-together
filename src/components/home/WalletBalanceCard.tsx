@@ -1,12 +1,16 @@
 /**
- * Wallet Balance Card
+ * Wallet Balance Card - Apple-Style Design
  * 
- * Displays linked wallets with balances prominently on the home page.
- * Shows total balance and individual wallet breakdowns with branded icons.
+ * Clean, minimal design with:
+ * - Prominent total balance
+ * - Compact horizontal wallet icon row
+ * - Expandable details
+ * - Dismissible warnings
  */
 
-import { motion } from 'framer-motion';
-import { Plus, RefreshCw, ChevronRight, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, RefreshCw, ChevronDown, X } from 'lucide-react';
 import { useFundingSources } from '@/hooks/useFundingSources';
 import { cn } from '@/lib/utils';
 import { getBrandedIcon } from '@/components/icons/BrandedIcons';
@@ -18,9 +22,12 @@ interface WalletBalanceCardProps {
 
 export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCardProps) {
   const { sources, totalBalance, loading, refetch } = useFundingSources();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [warningDismissed, setWarningDismissed] = useState(false);
 
   const linkedWallets = sources.filter(s => s.isLinked && s.type === 'wallet');
   const linkedBanks = sources.filter(s => s.isLinked && s.type === 'bank');
+  const allSources = [...linkedWallets, ...linkedBanks];
   const hasLowBalance = linkedWallets.some(w => w.balance < 20);
 
   if (loading) {
@@ -28,10 +35,10 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={cn("glass-card p-5 animate-pulse", className)}
+        className={cn("glass-card p-4 animate-pulse", className)}
       >
-        <div className="h-6 w-32 bg-muted/50 rounded mb-4" />
-        <div className="h-10 w-24 bg-muted/50 rounded" />
+        <div className="h-5 w-24 bg-muted/50 rounded mb-2" />
+        <div className="h-8 w-32 bg-muted/50 rounded" />
       </motion.div>
     );
   }
@@ -47,18 +54,17 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
       >
         <button
           onClick={onLinkWallet}
-          className="w-full p-5 flex items-center gap-4 hover:bg-white/5 transition-colors"
+          className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors"
         >
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Plus className="w-6 h-6 text-primary" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Plus className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 text-left">
-            <p className="font-semibold text-foreground">Link Your Wallets</p>
-            <p className="text-sm text-muted-foreground">
-              Connect Touch 'n Go, GrabPay & more
+            <p className="font-medium text-foreground text-sm">Link Your Wallets</p>
+            <p className="text-xs text-muted-foreground">
+              Connect TnG, GrabPay & more
             </p>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>
       </motion.div>
     );
@@ -71,85 +77,143 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
       transition={{ duration: 0.4, delay: 0.1 }}
       className={cn("glass-card overflow-hidden", className)}
     >
-      {/* Main Balance Section */}
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">Total Available</p>
-            <p className="text-3xl font-bold text-foreground tracking-tight">
-              RM {totalBalance.toFixed(2)}
-            </p>
-          </div>
+      {/* Compact Header with Balance */}
+      <div className="p-4 pb-3">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+            Total Available
+          </p>
           <button
             onClick={() => refetch()}
-            className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+            className="w-7 h-7 rounded-lg bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             title="Refresh balances"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
+        <p className="text-2xl font-semibold text-foreground tracking-tight">
+          RM {totalBalance.toFixed(2)}
+        </p>
+      </div>
 
-        {/* Low Balance Warning */}
-        {hasLowBalance && (
+      {/* Compact Wallet Icons Row */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-4 py-2.5 flex items-center justify-between border-t border-border/30 hover:bg-muted/20 transition-colors"
+      >
+        <div className="flex items-center gap-1">
+          {/* Overlapping wallet icons */}
+          <div className="flex -space-x-2">
+            {allSources.slice(0, 4).map((source, index) => {
+              const IconComponent = getBrandedIcon(source.name, source.type === 'wallet' ? 'wallet' : 'bank');
+              return (
+                <motion.div
+                  key={source.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="w-7 h-7 rounded-full bg-background border-2 border-background flex items-center justify-center shadow-sm"
+                >
+                  <IconComponent size={18} />
+                </motion.div>
+              );
+            })}
+            {allSources.length > 4 && (
+              <div className="w-7 h-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs font-medium text-muted-foreground">
+                +{allSources.length - 4}
+              </div>
+            )}
+          </div>
+          <span className="text-xs text-muted-foreground ml-2">
+            {allSources.length} linked
+          </span>
+        </div>
+        
+        <motion.div
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        </motion.div>
+      </button>
+
+      {/* Expandable Details */}
+      <AnimatePresence>
+        {isExpanded && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-4"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="overflow-hidden border-t border-border/30"
           >
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            <span>Wallet balance is low — FLOW will auto top-up when needed</span>
+            <div className="p-3 space-y-1">
+              {allSources.map((source, index) => {
+                const IconComponent = getBrandedIcon(
+                  source.name, 
+                  source.type === 'wallet' ? 'wallet' : 'bank'
+                );
+                const isLow = source.type === 'wallet' && source.balance < 20;
+                
+                return (
+                  <motion.div
+                    key={source.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="flex items-center justify-between py-1.5 px-1"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <IconComponent size={24} />
+                      <span className={cn(
+                        "text-sm",
+                        source.type === 'bank' ? "text-muted-foreground" : "text-foreground"
+                      )}>
+                        {source.name}
+                      </span>
+                    </div>
+                    <span className={cn(
+                      "text-sm font-medium tabular-nums",
+                      isLow ? "text-amber-500" : 
+                      source.type === 'bank' ? "text-muted-foreground" : "text-foreground"
+                    )}>
+                      RM {source.balance.toFixed(2)}
+                    </span>
+                  </motion.div>
+                );
+              })}
+            </div>
           </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Wallet Breakdown */}
-        <div className="space-y-2">
-          {linkedWallets.map((wallet, index) => {
-            const IconComponent = getBrandedIcon(wallet.name, 'wallet');
-            return (
-              <motion.div
-                key={wallet.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
-                className="flex items-center justify-between py-2"
+      {/* Dismissible Low Balance Warning */}
+      <AnimatePresence>
+        {hasLowBalance && !warningDismissed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="border-t border-amber-500/20 bg-amber-500/5"
+          >
+            <div className="px-4 py-2 flex items-center justify-between">
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Low balance — auto top-up enabled
+              </p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setWarningDismissed(true);
+                }}
+                className="w-5 h-5 rounded flex items-center justify-center text-amber-500 hover:bg-amber-500/10 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <IconComponent size={32} />
-                  <span className="text-sm font-medium text-foreground">{wallet.name}</span>
-                </div>
-                <span className={cn(
-                  "text-sm font-semibold",
-                  wallet.balance < 20 ? "text-amber-500" : "text-foreground"
-                )}>
-                  RM {wallet.balance.toFixed(2)}
-                </span>
-              </motion.div>
-            );
-          })}
-
-          {/* Bank Sources */}
-          {linkedBanks.slice(0, 2).map((bank, index) => {
-            const IconComponent = getBrandedIcon(bank.name, 'bank');
-            return (
-              <motion.div
-                key={bank.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.15 + index * 0.05 }}
-                className="flex items-center justify-between py-2 opacity-70"
-              >
-                <div className="flex items-center gap-3">
-                  <IconComponent size={32} />
-                  <span className="text-sm text-muted-foreground">{bank.name}</span>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  RM {bank.balance.toFixed(2)}
-                </span>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
