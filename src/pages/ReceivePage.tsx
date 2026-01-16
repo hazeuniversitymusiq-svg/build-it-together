@@ -93,8 +93,11 @@ const ReceivePage = () => {
     timestamp: Date;
   } | null>(null);
 
-  // Simulation timer ref
-  const simulationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Prototype simulation (native-safe timers)
+  const simulationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const simulationRafRef = useRef<number | null>(null);
+  const simulationStartedAtRef = useRef<number | null>(null);
+  const simulationCompletedRef = useRef(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -123,10 +126,15 @@ const ReceivePage = () => {
 
     loadUser();
 
-    // Cleanup simulation timer on unmount
+    // Cleanup prototype simulation on unmount
     return () => {
       if (simulationTimerRef.current) {
         clearTimeout(simulationTimerRef.current);
+        simulationTimerRef.current = null;
+      }
+      if (simulationRafRef.current != null) {
+        cancelAnimationFrame(simulationRafRef.current);
+        simulationRafRef.current = null;
       }
     };
   }, [navigate]);
@@ -135,42 +143,88 @@ const ReceivePage = () => {
     setAmount(preset.toString());
   }, []);
 
+  const runPrototypeSimulation = useCallback(() => {
+    if (simulationCompletedRef.current) return;
+    simulationCompletedRef.current = true;
+
+    const payerName = SIMULATED_PAYERS[Math.floor(Math.random() * SIMULATED_PAYERS.length)];
+    const payerApp = SIMULATED_PAYER_APPS[Math.floor(Math.random() * SIMULATED_PAYER_APPS.length)];
+    const receivedAmount = amount ? parseFloat(amount) : 20;
+
+    setReceivedData({
+      payerName,
+      payerApp,
+      amount: receivedAmount,
+      transactionId: `TXN-${Date.now().toString(36).toUpperCase()}`,
+      timestamp: new Date(),
+    });
+
+    setIsWaiting(false);
+    setFlowStep('received');
+
+    // Haptic feedback (best-effort)
+    try {
+      void hapticSuccess();
+    } catch {
+      // ignore
+    }
+
+    toast({
+      title: "Payment received! 🎉",
+      description: `RM ${receivedAmount.toFixed(2)} from ${payerName} via ${payerApp}`,
+    });
+  }, [amount, toast, hapticSuccess]);
+
   const handleShowQR = useCallback(() => {
+    // Reset any previous simulation loops
+    if (simulationTimerRef.current) {
+      clearTimeout(simulationTimerRef.current);
+      simulationTimerRef.current = null;
+    }
+    if (simulationRafRef.current != null) {
+      cancelAnimationFrame(simulationRafRef.current);
+      simulationRafRef.current = null;
+    }
+
+    simulationCompletedRef.current = false;
+    simulationStartedAtRef.current = Date.now();
+
     setFlowStep('display-qr');
     setIsWaiting(true);
+  }, []);
 
-    // PROTOTYPE: Simulate payment received after 5 seconds
-    const timer = setTimeout(() => {
-      const payerName = SIMULATED_PAYERS[Math.floor(Math.random() * SIMULATED_PAYERS.length)];
-      const payerApp = SIMULATED_PAYER_APPS[Math.floor(Math.random() * SIMULATED_PAYER_APPS.length)];
-      const receivedAmount = amount ? parseFloat(amount) : 20;
-      
-      setReceivedData({
-        payerName,
-        payerApp,
-        amount: receivedAmount,
-        transactionId: `TXN-${Date.now().toString(36).toUpperCase()}`,
-        timestamp: new Date(),
-      });
-      
-      setIsWaiting(false);
-      setFlowStep('received');
-      
-      // Haptic feedback - call directly to avoid closure issues
-      try {
-        hapticSuccess();
-      } catch (e) {
-        console.log('Haptic not available');
+  // PROTOTYPE: Auto-simulate payment received after ~5 seconds (RAF + timeout fallback)
+  useEffect(() => {
+    if (flowStep !== 'display-qr' || !isWaiting) return;
+
+    const start = simulationStartedAtRef.current ?? Date.now();
+    simulationStartedAtRef.current = start;
+
+    const tick = () => {
+      if (simulationCompletedRef.current) return;
+      if (Date.now() - start >= 5000) {
+        runPrototypeSimulation();
+        return;
       }
-      
-      toast({
-        title: "Payment received! 🎉",
-        description: `RM ${receivedAmount.toFixed(2)} from ${payerName} via ${payerApp}`,
-      });
-    }, 5000);
-    
-    simulationTimerRef.current = timer;
-  }, [amount, toast, hapticSuccess]);
+      simulationRafRef.current = requestAnimationFrame(tick);
+    };
+
+    simulationRafRef.current = requestAnimationFrame(tick);
+    simulationTimerRef.current = window.setTimeout(() => {
+      runPrototypeSimulation();
+    }, 5200);
+
+    return () => {
+      if (simulationTimerRef.current) {
+        clearTimeout(simulationTimerRef.current);
+        simulationTimerRef.current = null;
+      }
+      if (simulationRafRef.current != null) {
+        cancelAnimationFrame(simulationRafRef.current);
+        simulationRafRef.current = null;
+      }
+    };
+  }, [flowStep, isWaiting, runPrototypeSimulation]);
 
   const handleCopy = useCallback(async () => {
     const textToCopy = userPhone || 'FLOW Payment';
@@ -205,7 +259,16 @@ const ReceivePage = () => {
   const handleReset = useCallback(() => {
     if (simulationTimerRef.current) {
       clearTimeout(simulationTimerRef.current);
+      simulationTimerRef.current = null;
     }
+    if (simulationRafRef.current != null) {
+      cancelAnimationFrame(simulationRafRef.current);
+      simulationRafRef.current = null;
+    }
+
+    simulationStartedAtRef.current = null;
+    simulationCompletedRef.current = false;
+
     setFlowStep('setup');
     setAmount('');
     setIsWaiting(false);
