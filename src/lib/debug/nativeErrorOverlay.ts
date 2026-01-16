@@ -130,11 +130,14 @@ export function installNativeErrorOverlay(): void {
     true
   );
 
-  // Capture console.error as a last resort.
+  // Capture console.error only AFTER the overlay is already shown.
+  // This prevents non-fatal handled errors (e.g., network hiccups) from taking over the UI in native.
   const original = console.error.bind(console);
   console.error = (...args: unknown[]) => {
     original(...args);
     try {
+      const overlayExists = document.getElementById('flow-native-error-overlay');
+      if (!overlayExists) return;
       appendToOverlay(['CONSOLE.ERROR', ...args.map(safeStringify)].join('\n'));
     } catch {
       // ignore

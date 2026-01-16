@@ -40,14 +40,14 @@ export async function checkRateLimit(actionType: string): Promise<RateLimitResul
     });
 
     if (error) {
-      console.error('Rate limit check error:', error);
       // Fail open - allow if rate limit service is down
+      console.warn('[FLOW] Rate limit check unavailable:', error);
       return { allowed: true, remaining: 10, limit: 10, resetAt: '' };
     }
 
     return data as RateLimitResult;
   } catch (err) {
-    console.error('Rate limit service error:', err);
+    console.warn('[FLOW] Rate limit service error:', err);
     return { allowed: true, remaining: 10, limit: 10, resetAt: '' };
   }
 }
@@ -61,7 +61,8 @@ export async function recordRateLimitAction(actionType: string): Promise<void> {
       body: { action: 'record', actionType },
     });
   } catch (err) {
-    console.error('Rate limit record error:', err);
+    // Non-critical
+    console.warn('[FLOW] Rate limit record skipped:', err);
   }
 }
 
@@ -86,13 +87,14 @@ export async function signTransaction(
     });
 
     if (error) {
-      console.error('Transaction signing error:', error);
+      // This blocks payment, but should not trigger the native full-screen debug overlay.
+      console.warn('[FLOW] Transaction signing unavailable:', error);
       return null;
     }
 
     return data as TransactionSignature;
   } catch (err) {
-    console.error('Signing service error:', err);
+    console.warn('[FLOW] Signing service error:', err);
     return null;
   }
 }
@@ -107,13 +109,13 @@ export async function verifyTransactionSignature(signatureId: string): Promise<b
     });
 
     if (error) {
-      console.error('Signature verification error:', error);
+      console.warn('[FLOW] Signature verification unavailable:', error);
       return false;
     }
 
     return data?.verified === true;
   } catch (err) {
-    console.error('Verification service error:', err);
+    console.warn('[FLOW] Verification service error:', err);
     return false;
   }
 }
@@ -141,13 +143,14 @@ export async function createAuditLog(
     });
 
     if (error) {
-      console.error('Audit log error:', error);
+      // Audit is non-critical
+      console.warn('[FLOW] Audit log skipped:', error);
       return null;
     }
 
     return data as AuditLogResult;
   } catch (err) {
-    console.error('Audit service error:', err);
+    console.warn('[FLOW] Audit service error:', err);
     return null;
   }
 }
