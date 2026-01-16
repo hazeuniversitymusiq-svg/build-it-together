@@ -18,34 +18,28 @@ import { useToast } from "@/hooks/use-toast";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
 import { FlowLogo } from "@/components/brand/FlowLogo";
 
-// Apple-style Quick Action Button with Liquid Glass
+// Apple-style Minimal Quick Action Button
 const QuickAction = ({
   icon,
   label,
   onClick,
-  color,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  color: string;
 }) => {
   return (
     <motion.button
       onClick={onClick}
-      whileTap={{ scale: 0.92 }}
+      whileTap={{ scale: 0.95 }}
       whileHover={{ scale: 1.02 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className="flex-1 flex flex-col items-center gap-2.5 py-3"
+      className="flex-1 flex flex-col items-center gap-2 py-3"
     >
-      <div className={`w-14 h-14 rounded-[1.25rem] ${color} flex items-center justify-center shadow-lg`}
-        style={{
-          boxShadow: '0 8px 24px -6px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.3)'
-        }}
-      >
+      <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800/60 flex items-center justify-center transition-colors">
         {icon}
       </div>
-      <span className="text-xs font-medium text-foreground/80">{label}</span>
+      <span className="text-xs font-medium text-foreground/70">{label}</span>
     </motion.button>
   );
 };
@@ -138,10 +132,9 @@ const HomePage = () => {
           position="bottom"
         >
           <QuickAction
-            icon={<Send className="w-6 h-6 text-white" />}
+            icon={<Send className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
             label="Send"
             onClick={() => !isDemoMode && navigate("/send")}
-            color="bg-gradient-to-br from-aurora-purple to-aurora-pink"
           />
         </DemoHighlight>
         
@@ -153,10 +146,9 @@ const HomePage = () => {
           position="bottom"
         >
           <QuickAction
-            icon={<ArrowDownLeft className="w-6 h-6 text-white" />}
+            icon={<ArrowDownLeft className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
             label="Receive"
             onClick={() => !isDemoMode && navigate("/receive")}
-            color="bg-gradient-to-br from-aurora-teal to-aurora-blue"
           />
         </DemoHighlight>
         
@@ -168,10 +160,9 @@ const HomePage = () => {
           position="bottom"
         >
           <QuickAction
-            icon={<Receipt className="w-6 h-6 text-white" />}
+            icon={<Receipt className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
             label="Bills"
             onClick={() => !isDemoMode && navigate("/bills")}
-            color="bg-gradient-to-br from-aurora-pink to-aurora-purple"
           />
         </DemoHighlight>
       </motion.div>
