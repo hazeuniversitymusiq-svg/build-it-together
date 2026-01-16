@@ -140,7 +140,7 @@ const ReceivePage = () => {
     setIsWaiting(true);
 
     // PROTOTYPE: Simulate payment received after 5 seconds
-    simulationTimerRef.current = setTimeout(() => {
+    const timer = setTimeout(() => {
       const payerName = SIMULATED_PAYERS[Math.floor(Math.random() * SIMULATED_PAYERS.length)];
       const payerApp = SIMULATED_PAYER_APPS[Math.floor(Math.random() * SIMULATED_PAYER_APPS.length)];
       const receivedAmount = amount ? parseFloat(amount) : 20;
@@ -155,13 +155,21 @@ const ReceivePage = () => {
       
       setIsWaiting(false);
       setFlowStep('received');
-      hapticSuccess();
+      
+      // Haptic feedback - call directly to avoid closure issues
+      try {
+        hapticSuccess();
+      } catch (e) {
+        console.log('Haptic not available');
+      }
       
       toast({
         title: "Payment received! 🎉",
         description: `RM ${receivedAmount.toFixed(2)} from ${payerName} via ${payerApp}`,
       });
     }, 5000);
+    
+    simulationTimerRef.current = timer;
   }, [amount, toast, hapticSuccess]);
 
   const handleCopy = useCallback(async () => {
