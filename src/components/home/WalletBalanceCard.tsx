@@ -125,33 +125,16 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
           </motion.button>
         </div>
         
-        {/* Animated balance with increase indicator */}
-        <div className="flex items-center gap-2">
-          <motion.p 
-            key={totalBalance}
-            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight"
-          >
-            RM {totalBalance.toFixed(2)}
-          </motion.p>
-          
-          <AnimatePresence>
-            {balanceIncreased && !isSyncing && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0, x: -10 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium"
-              >
-                <TrendingUp className="w-3 h-3" />
-                <span>+{(totalBalance - lastBalance).toFixed(2)}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        {/* Clean balance display - no trend pill */}
+        <motion.p 
+          key={totalBalance}
+          initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight"
+        >
+          RM {totalBalance.toFixed(2)}
+        </motion.p>
       </div>
 
       {/* Compact Wallet Icons Row */}
@@ -245,7 +228,7 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
         )}
       </AnimatePresence>
 
-      {/* Dismissible Low Balance Warning */}
+      {/* Minimal Low Balance Warning - just text, no background */}
       <AnimatePresence>
         {hasLowBalance && !warningDismissed && (
           <motion.div
@@ -253,18 +236,21 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="border-t border-amber-500/20 bg-amber-500/5"
+            className="border-t border-border/20"
           >
-            <div className="px-4 py-2 flex items-center justify-between">
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Low balance — auto top-up enabled
-              </p>
+            <div className="px-4 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <p className="text-xs text-muted-foreground">
+                  Low balance — auto top-up enabled
+                </p>
+              </div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setWarningDismissed(true);
                 }}
-                className="w-5 h-5 rounded flex items-center justify-center text-amber-500 hover:bg-amber-500/10 transition-colors"
+                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>
