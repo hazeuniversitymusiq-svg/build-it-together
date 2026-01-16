@@ -7,10 +7,12 @@
  * 3. Payer scans with ANY DuitNow-enabled wallet/bank (T&G, Maybank, GrabPay, CIMB, etc.)
  * 4. FLOW receives via DuitNow rails → Routes to receiver's chosen destination wallet
  * 
+ * PROTOTYPE: Auto-simulates payment received after 5 seconds
+ * 
  * iOS 26 Liquid Glass design
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -22,18 +24,21 @@ import {
   Share2,
   Wallet,
   ArrowDown,
-  Sparkles,
+  Zap,
   RefreshCw,
   Smartphone,
   ArrowRight,
   Building2,
   CreditCard,
-  Zap
+  CheckCircle2,
+  PartyPopper,
+  Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useHaptics } from "@/hooks/useHaptics";
 
 // Destination wallet options (where receiver wants money to land)
 const DESTINATION_WALLETS = [
@@ -49,6 +54,10 @@ const COMPATIBLE_PAYER_APPS = [
   'Hong Leong', 'AmBank', 'Bank Islam', 'GrabPay', 'Boost', 'ShopeePay'
 ];
 
+// Simulated payer names for prototype
+const SIMULATED_PAYERS = ['Ahmad', 'Sarah', 'Wei Ming', 'Nurul', 'Jason'];
+const SIMULATED_PAYER_APPS = ['Maybank', 'Touch\'n Go', 'CIMB', 'GrabPay'];
+
 type DestinationWalletId = typeof DESTINATION_WALLETS[number]['id'];
 
 // Amount presets
@@ -57,9 +66,10 @@ const AMOUNT_PRESETS = [10, 20, 50, 100];
 const ReceivePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { success: hapticSuccess } = useHaptics();
 
-  // Flow state: 'setup' → 'display-qr'
-  const [flowStep, setFlowStep] = useState<'setup' | 'display-qr'>('setup');
+  // Flow state: 'setup' → 'display-qr' → 'received'
+  const [flowStep, setFlowStep] = useState<'setup' | 'display-qr' | 'received'>('setup');
   
   // Setup state
   const [amount, setAmount] = useState("");
@@ -73,6 +83,18 @@ const ReceivePage = () => {
   // QR display state
   const [copied, setCopied] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
+  
+  // Received state (prototype simulation)
+  const [receivedData, setReceivedData] = useState<{
+    payerName: string;
+    payerApp: string;
+    amount: number;
+    transactionId: string;
+    timestamp: Date;
+  } | null>(null);
+
+  // Simulation timer ref
+  const simulationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -100,6 +122,13 @@ const ReceivePage = () => {
     };
 
     loadUser();
+
+    // Cleanup simulation timer on unmount
+    return () => {
+      if (simulationTimerRef.current) {
+        clearTimeout(simulationTimerRef.current);
+      }
+    };
   }, [navigate]);
 
   const handlePresetAmount = useCallback((preset: number) => {
@@ -109,7 +138,31 @@ const ReceivePage = () => {
   const handleShowQR = useCallback(() => {
     setFlowStep('display-qr');
     setIsWaiting(true);
-  }, []);
+
+    // PROTOTYPE: Simulate payment received after 5 seconds
+    simulationTimerRef.current = setTimeout(() => {
+      const payerName = SIMULATED_PAYERS[Math.floor(Math.random() * SIMULATED_PAYERS.length)];
+      const payerApp = SIMULATED_PAYER_APPS[Math.floor(Math.random() * SIMULATED_PAYER_APPS.length)];
+      const receivedAmount = amount ? parseFloat(amount) : 20;
+      
+      setReceivedData({
+        payerName,
+        payerApp,
+        amount: receivedAmount,
+        transactionId: `TXN-${Date.now().toString(36).toUpperCase()}`,
+        timestamp: new Date(),
+      });
+      
+      setIsWaiting(false);
+      setFlowStep('received');
+      hapticSuccess();
+      
+      toast({
+        title: "Payment received! 🎉",
+        description: `RM ${receivedAmount.toFixed(2)} from ${payerName} via ${payerApp}`,
+      });
+    }, 5000);
+  }, [amount, toast, hapticSuccess]);
 
   const handleCopy = useCallback(async () => {
     const textToCopy = userPhone || 'FLOW Payment';
@@ -142,9 +195,23 @@ const ReceivePage = () => {
   }, [amount, destinationWallet, userPhone, handleCopy]);
 
   const handleReset = useCallback(() => {
+    if (simulationTimerRef.current) {
+      clearTimeout(simulationTimerRef.current);
+    }
     setFlowStep('setup');
     setAmount('');
     setIsWaiting(false);
+    setReceivedData(null);
+  }, []);
+
+  const handleDone = useCallback(() => {
+    navigate('/home');
+  }, [navigate]);
+
+  const handleReceiveAnother = useCallback(() => {
+    setFlowStep('setup');
+    setAmount('');
+    setReceivedData(null);
   }, []);
 
   // Generate DuitNow-style QR pattern
@@ -214,7 +281,7 @@ const ReceivePage = () => {
       <div className="px-6 pt-4 pb-2">
         <div className="flex items-center gap-4 mb-2">
           <button 
-            onClick={() => flowStep === 'display-qr' ? handleReset() : navigate("/home")}
+            onClick={() => flowStep === 'setup' ? navigate("/home") : handleReset()}
             className="w-10 h-10 rounded-full glass-card flex items-center justify-center shadow-float"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
@@ -377,7 +444,7 @@ const ReceivePage = () => {
           </motion.div>
         )}
 
-        {/* STEP 2: Display QR */}
+        {/* STEP 2: Display QR - Waiting for Payment */}
         {flowStep === 'display-qr' && (
           <motion.div
             key="display-qr"
@@ -486,6 +553,13 @@ const ReceivePage = () => {
               </motion.div>
             )}
 
+            {/* Prototype Badge */}
+            <div className="px-3 py-1.5 rounded-lg bg-aurora-purple/10 mb-4">
+              <p className="text-xs text-aurora-purple font-medium">
+                ⚡ Prototype: Auto-resolves in 5 seconds
+              </p>
+            </div>
+
             {/* Compatible Apps */}
             <div className="glass-card rounded-2xl p-4 w-full max-w-sm mb-4">
               <p className="text-xs font-medium text-foreground mb-2 text-center">
@@ -541,6 +615,143 @@ const ReceivePage = () => {
             >
               Change amount or destination
             </button>
+          </motion.div>
+        )}
+
+        {/* STEP 3: Payment Received - Success State */}
+        {flowStep === 'received' && receivedData && (
+          <motion.div
+            key="received"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex-1 flex flex-col items-center justify-center px-6"
+          >
+            {/* Success Animation */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
+              className="w-24 h-24 rounded-full bg-success/10 flex items-center justify-center mb-6"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <CheckCircle2 className="w-14 h-14 text-success" />
+              </motion.div>
+            </motion.div>
+
+            {/* Amount Received */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-center mb-6"
+            >
+              <p className="text-sm text-muted-foreground mb-2">Payment received</p>
+              <p className="text-4xl font-bold text-success mb-2">
+                +RM {receivedData.amount.toFixed(2)}
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <PartyPopper className="w-4 h-4 text-aurora-purple" />
+                <p className="text-foreground font-medium">
+                  From {receivedData.payerName}
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Transaction Details Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="glass-card rounded-2xl p-4 w-full max-w-sm mb-6 shadow-float"
+            >
+              {/* Flow Visualization */}
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                    <Smartphone className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Paid via</p>
+                    <p className="text-sm font-medium text-foreground">{receivedData.payerApp}</p>
+                  </div>
+                </div>
+                
+                <ArrowRight className="w-5 h-5 text-success" />
+                
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${selectedWalletData?.color} flex items-center justify-center`}>
+                    <Wallet className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Routed to</p>
+                    <p className="text-sm font-medium text-foreground">{selectedWalletData?.shortName}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction Info */}
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Transaction ID</span>
+                  <span className="text-xs font-mono text-foreground">{receivedData.transactionId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Time</span>
+                  <span className="text-xs text-foreground">
+                    {receivedData.timestamp.toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Status</span>
+                  <span className="text-xs font-medium text-success flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Completed
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* FLOW Orchestration Badge */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-aurora-purple/10 mb-6"
+            >
+              <Zap className="w-4 h-4 text-aurora-purple" />
+              <p className="text-xs text-aurora-purple font-medium">
+                FLOW resolved payment across rails
+              </p>
+            </motion.div>
+
+            {/* Action Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="flex gap-3 w-full max-w-sm"
+            >
+              <Button
+                onClick={handleReceiveAnother}
+                variant="outline"
+                className="flex-1 h-12 rounded-2xl glass-card border-0"
+              >
+                <QrCode className="w-5 h-5 mr-2" />
+                New QR
+              </Button>
+              <Button
+                onClick={handleDone}
+                className="flex-1 h-12 rounded-2xl aurora-gradient text-white border-0 shadow-glow-aurora"
+              >
+                <Receipt className="w-5 h-5 mr-2" />
+                Done
+              </Button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
