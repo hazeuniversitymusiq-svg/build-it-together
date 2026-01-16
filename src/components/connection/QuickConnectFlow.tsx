@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { FloatingAppsOrbit } from '@/components/onboarding/FloatingAppsOrbit';
 import { useConnectionEngine } from '@/hooks/useConnectionEngine';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -388,22 +389,46 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
     return acc;
   }, {} as Record<string, AppDefinition[]>);
 
-  const connectedAppNames = new Set(connectedApps.map(a => a.appName));
+  const connectedAppNames = new Set(connectedApps.map((a) => a.appName));
+
+  const orbitPhase: 'idle' | 'detecting' | 'syncing' | 'complete' =
+    phase === 'detecting'
+      ? 'detecting'
+      : phase === 'connecting'
+        ? 'syncing'
+        : phase === 'complete'
+          ? 'complete'
+          : 'idle';
 
   return (
     <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom relative overflow-hidden">
-      {/* Aurora background */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-aurora-gradient opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-aurora-pink/20 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2" />
+      {/* Ambient background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{ x: [0, 60, 0], y: [0, -40, 0], opacity: [0.12, 0.18, 0.12] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-40 -right-40 w-[520px] h-[520px] rounded-full bg-aurora-purple/25 blur-[110px]"
+        />
+        <motion.div
+          animate={{ x: [0, -50, 0], y: [0, 60, 0], opacity: [0.1, 0.16, 0.1] }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -bottom-40 -left-40 w-[460px] h-[460px] rounded-full bg-aurora-blue/20 blur-[110px]"
+        />
+        <motion.div
+          animate={{ scale: [1, 1.15, 1], opacity: [0.06, 0.12, 0.06] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[620px] h-[360px] rounded-full bg-aurora-teal/15 blur-[90px]"
+        />
+      </div>
 
       {/* Skip button */}
       {showSkip && phase !== 'complete' && phase !== 'connecting' && (
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 right-4 z-10 safe-area-top">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleSkip}
-            className="text-muted-foreground"
+            className="text-muted-foreground/70 hover:text-foreground"
           >
             Skip
           </Button>
@@ -411,73 +436,57 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
       )}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col justify-center px-6 relative z-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
+          className="mb-8"
+        >
+          <FloatingAppsOrbit phase={orbitPhase} />
+        </motion.div>
+
         <AnimatePresence mode="wait">
-          {/* Detecting phase */}
           {phase === 'detecting' && (
             <motion.div
               key="detecting"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-center max-w-sm"
             >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                className="w-20 h-20 mx-auto mb-6 rounded-full aurora-gradient flex items-center justify-center"
-              >
-                <RefreshCw className="w-10 h-10 text-white" />
-              </motion.div>
-              <h2 className="text-2xl font-semibold mb-2">Detecting Your Apps</h2>
-              <p className="text-muted-foreground">Finding wallets, banks, and payment apps...</p>
+              <h1 className="text-2xl font-semibold text-foreground">Detecting your apps</h1>
+              <p className="mt-2 text-muted-foreground">Looking for wallets, banks, and billers…</p>
             </motion.div>
           )}
 
-          {/* Ready phase */}
           {phase === 'ready' && (
             <motion.div
               key="ready"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="w-full max-w-md"
             >
-              {/* Header */}
-              <div className="text-center mb-8">
-                <motion.div
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  className="w-20 h-20 mx-auto mb-6 rounded-[1.5rem] aurora-gradient flex items-center justify-center shadow-glow-aurora"
-                >
-                  <Sparkles className="w-10 h-10 text-white" />
-                </motion.div>
-                <h1 className="text-2xl font-bold mb-2">
-                  Found {detectedApps.length} Apps
-                </h1>
-                <p className="text-muted-foreground">
-                  Connect them all to FLOW with one tap
-                </p>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-foreground">Found {detectedApps.length} apps</h1>
+                <p className="mt-2 text-muted-foreground">Connect everything to FLOW in one tap.</p>
               </div>
 
-              {/* Detected apps by category */}
-              <div className="space-y-4 max-h-[40vh] overflow-y-auto">
+              <div className="mt-6 space-y-4 max-h-[28vh] overflow-y-auto">
                 {Object.entries(groupedApps).map(([category, apps], catIndex) => (
                   <motion.div
                     key={category}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: catIndex * 0.1 }}
+                    transition={{ delay: catIndex * 0.08 }}
                   >
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
                       {CATEGORY_LABELS[category] || category}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {apps.map(app => (
-                        <AppPill
-                          key={app.name}
-                          app={app}
-                          isConnected={connectedAppNames.has(app.name)}
-                        />
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {apps.map((app) => (
+                        <AppPill key={app.name} app={app} isConnected={connectedAppNames.has(app.name)} />
                       ))}
                     </div>
                   </motion.div>
@@ -486,76 +495,42 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
             </motion.div>
           )}
 
-          {/* Connecting phase - with detailed progress */}
           {phase === 'connecting' && (
             <motion.div
               key="connecting"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="max-h-[85vh] flex flex-col"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-center max-w-sm"
             >
-              {/* Header with progress */}
-              <div className="text-center mb-6">
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.05, 1],
-                    boxShadow: [
-                      '0 0 20px rgba(139, 92, 246, 0.3)',
-                      '0 0 40px rgba(139, 92, 246, 0.5)',
-                      '0 0 20px rgba(139, 92, 246, 0.3)',
-                    ]
-                  }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                  className="w-16 h-16 mx-auto mb-4 rounded-[1.25rem] aurora-gradient flex items-center justify-center"
-                >
-                  <Zap className="w-8 h-8 text-white" />
-                </motion.div>
-                <h2 className="text-xl font-semibold mb-1">Connecting Your Apps</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Linking to FLOW securely...
-                </p>
-                
-                {/* Progress bar */}
-                <div className="max-w-xs mx-auto">
-                  <Progress value={progress} className="h-2" />
-                  <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                    <span>{Math.round(progress)}%</span>
-                    <span>{successCount} of {detectedApps.length} connected</span>
-                  </div>
-                </div>
-              </div>
+              <h2 className="text-2xl font-semibold text-foreground">Connecting securely</h2>
+              <p className="mt-2 text-muted-foreground">Linking your apps to FLOW…</p>
 
-              {/* App list with status */}
-              <div className="flex-1 overflow-y-auto space-y-2 pb-4">
-                {detectedApps.map((app, index) => (
-                  <AppConnectionRow
-                    key={app.name}
-                    app={app}
-                    status={appStates.get(app.name)?.status || 'pending'}
-                    index={index}
-                  />
-                ))}
+              <div className="mt-6 max-w-xs mx-auto">
+                <Progress value={progress} className="h-2" />
+                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                  <span>{Math.round(progress)}%</span>
+                  <span>
+                    {successCount} of {detectedApps.length} connected
+                  </span>
+                </div>
               </div>
             </motion.div>
           )}
 
-          {/* Complete phase */}
           {phase === 'complete' && (
             <motion.div
               key="complete"
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="text-center"
             >
-              {/* Success animation */}
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 className="relative w-24 h-24 mx-auto mb-6"
               >
-                {/* Ripple effect */}
                 <motion.div
                   initial={{ scale: 0.8, opacity: 1 }}
                   animate={{ scale: 2, opacity: 0 }}
@@ -568,8 +543,7 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                   transition={{ duration: 1, repeat: Infinity, delay: 0.3 }}
                   className="absolute inset-0 rounded-full bg-success/30"
                 />
-                
-                {/* Check icon */}
+
                 <div className="absolute inset-0 rounded-full bg-success/10 flex items-center justify-center">
                   <motion.div
                     initial={{ scale: 0, rotate: -180 }}
@@ -584,60 +558,25 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.2 }}
                 className="text-2xl font-bold mb-2"
               >
-                All Connected!
+                All connected
               </motion.h2>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.3 }}
               >
-                <p className="text-muted-foreground mb-2">
-                  {successCount} apps linked to FLOW
-                </p>
-                <p className="text-lg font-medium text-foreground">
-                  RM {totalBalance.toFixed(2)} available
-                </p>
-              </motion.div>
-
-              {/* Connected apps summary */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="mt-6 flex flex-wrap justify-center gap-2"
-              >
-                {detectedApps.slice(0, 5).map((app, i) => (
-                  <motion.div
-                    key={app.name}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.6 + i * 0.1 }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 text-success text-sm"
-                  >
-                    <CircleCheck className="w-4 h-4" />
-                    <span>{app.displayName}</span>
-                  </motion.div>
-                ))}
-                {detectedApps.length > 5 && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 1.1 }}
-                    className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-sm"
-                  >
-                    +{detectedApps.length - 5} more
-                  </motion.div>
-                )}
+                <p className="text-muted-foreground mb-2">{successCount} apps linked to FLOW</p>
+                <p className="text-lg font-medium text-foreground">RM {totalBalance.toFixed(2)} available</p>
               </motion.div>
 
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
+                transition={{ delay: 0.45 }}
                 className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-6"
               >
                 <ShieldCheck className="w-4 h-4" />
@@ -649,25 +588,23 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
       </div>
 
       {/* Footer */}
-      <div className="px-6 pb-8 relative z-10">
+      <div className="px-6 pb-8 relative z-10 safe-area-bottom">
         {phase === 'ready' && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-4"
+            transition={{ delay: 0.2 }}
+            className="space-y-4 max-w-md mx-auto"
           >
-            {/* Trust message */}
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="w-4 h-4" />
               <span>FLOW never holds your money. You always confirm first.</span>
             </div>
 
-            {/* Connect button */}
             <Button
               onClick={handleQuickConnect}
               disabled={isConnecting || detectedApps.length === 0}
-              className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora"
+              className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-primary-foreground shadow-glow-aurora"
             >
               {isConnecting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

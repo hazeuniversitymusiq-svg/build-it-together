@@ -74,13 +74,19 @@ export function AppleOnboardingFlow() {
 
   // Auto-advance through phases with elegant timing
   useEffect(() => {
-    if (currentPhase === 0) {
-      // Welcome phase - wait for user interaction or auto-advance
-      const timer = setTimeout(() => {
-        handleNext();
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
+    const delayMs =
+      currentPhase === 0 ? 4000 :
+      currentPhase === 1 ? 2200 :
+      currentPhase === 2 ? 2200 :
+      null;
+
+    if (delayMs == null) return;
+
+    const timer = setTimeout(() => {
+      setCurrentPhase((prev) => Math.min(prev + 1, PHASES.length - 1));
+    }, delayMs);
+
+    return () => clearTimeout(timer);
   }, [currentPhase]);
 
   useEffect(() => {
@@ -98,20 +104,13 @@ export function AppleOnboardingFlow() {
 
   const handleNext = () => {
     if (isTransitioning) return;
-    
+
     if (currentPhase < PHASES.length - 1) {
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentPhase(prev => prev + 1);
+        setCurrentPhase((prev) => prev + 1);
         setIsTransitioning(false);
       }, 300);
-    }
-  };
-
-  const handleSyncComplete = () => {
-    // Move to ready phase after sync animation completes
-    if (currentPhase === 2) {
-      setCurrentPhase(3);
     }
   };
 
@@ -194,10 +193,7 @@ export function AppleOnboardingFlow() {
           transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
           className="mb-8"
         >
-          <FloatingAppsOrbit 
-            phase={orbitPhase} 
-            onSyncComplete={handleSyncComplete}
-          />
+          <FloatingAppsOrbit phase={orbitPhase} />
         </motion.div>
 
         {/* Phase content */}
