@@ -157,9 +157,9 @@ export default function FlowCardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-32 safe-area-top">
       {/* Header */}
-      <div className="p-6 pt-8">
+      <div className="p-6 pt-4">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Flow Card</h1>
