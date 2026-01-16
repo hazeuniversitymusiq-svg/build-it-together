@@ -365,31 +365,36 @@ const DemoPage = () => {
                     <button 
                       key={payment.qrId}
                       className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-2xl border bg-card",
+                        "w-full flex items-center justify-between p-4 rounded-2xl border bg-card text-left",
                         "hover:bg-muted/50 active:scale-[0.98] transition-all",
                         payment.simulateError && "border-amber-200 dark:border-amber-800"
                       )}
                       onClick={() => startDemo(payment)}
                     >
-                      {/* Amount */}
-                      <div className="text-left">
-                        <span className="text-2xl font-semibold tracking-tight">
-                          {payment.amount.toFixed(2)}
-                        </span>
-                        <span className="text-sm text-muted-foreground ml-1">MYR</span>
-                      </div>
-                      
-                      {/* Merchant & Rail */}
-                      <div className="flex-1 text-left min-w-0">
-                        <p className="font-medium text-sm truncate">{payment.merchant}</p>
-                        <p className="text-xs text-muted-foreground">
-                          via {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail}
-                          {payment.simulateError && ' • Fallback demo'}
-                        </p>
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        {/* Amount */}
+                        <div className="shrink-0">
+                          <span className="text-xl font-semibold tabular-nums">
+                            {payment.amount.toFixed(2)}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">MYR</span>
+                        </div>
+                        
+                        {/* Divider */}
+                        <div className="w-px h-8 bg-border shrink-0" />
+                        
+                        {/* Merchant & Rail */}
+                        <div className="overflow-hidden">
+                          <p className="font-medium text-sm truncate">{payment.merchant}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail}
+                            {payment.simulateError && ' • Fallback'}
+                          </p>
+                        </div>
                       </div>
                       
                       {/* Arrow */}
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0 ml-2" />
                     </button>
                   ))}
                 </motion.div>
