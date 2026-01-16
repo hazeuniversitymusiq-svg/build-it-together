@@ -21,7 +21,7 @@ const WelcomePage = () => {
           transition={{ duration: 0.6 }}
           className="mb-8"
         >
-          <FlowLogo variant="full" size="lg" animate />
+          <FlowLogo variant="full" size="lg" animate={false} />
         </motion.div>
 
         {/* Headline */}
