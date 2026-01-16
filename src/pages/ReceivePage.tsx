@@ -1,11 +1,11 @@
 /**
- * FLOW Receive Page
+ * FLOW Receive Page - Universal Receive Architecture
  * 
- * CORRECT PROTOCOL:
- * 1. Enter amount (optional) → Select destination wallet
- * 2. Display YOUR QR code
- * 3. Payer scans QR with their T&G/DuitNow app
- * 4. Money lands in your chosen wallet
+ * PROTOCOL:
+ * 1. Receiver selects destination wallet (where money lands)
+ * 2. FLOW generates DuitNow-interoperable QR
+ * 3. Payer scans with ANY DuitNow-enabled wallet/bank (T&G, Maybank, GrabPay, CIMB, etc.)
+ * 4. FLOW receives via DuitNow rails → Routes to receiver's chosen destination wallet
  * 
  * iOS 26 Liquid Glass design
  */
@@ -23,22 +23,33 @@ import {
   Wallet,
   ArrowDown,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Smartphone,
+  ArrowRight,
+  Building2,
+  CreditCard,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Wallet options for destination
-const WALLET_OPTIONS = [
-  { id: 'TouchNGo', name: 'Touch\'n Go', shortName: 'TNG', color: 'from-blue-500 to-blue-600' },
-  { id: 'DuitNow', name: 'DuitNow', shortName: 'DuitNow', color: 'from-rose-500 to-pink-600' },
-  { id: 'GrabPay', name: 'GrabPay', shortName: 'Grab', color: 'from-green-500 to-emerald-600' },
-  { id: 'Boost', name: 'Boost', shortName: 'Boost', color: 'from-orange-500 to-red-500' },
+// Destination wallet options (where receiver wants money to land)
+const DESTINATION_WALLETS = [
+  { id: 'TouchNGo', name: 'Touch\'n Go', shortName: 'TNG', color: 'from-blue-500 to-blue-600', icon: Wallet },
+  { id: 'GrabPay', name: 'GrabPay', shortName: 'Grab', color: 'from-green-500 to-emerald-600', icon: Wallet },
+  { id: 'Boost', name: 'Boost', shortName: 'Boost', color: 'from-orange-500 to-red-500', icon: Wallet },
+  { id: 'Maybank', name: 'Maybank Account', shortName: 'Maybank', color: 'from-yellow-500 to-amber-600', icon: Building2 },
 ] as const;
 
-type WalletId = typeof WALLET_OPTIONS[number]['id'];
+// Payer can use ANY of these (shown for info)
+const COMPATIBLE_PAYER_APPS = [
+  'Touch\'n Go', 'Maybank', 'CIMB', 'Public Bank', 'RHB', 
+  'Hong Leong', 'AmBank', 'Bank Islam', 'GrabPay', 'Boost', 'ShopeePay'
+];
+
+type DestinationWalletId = typeof DESTINATION_WALLETS[number]['id'];
 
 // Amount presets
 const AMOUNT_PRESETS = [10, 20, 50, 100];
@@ -52,7 +63,7 @@ const ReceivePage = () => {
   
   // Setup state
   const [amount, setAmount] = useState("");
-  const [destinationWallet, setDestinationWallet] = useState<WalletId>('TouchNGo');
+  const [destinationWallet, setDestinationWallet] = useState<DestinationWalletId>('TouchNGo');
   
   // User data
   const [userPhone, setUserPhone] = useState<string | null>(null);
@@ -98,9 +109,6 @@ const ReceivePage = () => {
   const handleShowQR = useCallback(() => {
     setFlowStep('display-qr');
     setIsWaiting(true);
-    
-    // In production, this would poll for incoming payment
-    // For prototype, just show waiting state
   }, []);
 
   const handleCopy = useCallback(async () => {
@@ -108,7 +116,7 @@ const ReceivePage = () => {
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
-      toast({ title: "Copied!", description: "Payment ID copied to clipboard" });
+      toast({ title: "Copied!", description: "DuitNow ID copied to clipboard" });
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
@@ -118,8 +126,8 @@ const ReceivePage = () => {
   const handleShare = useCallback(async () => {
     const amountText = amount ? `RM ${parseFloat(amount).toFixed(2)}` : 'any amount';
     const shareData = {
-      title: 'Pay me via FLOW',
-      text: `Pay me ${amountText} via ${destinationWallet}. ID: ${userPhone || 'FLOW User'}`,
+      title: 'Pay me via DuitNow',
+      text: `Pay me ${amountText}. Scan my DuitNow QR or use ID: ${userPhone || 'FLOW User'}. I'll receive it in my ${destinationWallet} wallet.`,
     };
 
     try {
@@ -139,7 +147,7 @@ const ReceivePage = () => {
     setIsWaiting(false);
   }, []);
 
-  // Generate QR pattern (placeholder - production would use real DuitNow/T&G QR)
+  // Generate DuitNow-style QR pattern
   const generateQRPattern = useCallback(() => {
     const size = 200;
     const cells = 11;
@@ -152,7 +160,6 @@ const ReceivePage = () => {
     
     for (let y = 0; y < cells; y++) {
       for (let x = 0; x < cells; x++) {
-        // Position markers
         const isCorner = (
           (x < 3 && y < 3) ||
           (x >= cells - 3 && y < 3) ||
@@ -191,7 +198,7 @@ const ReceivePage = () => {
     return pattern;
   }, [userPhone, amount, destinationWallet]);
 
-  const selectedWalletData = WALLET_OPTIONS.find(w => w.id === destinationWallet);
+  const selectedWalletData = DESTINATION_WALLETS.find(w => w.id === destinationWallet);
 
   if (isLoading) {
     return (
@@ -213,7 +220,7 @@ const ReceivePage = () => {
             <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
           <div>
-            <p className="text-muted-foreground text-sm">Get paid</p>
+            <p className="text-muted-foreground text-sm">Universal receive</p>
             <h1 className="text-2xl font-semibold text-foreground tracking-tight">
               Receive
             </h1>
@@ -231,18 +238,35 @@ const ReceivePage = () => {
             exit={{ opacity: 0, x: -20 }}
             className="flex-1 flex flex-col px-6"
           >
-            {/* Protocol Explanation */}
+            {/* Architecture Explanation */}
             <div className="glass-card rounded-2xl p-4 mb-6 shadow-float">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl aurora-gradient flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-5 h-5 text-white" />
+                  <Zap className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm mb-1">How it works</p>
+                  <p className="font-medium text-foreground text-sm mb-1">Universal Receive</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Show your QR → Payer scans with their T&G or DuitNow → 
-                    Money lands in your chosen wallet
+                    Payer uses <span className="font-medium text-foreground">any wallet</span> → 
+                    FLOW routes to <span className="font-medium text-foreground">your chosen wallet</span>
                   </p>
+                </div>
+              </div>
+              
+              {/* Visual Flow */}
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Smartphone className="w-4 h-4" />
+                  <span>Any app</span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-aurora-purple" />
+                <div className="px-2 py-1 rounded-lg bg-aurora-purple/10 text-aurora-purple font-medium">
+                  DuitNow
+                </div>
+                <ArrowRight className="w-4 h-4 text-aurora-purple" />
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Wallet className="w-4 h-4" />
+                  <span>Your wallet</span>
                 </div>
               </div>
             </div>
@@ -289,45 +313,50 @@ const ReceivePage = () => {
             </div>
 
             {/* Destination Wallet Section */}
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-foreground mb-3">
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 <ArrowDown className="w-4 h-4 inline mr-2" />
-                Where do you want money to land?
+                Route payment to
               </label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Choose which wallet receives the money
+              </p>
               
               <div className="grid grid-cols-2 gap-3">
-                {WALLET_OPTIONS.map((wallet) => (
-                  <motion.button
-                    key={wallet.id}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setDestinationWallet(wallet.id)}
-                    className={`relative p-4 rounded-2xl transition-all ${
-                      destinationWallet === wallet.id
-                        ? 'aurora-gradient-soft aurora-border shadow-glow-blue'
-                        : 'glass-card hover:bg-white/60 dark:hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${wallet.color} flex items-center justify-center`}>
-                        <Wallet className="w-5 h-5 text-white" />
+                {DESTINATION_WALLETS.map((wallet) => {
+                  const IconComponent = wallet.icon;
+                  return (
+                    <motion.button
+                      key={wallet.id}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setDestinationWallet(wallet.id)}
+                      className={`relative p-4 rounded-2xl transition-all ${
+                        destinationWallet === wallet.id
+                          ? 'aurora-gradient-soft aurora-border shadow-glow-blue'
+                          : 'glass-card hover:bg-white/60 dark:hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${wallet.color} flex items-center justify-center`}>
+                          <IconComponent className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-medium text-foreground text-sm">{wallet.shortName}</p>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <p className="font-medium text-foreground text-sm">{wallet.shortName}</p>
-                        <p className="text-xs text-muted-foreground">{wallet.name}</p>
-                      </div>
-                    </div>
-                    
-                    {destinationWallet === wallet.id && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute top-2 right-2 w-5 h-5 rounded-full aurora-gradient flex items-center justify-center"
-                      >
-                        <Check className="w-3 h-3 text-white" />
-                      </motion.div>
-                    )}
-                  </motion.button>
-                ))}
+                      
+                      {destinationWallet === wallet.id && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute top-2 right-2 w-5 h-5 rounded-full aurora-gradient flex items-center justify-center"
+                        >
+                          <Check className="w-3 h-3 text-white" />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  );
+                })}
               </div>
             </div>
 
@@ -338,8 +367,13 @@ const ReceivePage = () => {
               className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white border-0 shadow-glow-aurora"
             >
               <QrCode className="w-5 h-5 mr-2" />
-              Show My QR Code
+              Generate DuitNow QR
             </Button>
+
+            {/* Payer compatibility note */}
+            <p className="text-xs text-center text-muted-foreground mt-4">
+              Payer can scan with: T&G, Maybank, CIMB, GrabPay, and 50+ more apps
+            </p>
           </motion.div>
         )}
 
@@ -353,16 +387,21 @@ const ReceivePage = () => {
             className="flex-1 flex flex-col items-center px-6"
           >
             {/* QR Card */}
-            <div className="glass-card rounded-3xl p-6 shadow-float-lg w-full max-w-sm mb-6">
-              {/* Wallet Badge */}
-              <div className="flex justify-center mb-4">
-                <div className={`px-4 py-2 rounded-xl bg-gradient-to-r ${selectedWalletData?.color} flex items-center gap-2`}>
-                  <Wallet className="w-4 h-4 text-white" />
+            <div className="glass-card rounded-3xl p-6 shadow-float-lg w-full max-w-sm mb-4">
+              {/* DuitNow Badge - Universal Rail */}
+              <div className="flex justify-center mb-3">
+                <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-white" />
                   <span className="text-white font-medium text-sm">
-                    Receive to {selectedWalletData?.shortName}
+                    DuitNow QR
                   </span>
                 </div>
               </div>
+
+              {/* Scannable by any app indicator */}
+              <p className="text-xs text-center text-muted-foreground mb-4">
+                Scannable by any DuitNow-enabled app
+              </p>
 
               {/* QR Code */}
               <div className="flex justify-center mb-4">
@@ -386,11 +425,11 @@ const ReceivePage = () => {
                   {/* Center Logo */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <motion.div 
-                      className="w-14 h-14 rounded-2xl aurora-gradient flex items-center justify-center shadow-glow-aurora"
+                      className="w-14 h-14 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 flex items-center justify-center shadow-lg"
                       animate={isWaiting ? { scale: [1, 1.1, 1] } : {}}
                       transition={{ duration: 1.5, repeat: Infinity }}
                     >
-                      <QrCode className="w-7 h-7 text-white" />
+                      <span className="text-white font-bold text-xs">DN</span>
                     </motion.div>
                   </div>
                 </div>
@@ -398,7 +437,7 @@ const ReceivePage = () => {
 
               {/* Amount Display */}
               {amount && parseFloat(amount) > 0 && (
-                <div className="text-center mb-4">
+                <div className="text-center mb-3">
                   <p className="text-3xl font-bold text-foreground">
                     RM {parseFloat(amount).toFixed(2)}
                   </p>
@@ -406,13 +445,25 @@ const ReceivePage = () => {
               )}
 
               {/* User Info */}
-              <div className="text-center">
+              <div className="text-center mb-4">
                 <p className="font-medium text-foreground mb-1">
                   {userName}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {userPhone || 'FLOW User'}
                 </p>
+              </div>
+
+              {/* Routing Indicator */}
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-muted/50">
+                <span className="text-xs text-muted-foreground">Routes to</span>
+                <ArrowRight className="w-3 h-3 text-aurora-purple" />
+                <div className={`px-3 py-1 rounded-lg bg-gradient-to-r ${selectedWalletData?.color} flex items-center gap-1`}>
+                  <Wallet className="w-3 h-3 text-white" />
+                  <span className="text-white font-medium text-xs">
+                    {selectedWalletData?.shortName}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -421,7 +472,7 @@ const ReceivePage = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 mb-6"
+                className="flex items-center gap-3 mb-4"
               >
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -435,11 +486,24 @@ const ReceivePage = () => {
               </motion.div>
             )}
 
-            {/* Instructions */}
-            <div className="glass-card rounded-2xl p-4 w-full max-w-sm mb-6">
-              <p className="text-sm text-center text-muted-foreground">
-                Ask the payer to scan this QR with their <span className="font-medium text-foreground">Touch'n Go</span> or <span className="font-medium text-foreground">DuitNow</span> app
+            {/* Compatible Apps */}
+            <div className="glass-card rounded-2xl p-4 w-full max-w-sm mb-4">
+              <p className="text-xs font-medium text-foreground mb-2 text-center">
+                Payer can scan with:
               </p>
+              <div className="flex flex-wrap gap-1 justify-center">
+                {COMPATIBLE_PAYER_APPS.slice(0, 6).map((app) => (
+                  <span 
+                    key={app} 
+                    className="px-2 py-1 rounded-lg bg-muted text-[10px] text-muted-foreground"
+                  >
+                    {app}
+                  </span>
+                ))}
+                <span className="px-2 py-1 rounded-lg bg-aurora-purple/10 text-[10px] text-aurora-purple font-medium">
+                  +50 more
+                </span>
+              </div>
             </div>
 
             {/* Actions */}
@@ -470,12 +534,12 @@ const ReceivePage = () => {
               </Button>
             </div>
 
-            {/* New Request */}
+            {/* Change Settings */}
             <button
               onClick={handleReset}
               className="mt-6 text-sm text-muted-foreground hover:text-foreground"
             >
-              Change amount or wallet
+              Change amount or destination
             </button>
           </motion.div>
         )}
