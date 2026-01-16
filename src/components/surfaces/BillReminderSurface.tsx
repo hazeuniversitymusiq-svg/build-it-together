@@ -120,7 +120,8 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
               billerType: reminder.billerName,
               accountRef: reminder.accountRef,
               dueDate: reminder.dueDate.toISOString(),
-              railsAvailable: ["DuitNow", "BankTransfer"],
+              // Bill payments: DuitNow, Bank Transfer, Cards - NOT BNPL/Atome
+              railsAvailable: ["DuitNow", "BankTransfer", "VisaMastercard", "Maybank"],
             },
           })
           .select("id")
