@@ -5,225 +5,77 @@
  * With intelligent features: payment history, auto-pay, spending insights
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
   ChevronLeft,
   Loader2,
-  Zap,
-  Wifi,
-  Phone,
   Calendar,
   ArrowRight,
-  CheckCircle2
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, addDays, differenceInDays } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import BillPaymentHistory from "@/components/bills/BillPaymentHistory";
 import AutoPayToggle from "@/components/bills/AutoPayToggle";
 import BillLinkingFlow from "@/components/bills/BillLinkingFlow";
-import BillPaymentMethodPicker from "@/components/bills/BillPaymentMethodPicker";
+import BillerCatalog, { type BillerTemplate } from "@/components/bills/BillerCatalog";
 import { useDemo } from "@/contexts/DemoContext";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
-import { useFundingSources } from "@/hooks/useFundingSources";
-import type { Database } from "@/integrations/supabase/types";
-
-type BillerAccount = Database['public']['Tables']['biller_accounts']['Row'];
-
-interface BillerInfo {
-  name: "Maxis" | "Unifi" | "TNB";
-  icon: React.ReactNode;
-  gradient: string;
-  dueAmount?: number;
-  dueDate?: Date;
-  accountRef?: string;
-  isLinked: boolean;
-}
-
-const billerConfig: Record<string, { icon: React.ReactNode; gradient: string }> = {
-  Maxis: { icon: <Phone className="w-6 h-6" />, gradient: "from-green-500 to-emerald-600" },
-  Unifi: { icon: <Wifi className="w-6 h-6" />, gradient: "from-orange-500 to-amber-600" },
-  TNB: { icon: <Zap className="w-6 h-6" />, gradient: "from-yellow-500 to-orange-500" },
-};
+import { useBillerAccounts, type LinkedBiller } from "@/hooks/useBillerAccounts";
 
 const BillsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { registerPageAction, clearPageActions } = useDemo();
-  const { sources: fundingSources } = useFundingSources();
+  
+  const { 
+    linkedBillers, 
+    linkedBillerIds, 
+    isLoading, 
+    userId,
+    linkBiller, 
+  } = useBillerAccounts();
 
-  const [billers, setBillers] = useState<BillerInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [linkingBiller, setLinkingBiller] = useState<string | null>(null);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<BillerTemplate | null>(null);
   const [isLinking, setIsLinking] = useState(false);
   const [isCreatingIntent, setIsCreatingIntent] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<Record<string, { id: string; rail: string }>>({});
-  const [showPaymentPicker, setShowPaymentPicker] = useState<string | null>(null);
 
+  // Redirect if not authenticated
   useEffect(() => {
-    const loadBillers = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data: linkedBillers } = await supabase
-        .from("biller_accounts")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "linked");
-
-      const billerNames: Array<"Maxis" | "Unifi" | "TNB"> = ["Maxis", "Unifi", "TNB"];
-      const billerList: BillerInfo[] = billerNames.map(name => {
-        const linked = linkedBillers?.find(b => b.biller_name === name);
-        const config = billerConfig[name];
-        
-        const sampleDue = linked ? {
-          dueAmount: Math.floor(Math.random() * 150) + 50,
-          dueDate: addDays(new Date(), Math.floor(Math.random() * 14) + 1),
-        } : {};
-
-        return {
-          name,
-          icon: config.icon,
-          gradient: config.gradient,
-          isLinked: !!linked,
-          accountRef: linked?.account_reference,
-          ...sampleDue,
-        };
-      });
-
-      setBillers(billerList);
-      setIsLoading(false);
-    };
-
-    loadBillers();
-  }, [navigate]);
-
-  // Simulate paying a bill with auto-detection of due date
-  const simulateBillPayment = useCallback(() => {
-    // Find the bill with the soonest due date
-    const linkedBillers = billers.filter(b => b.isLinked && b.dueDate);
-    
-    if (linkedBillers.length === 0) {
-      // Auto-link TNB as demo
-      const demoBiller: BillerInfo = {
-        name: "TNB",
-        icon: <Zap className="w-6 h-6" />,
-        gradient: "from-yellow-500 to-orange-500",
-        isLinked: true,
-        accountRef: "TNB-12345678",
-        dueAmount: 127.50,
-        dueDate: addDays(new Date(), 3),
-      };
-      
-      setBillers(prev => prev.map(b => 
-        b.name === "TNB" ? demoBiller : b
-      ));
-      
-      toast({
-        title: "⚡ Demo: TNB Bill Detected",
-        description: `RM 127.50 due in 3 days`,
-      });
-      return;
+    if (!isLoading && !userId) {
+      navigate("/auth");
     }
+  }, [isLoading, userId, navigate]);
 
-    // Find the most urgent bill
-    const sortedByDue = linkedBillers.sort((a, b) => 
-      (a.dueDate?.getTime() || 0) - (b.dueDate?.getTime() || 0)
-    );
-    const urgentBill = sortedByDue[0];
-    const daysUntilDue = differenceInDays(urgentBill.dueDate!, new Date());
+  // Handle selecting a biller from catalog
+  const handleSelectBiller = useCallback((template: BillerTemplate) => {
+    setShowCatalog(false);
+    setSelectedTemplate(template);
+  }, []);
+
+  // Handle completing the linking flow
+  const handleLinkComplete = useCallback(async (accountRef: string) => {
+    if (!selectedTemplate) return;
     
-    const urgency = daysUntilDue <= 3 ? "🔴 Urgent" : daysUntilDue <= 7 ? "🟡 Soon" : "🟢 Upcoming";
-    
-    toast({
-      title: `${urgency}: ${urgentBill.name} Bill`,
-      description: `RM ${urgentBill.dueAmount?.toFixed(2)} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`,
-    });
-  }, [billers, toast]);
-
-  // Register demo actions for this page
-  useEffect(() => {
-    registerPageAction({
-      id: 'bills-simulate-payment',
-      label: 'Simulate Bill Payment',
-      description: 'Detect and pay the most urgent bill',
-      action: simulateBillPayment,
-    });
-
-    return () => {
-      clearPageActions();
-    };
-  }, [registerPageAction, clearPageActions, simulateBillPayment]);
-
-  const handleLinkBiller = useCallback(async (billerName: string, accountRef: string) => {
     setIsLinking(true);
+    const success = await linkBiller(selectedTemplate, accountRef);
+    setIsLinking(false);
+    
+    if (success) {
+      setSelectedTemplate(null);
+    }
+  }, [selectedTemplate, linkBiller]);
+
+  // Handle paying a bill
+  const handlePayNow = useCallback(async (biller: LinkedBiller) => {
+    setIsCreatingIntent(biller.id);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      await supabase.from("biller_accounts").insert({
-        user_id: user.id,
-        biller_name: billerName,
-        account_reference: accountRef,
-        status: "linked",
-      });
-
-      setBillers(prev => prev.map(b => 
-        b.name === billerName 
-          ? { 
-              ...b, 
-              isLinked: true, 
-              accountRef: accountRef,
-              dueAmount: Math.floor(Math.random() * 150) + 50,
-              dueDate: addDays(new Date(), Math.floor(Math.random() * 14) + 1),
-            } 
-          : b
-      ));
-
-      setLinkingBiller(null);
-
-      toast({
-        title: "✓ Biller activated",
-        description: `${billerName} is now linked and ready for payments`,
-      });
-    } catch (error) {
-      console.error("Error linking biller:", error);
-      toast({
-        title: "Failed to link",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLinking(false);
-    }
-  }, [toast]);
-
-  const handlePayNow = useCallback(async (biller: BillerInfo) => {
-    if (!biller.dueAmount) return;
-
-    // Check if payment method is selected
-    const paymentMethod = selectedPaymentMethod[biller.name];
-    if (!paymentMethod) {
-      setShowPaymentPicker(biller.name);
-      return;
-    }
-
-    setIsCreatingIntent(biller.name);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
       // Bill payments support: DuitNow, BankTransfer, VisaMastercard (cards)
       // NOT Atome or other BNPL
       const railsAvailable = ["DuitNow", "BankTransfer", "VisaMastercard", "Maybank"];
@@ -231,18 +83,16 @@ const BillsPage = () => {
       const { data: intent, error } = await supabase
         .from("intents")
         .insert({
-          user_id: user.id,
+          user_id: userId,
           type: "PayBill",
           amount: biller.dueAmount,
           currency: "MYR",
           payee_name: biller.name,
-          payee_identifier: biller.accountRef || "",
+          payee_identifier: biller.accountRef,
           metadata: {
             billerType: biller.name,
             accountRef: biller.accountRef,
             railsAvailable,
-            selectedRail: paymentMethod.rail,
-            paymentMethodId: paymentMethod.id,
           },
         })
         .select("id")
@@ -262,15 +112,46 @@ const BillsPage = () => {
       });
       setIsCreatingIntent(null);
     }
-  }, [navigate, toast, selectedPaymentMethod]);
-  
-  const handleSelectPaymentMethod = (billerName: string, id: string, railName: string) => {
-    setSelectedPaymentMethod(prev => ({
-      ...prev,
-      [billerName]: { id, rail: railName }
-    }));
-    setShowPaymentPicker(null);
-  };
+  }, [navigate, toast, userId]);
+
+  // Demo simulation
+  const simulateBillPayment = useCallback(() => {
+    if (linkedBillers.length === 0) {
+      toast({
+        title: "No bills linked",
+        description: "Tap + to add your first biller",
+      });
+      setShowCatalog(true);
+      return;
+    }
+
+    const sortedByDue = [...linkedBillers].sort((a, b) => 
+      a.dueDate.getTime() - b.dueDate.getTime()
+    );
+    const urgentBill = sortedByDue[0];
+    const daysUntilDue = differenceInDays(urgentBill.dueDate, new Date());
+    
+    const urgency = daysUntilDue <= 3 ? "🔴 Urgent" : daysUntilDue <= 7 ? "🟡 Soon" : "🟢 Upcoming";
+    
+    toast({
+      title: `${urgency}: ${urgentBill.name} Bill`,
+      description: `RM ${urgentBill.dueAmount.toFixed(2)} due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`,
+    });
+  }, [linkedBillers, toast]);
+
+  // Register demo actions
+  useEffect(() => {
+    registerPageAction({
+      id: 'bills-simulate-payment',
+      label: 'Simulate Bill Payment',
+      description: 'Detect and pay the most urgent bill',
+      action: simulateBillPayment,
+    });
+
+    return () => {
+      clearPageActions();
+    };
+  }, [registerPageAction, clearPageActions, simulateBillPayment]);
 
   if (isLoading) {
     return (
@@ -291,12 +172,22 @@ const BillsPage = () => {
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
-          <div>
+          <div className="flex-1">
             <p className="text-muted-foreground text-sm">Manage & pay</p>
             <h1 className="text-2xl font-semibold text-foreground tracking-tight">
               Bills
             </h1>
           </div>
+          
+          {/* Add Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCatalog(true)}
+            className="w-10 h-10 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora"
+          >
+            <Plus className="w-5 h-5 text-white" />
+          </motion.button>
         </div>
       </div>
 
@@ -305,65 +196,101 @@ const BillsPage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="px-6 pb-6 text-muted-foreground"
+        className="px-6 pb-4 text-muted-foreground"
       >
         Link your billers and pay in one flow.
       </motion.p>
 
-      {/* Billers List */}
-      <div className="flex-1 px-6 space-y-4">
-        {billers.map((biller, index) => (
-          <DemoHighlight
-            key={biller.name}
-            id={`biller-${biller.name}`}
-            title={`${biller.name} Bill`}
-            description={biller.isLinked 
-              ? `Your ${biller.name} account is linked. Tap to see payment options.`
-              : `Link your ${biller.name} account to pay bills in one tap.`}
-            onTryIt={simulateBillPayment}
+      {/* Active Linking Flow */}
+      <AnimatePresence>
+        {selectedTemplate && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mx-6 mb-4 glass-card rounded-3xl overflow-hidden shadow-float-lg"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + index * 0.1 }}
-              className="glass-card rounded-3xl overflow-hidden shadow-float-lg"
-            >
-            {/* Biller Header */}
-            <div className="flex items-center gap-4 p-5">
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${biller.gradient} flex items-center justify-center text-white shadow-float`}>
-                {biller.icon}
+            <div className="flex items-center gap-4 p-5 border-b border-border/30">
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${selectedTemplate.gradient} flex items-center justify-center text-white shadow-float`}>
+                {selectedTemplate.icon}
               </div>
-              <div className="flex-1">
-                <p className="font-semibold text-foreground text-lg">{biller.name}</p>
-                {biller.isLinked && biller.accountRef && (
-                  <p className="text-sm text-muted-foreground">Acc: {biller.accountRef}</p>
-                )}
+              <div>
+                <p className="font-semibold text-foreground">{selectedTemplate.name}</p>
+                <p className="text-sm text-muted-foreground">New biller</p>
               </div>
-              {biller.isLinked && (
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Due</p>
-                  <p className="font-bold text-foreground text-xl">
-                    RM {biller.dueAmount?.toFixed(2)}
-                  </p>
-                </div>
-              )}
             </div>
+            <BillLinkingFlow
+              billerName={selectedTemplate.name}
+              billerIcon={selectedTemplate.icon}
+              billerGradient={selectedTemplate.gradient}
+              onComplete={handleLinkComplete}
+              onCancel={() => setSelectedTemplate(null)}
+              isLoading={isLinking}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            <AnimatePresence mode="wait">
-              {biller.isLinked ? (
-                <motion.div
-                  key="linked"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="px-5 pb-5"
-                >
-                  {biller.dueDate && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 glass-subtle rounded-xl px-3 py-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>Due on {format(biller.dueDate, "MMM d, yyyy")}</span>
-                    </div>
-                  )}
+      {/* Billers List */}
+      <div className="flex-1 px-6 space-y-4 overflow-y-auto">
+        {linkedBillers.length === 0 && !selectedTemplate ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-16 text-center"
+          >
+            <div className="w-20 h-20 rounded-full glass-subtle flex items-center justify-center mb-6">
+              <Plus className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium text-foreground mb-2">No bills linked</h3>
+            <p className="text-muted-foreground text-sm mb-6 max-w-[240px]">
+              Add your utility bills, subscriptions, and more for easy payment
+            </p>
+            <Button
+              onClick={() => setShowCatalog(true)}
+              className="rounded-2xl aurora-gradient text-white border-0 shadow-glow-aurora"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add your first biller
+            </Button>
+          </motion.div>
+        ) : (
+          linkedBillers.map((biller, index) => (
+            <DemoHighlight
+              key={biller.id}
+              id={`biller-${biller.id}`}
+              title={`${biller.name} Bill`}
+              description={`Your ${biller.name} account is linked. Tap to see payment options.`}
+              onTryIt={simulateBillPayment}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + index * 0.08 }}
+                className="glass-card rounded-3xl overflow-hidden shadow-float-lg"
+              >
+                {/* Biller Header */}
+                <div className="flex items-center gap-4 p-5">
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${biller.gradient} flex items-center justify-center text-white shadow-float`}>
+                    {biller.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground text-lg">{biller.name}</p>
+                    <p className="text-sm text-muted-foreground">Acc: {biller.accountRef}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Due</p>
+                    <p className="font-bold text-foreground text-xl">
+                      RM {biller.dueAmount.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="px-5 pb-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3 glass-subtle rounded-xl px-3 py-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Due on {format(biller.dueDate, "MMM d, yyyy")}</span>
+                  </div>
 
                   {/* Payment History */}
                   <BillPaymentHistory 
@@ -374,15 +301,15 @@ const BillsPage = () => {
                   {/* Auto-Pay Toggle */}
                   <AutoPayToggle
                     billerName={biller.name}
-                    accountRef={biller.accountRef || ''}
+                    accountRef={biller.accountRef}
                   />
                   
                   <Button
                     onClick={() => handlePayNow(biller)}
-                    disabled={isCreatingIntent === biller.name}
+                    disabled={isCreatingIntent === biller.id}
                     className="w-full rounded-2xl h-12 aurora-gradient text-white border-0 shadow-glow-aurora"
                   >
-                    {isCreatingIntent === biller.name ? (
+                    {isCreatingIntent === biller.id ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Creating...
@@ -394,40 +321,23 @@ const BillsPage = () => {
                       </>
                     )}
                   </Button>
-                </motion.div>
-              ) : linkingBiller === biller.name ? (
-                <BillLinkingFlow
-                  key="linking"
-                  billerName={biller.name}
-                  billerIcon={biller.icon}
-                  billerGradient={biller.gradient}
-                  onComplete={(accountRef) => handleLinkBiller(biller.name, accountRef)}
-                  onCancel={() => setLinkingBiller(null)}
-                  isLoading={isLinking}
-                />
-              ) : (
-                <motion.div
-                  key="unlinked"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="px-5 pb-5"
-                >
-                  <Button
-                    variant="outline"
-                    onClick={() => setLinkingBiller(biller.name)}
-                    className="w-full rounded-2xl h-11 glass-card border-0 text-muted-foreground hover:text-foreground"
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Link & Activate
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-          </DemoHighlight>
-        ))}
+                </div>
+              </motion.div>
+            </DemoHighlight>
+          ))
+        )}
       </div>
+
+      {/* Biller Catalog Modal */}
+      <AnimatePresence>
+        {showCatalog && (
+          <BillerCatalog
+            linkedBillerIds={linkedBillerIds}
+            onSelectBiller={handleSelectBiller}
+            onClose={() => setShowCatalog(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
