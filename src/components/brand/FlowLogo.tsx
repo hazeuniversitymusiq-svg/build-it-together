@@ -61,7 +61,7 @@ export const FlowLogo = ({
       <motion.img
         src={variant === "icon" ? flowIcon : flowLogoFull}
         alt="FLOW"
-        className="relative z-10 object-contain"
+        className="relative z-10 object-contain dark:brightness-[1.8] dark:contrast-[1.1]"
         style={{ 
           width: logoSize, 
           height: variant === "icon" ? logoSize * 0.6 : logoSize,
