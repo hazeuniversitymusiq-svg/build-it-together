@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWebAuthn } from '@/hooks/useWebAuthn';
 import { useNativeBiometric } from '@/hooks/useNativeBiometric';
 import { Capacitor } from '@capacitor/core';
+import { isPrototypeMode } from '@/lib/core/gates';
 
 interface SecurityState {
   isPaymentAuthorized: boolean;
@@ -70,8 +71,21 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     !webAuthn.isRegistered;
 
   // Authorize a payment using biometrics (native preferred)
+  // In prototype mode, auto-pass to allow smooth demos
   const authorizePayment = useCallback(async (reason?: string): Promise<boolean> => {
     if (!user) return false;
+
+    // PROTOTYPE MODE: Auto-pass biometric checks for demos
+    if (isPrototypeMode()) {
+      console.log('FLOW Prototype: Auto-passing biometric authentication');
+      setState({
+        isPaymentAuthorized: true,
+        lastAuthTime: Date.now(),
+        requiresReauth: false,
+        biometricMethod: 'none',
+      });
+      return true;
+    }
 
     // FLOW Security: Require biometrics on native platforms
     if (Capacitor.isNativePlatform()) {
