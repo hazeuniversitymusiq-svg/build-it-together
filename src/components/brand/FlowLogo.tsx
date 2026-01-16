@@ -191,7 +191,11 @@ export const FlowLogoMark = ({
         src={flowIcon}
         alt="FLOW"
         className="relative z-10 object-contain"
-        style={{ width: size, height: size * 0.6 }}
+        style={{ 
+          width: size, 
+          height: size * 0.6,
+          filter: "contrast(1.25) saturate(1.6) brightness(1.1)",
+        }}
         animate={animate ? {
           filter: [
             "drop-shadow(0 0 0px rgba(34,197,94,0))",
@@ -265,7 +269,11 @@ export const FlowLoadingLogo = ({
         src={flowIcon}
         alt="FLOW"
         className="relative z-10 object-contain"
-        style={{ width: size, height: size * 0.6 }}
+        style={{ 
+          width: size, 
+          height: size * 0.6,
+          filter: "contrast(1.25) saturate(1.6) brightness(1.1)",
+        }}
         animate={{
           opacity: [0.8, 1, 0.8],
           scale: [0.98, 1, 0.98],
