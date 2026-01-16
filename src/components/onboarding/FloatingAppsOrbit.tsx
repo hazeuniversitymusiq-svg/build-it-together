@@ -14,10 +14,10 @@ import {
   CreditCard, 
   Receipt,
   Smartphone,
-  Banknote,
   ShoppingBag,
   Zap
 } from 'lucide-react';
+import flowIcon from '@/assets/flow-icon.png';
 
 interface FloatingApp {
   id: string;
@@ -228,14 +228,24 @@ export function FloatingAppsOrbit({ phase, onSyncComplete }: FloatingAppsOrbitPr
         }}
         className="relative z-10"
       >
-        {/* Glass orb */}
-        <div className="w-24 h-24 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
-          <motion.div
-            animate={phase === 'detecting' ? { rotate: 360 } : {}}
-            transition={phase === 'detecting' ? { duration: 2, repeat: Infinity, ease: 'linear' } : {}}
-          >
-            <span className="text-3xl font-bold text-white tracking-tight">F</span>
-          </motion.div>
+        {/* Glass orb with Flow icon */}
+        <div className="w-24 h-24 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora overflow-hidden">
+          <motion.img
+            src={flowIcon}
+            alt="FLOW"
+            className="w-16 h-10 object-contain"
+            animate={phase === 'detecting' ? { 
+              opacity: [0.8, 1, 0.8],
+              filter: [
+                'drop-shadow(0 0 0px rgba(255,255,255,0))',
+                'drop-shadow(0 0 12px rgba(255,255,255,0.6))',
+                'drop-shadow(0 0 0px rgba(255,255,255,0))',
+              ],
+            } : {
+              opacity: 1,
+            }}
+            transition={phase === 'detecting' ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : {}}
+          />
         </div>
         
         {/* Orbital ring */}

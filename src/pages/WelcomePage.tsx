@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { FlowLogo } from "@/components/brand/FlowLogo";
 
 const WelcomePage = () => {
   const navigate = useNavigate();
@@ -13,15 +14,15 @@ const WelcomePage = () => {
       
       {/* Main content - centered vertically */}
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full relative z-10">
-        {/* Title with gradient */}
-        <motion.h1
+        {/* Animated Logo */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-5xl font-bold tracking-tight mb-8 bg-gradient-to-r from-foreground via-foreground to-aurora-blue bg-clip-text"
+          className="mb-8"
         >
-          FLOW
-        </motion.h1>
+          <FlowLogo variant="full" size="lg" animate />
+        </motion.div>
 
         {/* Headline */}
         <motion.h2
