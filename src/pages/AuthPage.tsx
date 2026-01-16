@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import AuthDebugPanel from '@/components/auth/AuthDebugPanel';
+// Debug panel removed for production
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -357,7 +357,7 @@ const AuthPage = () => {
                 : 'Get started with your FLOW account'}
             </motion.p>
 
-            <AuthDebugPanel user={user} session={session} loading={loading} />
+            {/* Debug panel removed for production */}
 
             {/* Google Sign-In Button */}
             <motion.div
