@@ -379,7 +379,11 @@
   }
 
   .safe-area-top {
-    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-top: max(3.5rem, calc(env(safe-area-inset-top) + 1rem));
+  }
+  
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   /* === LEGACY UTILITIES (keeping for compatibility) === */
