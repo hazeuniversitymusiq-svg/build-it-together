@@ -65,7 +65,7 @@ export const FlowLogo = ({
         style={{ 
           width: logoSize, 
           height: variant === "icon" ? logoSize * 0.6 : logoSize,
-          filter: "contrast(1.15) saturate(1.3) brightness(1.05)",
+          filter: "contrast(1.25) saturate(1.6) brightness(1.1)",
         }}
         initial={animate ? { opacity: 0, scale: 0.9 } : false}
         animate={animate ? { opacity: 1, scale: 1 } : false}
