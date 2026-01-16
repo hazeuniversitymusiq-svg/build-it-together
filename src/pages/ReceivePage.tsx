@@ -41,6 +41,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import { SuccessCircle, SyncSpinner, PulsingDot } from "@/components/ui/micro-animations";
+import flowIcon from "@/assets/flow-icon.png";
 
 // Destination wallet options (where receiver wants money to land)
 const DESTINATION_WALLETS = [
@@ -565,11 +566,11 @@ const ReceivePage = () => {
                   {/* Center Logo */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <motion.div 
-                      className="w-14 h-14 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 flex items-center justify-center shadow-lg"
-                      animate={isWaiting ? { scale: [1, 1.1, 1] } : {}}
+                      className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-lg"
+                      animate={isWaiting ? { scale: [1, 1.05, 1] } : {}}
                       transition={{ duration: 1.5, repeat: Infinity }}
                     >
-                      <span className="text-white font-bold text-xs">DN</span>
+                      <img src={flowIcon} alt="FLOW" className="w-11 h-7 object-contain" />
                     </motion.div>
                   </div>
                 </div>

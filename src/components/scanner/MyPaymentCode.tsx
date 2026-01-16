@@ -7,10 +7,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Share2, Check, QrCode, Wallet } from 'lucide-react';
+import { X, Copy, Share2, Check, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import flowIcon from '@/assets/flow-icon.png';
 
 interface MyPaymentCodeProps {
   isOpen: boolean;
@@ -173,8 +174,8 @@ const MyPaymentCode = ({ isOpen, onClose }: MyPaymentCodeProps) => {
                 
                 {/* Center logo */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-xl aurora-gradient flex items-center justify-center shadow-glow-aurora">
-                    <QrCode className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-lg">
+                    <img src={flowIcon} alt="FLOW" className="w-10 h-6 object-contain" />
                   </div>
                 </div>
               </div>

@@ -41,6 +41,7 @@ import {
   RotateCcw,
   Loader2
 } from "lucide-react";
+import { FlowLogoMark } from "@/components/brand/FlowLogo";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -470,9 +471,12 @@ const SettingsPage = () => {
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Sign Out</span>
         </motion.button>
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          FLOW 1.0 • Liquid Glass
-        </p>
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <FlowLogoMark size={24} animate={false} />
+          <p className="text-xs text-muted-foreground">
+            1.0 • Liquid Glass
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
+import { FlowLogo } from '@/components/brand/FlowLogo';
 
 // Email/password validation
 const emailSchema = z.string().email('Please enter a valid email');
@@ -337,14 +338,14 @@ const AuthPage = () => {
             exit={{ opacity: 0, x: -20 }}
             className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full relative z-10"
           >
-            <motion.h1
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-3xl font-bold text-foreground tracking-tight mb-4"
+              className="mb-6"
             >
-              {mode === 'signin' ? 'Welcome back' : 'Create account'}
-            </motion.h1>
+              <FlowLogo variant="full" size="md" animate={false} />
+            </motion.div>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -353,8 +354,8 @@ const AuthPage = () => {
               className="text-base text-muted-foreground mb-8"
             >
               {mode === 'signin' 
-                ? 'Sign in to continue to FLOW' 
-                : 'Get started with your FLOW account'}
+                ? 'Sign in to continue' 
+                : 'Get started with your account'}
             </motion.p>
 
             {/* Debug panel removed for production */}
