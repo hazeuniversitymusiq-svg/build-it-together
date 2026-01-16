@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { FloatingAppsOrbit } from './FloatingAppsOrbit';
-import { FlowLogoMark } from '@/components/brand/FlowLogo';
+import { FlowLogo } from '@/components/brand/FlowLogo';
 
 interface OnboardingPhase {
   id: string;
@@ -190,13 +190,13 @@ export function AppleOnboardingFlow() {
         {/* Flow Logo */}
         {currentPhase === 0 && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
+            initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.6 }}
-            className="mb-6"
+            className="mb-8"
           >
-            <FlowLogoMark size={80} animate glowing />
+            <FlowLogo variant="full" size="md" animate />
           </motion.div>
         )}
         
