@@ -12,7 +12,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Sparkles, 
   ChevronRight,
-  Check,
   Fingerprint,
   Shield,
   Zap
@@ -20,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { FloatingAppsOrbit } from './FloatingAppsOrbit';
+import { FlowLogoMark } from '@/components/brand/FlowLogo';
 
 interface OnboardingPhase {
   id: string;
@@ -187,6 +187,19 @@ export function AppleOnboardingFlow() {
 
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 safe-area-top safe-area-bottom">
+        {/* Flow Logo */}
+        {currentPhase === 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6"
+          >
+            <FlowLogoMark size={80} animate glowing />
+          </motion.div>
+        )}
+        
         {/* Floating Apps Constellation */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
