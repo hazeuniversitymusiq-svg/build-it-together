@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { generatePartnerPitchPDF } from '@/lib/pdf/partner-pitch-pdf';
 import { generateIntelligenceSummaryPDF } from '@/lib/pdf/intelligence-summary-pdf';
+import { generateUnifiedPitchPDF } from '@/lib/pdf/unified-pitch-pdf';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -100,13 +101,22 @@ export default function PartnerPitchPage() {
             className="mt-6 flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button 
+              variant="default" 
+              size="sm" 
+              className="bg-primary hover:bg-primary/90"
+              onClick={generateUnifiedPitchPDF}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Pitch Deck
+            </Button>
+            <Button 
               variant="ghost" 
               size="sm" 
               className="text-muted-foreground hover:text-primary"
               onClick={generatePartnerPitchPDF}
             >
               <Download className="w-4 h-4 mr-2" />
-              Download Partnership PDF
+              Partnership Only
             </Button>
             <Button 
               variant="ghost" 
@@ -115,7 +125,7 @@ export default function PartnerPitchPage() {
               onClick={generateIntelligenceSummaryPDF}
             >
               <Download className="w-4 h-4 mr-2" />
-              Download Intelligence Summary
+              Intelligence Only
             </Button>
           </motion.div>
         </motion.div>
