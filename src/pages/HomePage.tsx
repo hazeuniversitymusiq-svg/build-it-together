@@ -100,7 +100,7 @@ const HomePage = () => {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FlowLogoMark size={48} animate glowing />
+            <FlowLogoMark size={64} animate={false} glowing={false} />
             <div>
               <motion.p 
                 initial={{ opacity: 0 }}
