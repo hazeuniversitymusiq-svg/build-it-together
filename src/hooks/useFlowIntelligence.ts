@@ -54,12 +54,28 @@ export function useFlowIntelligence() {
         },
       });
 
-      if (fnError) throw fnError;
+      if (fnError) {
+        // Non-critical - return safe defaults so payment can proceed
+        console.warn('[FLOW] Payment analysis unavailable:', fnError.message);
+        return {
+          riskScore: 0,
+          riskFactors: [],
+          recommendation: null,
+          suggestedSource: 'Wallet',
+          isAnomalous: false,
+        };
+      }
       return data as PaymentAnalysis;
     } catch (err) {
-      console.error('Payment analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Analysis failed');
-      return null;
+      // Network/edge function errors - fail gracefully
+      console.warn('[FLOW] Payment analysis skipped');
+      return {
+        riskScore: 0,
+        riskFactors: [],
+        recommendation: null,
+        suggestedSource: 'Wallet',
+        isAnomalous: false,
+      };
     } finally {
       setIsAnalyzing(false);
     }

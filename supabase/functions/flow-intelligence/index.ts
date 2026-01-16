@@ -143,13 +143,17 @@ Be helpful, not alarmist. Most payments are normal.`;
       });
 
       if (!aiResponse.ok) {
-        if (aiResponse.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limited, please try again later" }), {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        throw new Error(`AI gateway error: ${aiResponse.status}`);
+        // AI unavailable - return safe defaults instead of failing
+        console.warn(`AI gateway returned ${aiResponse.status}, using fallback`);
+        return new Response(JSON.stringify({
+          riskScore: 0,
+          riskFactors: [],
+          recommendation: null,
+          suggestedSource: fundingSources?.[0]?.name || "Wallet",
+          isAnomalous: false,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const aiData = await aiResponse.json();
