@@ -16,7 +16,7 @@ import { useDeepLink } from "@/hooks/useDeepLink";
 import { useDemo } from "@/contexts/DemoContext";
 import { useToast } from "@/hooks/use-toast";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
-import { FlowLogoMark } from "@/components/brand/FlowLogo";
+import { FlowLogo } from "@/components/brand/FlowLogo";
 
 // Apple-style Quick Action Button with Liquid Glass
 const QuickAction = ({
@@ -99,22 +99,7 @@ const HomePage = () => {
         className="pt-4 pb-2"
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FlowLogoMark size={64} animate={false} glowing={false} />
-            <div>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="text-muted-foreground text-xs"
-              >
-                Good to see you
-              </motion.p>
-              <h1 className="text-xl font-semibold text-foreground tracking-tight">
-                FLOW
-              </h1>
-            </div>
-          </div>
+          <FlowLogo variant="full" size="sm" animate={false} />
           
           {/* Liquid Glass Status Pill */}
           <div className="liquid-pill px-3 py-1.5 flex items-center gap-1.5">
