@@ -355,42 +355,42 @@ const DemoPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="space-y-2"
+                  className="space-y-3"
                 >
-                  <p className="text-sm font-medium text-center text-muted-foreground">
-                    Select a QR payment to demo:
+                  <p className="text-sm text-muted-foreground text-center mb-4">
+                    Select a payment scenario
                   </p>
+                  
                   {DEMO_PAYMENTS.map((payment) => (
-                    <Card 
+                    <button 
                       key={payment.qrId}
                       className={cn(
-                        "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all",
-                        payment.simulateError && "border-amber-500/30 bg-amber-50/30 dark:bg-amber-950/10"
+                        "w-full flex items-center gap-4 p-4 rounded-2xl border bg-card",
+                        "hover:bg-muted/50 active:scale-[0.98] transition-all",
+                        payment.simulateError && "border-amber-200 dark:border-amber-800"
                       )}
                       onClick={() => startDemo(payment)}
                     >
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="h-9 w-9 rounded-lg flex items-center justify-center text-lg bg-muted shrink-0">
-                              {payment.railIcon}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm truncate">{payment.merchant}</p>
-                              <p className={cn("text-xs", payment.railColor)}>
-                                {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="font-bold">RM {payment.amount.toFixed(2)}</p>
-                          </div>
-                        </div>
-                        {payment.simulateError && (
-                          <p className="text-xs text-amber-600 mt-1">Demo: Fallback flow</p>
-                        )}
-                      </CardContent>
-                    </Card>
+                      {/* Amount */}
+                      <div className="text-left">
+                        <span className="text-2xl font-semibold tracking-tight">
+                          {payment.amount.toFixed(2)}
+                        </span>
+                        <span className="text-sm text-muted-foreground ml-1">MYR</span>
+                      </div>
+                      
+                      {/* Merchant & Rail */}
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="font-medium text-sm truncate">{payment.merchant}</p>
+                        <p className="text-xs text-muted-foreground">
+                          via {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail}
+                          {payment.simulateError && ' • Fallback demo'}
+                        </p>
+                      </div>
+                      
+                      {/* Arrow */}
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
+                    </button>
                   ))}
                 </motion.div>
               )}
