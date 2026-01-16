@@ -50,10 +50,15 @@ export function useAuditLog() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Audit logging is non-critical - log silently and don't block user flows
+        console.warn('[FLOW] Audit log skipped:', error.message);
+        return false;
+      }
       return true;
     } catch (err) {
-      console.error('Audit log error:', err);
+      // Network errors in native apps are common - fail silently
+      console.warn('[FLOW] Audit log unavailable');
       return false;
     }
   }, []);
