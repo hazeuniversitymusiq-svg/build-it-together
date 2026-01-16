@@ -209,7 +209,7 @@ const DonePage = forwardRef<HTMLDivElement>((_, ref) => {
           transition={{ delay: 0.4 }}
           className="text-3xl font-semibold text-foreground mb-2"
         >
-          Payment Complete
+          Sent
         </motion.h1>
         
         <motion.p
@@ -218,7 +218,7 @@ const DonePage = forwardRef<HTMLDivElement>((_, ref) => {
           transition={{ delay: 0.5 }}
           className="text-muted-foreground mb-8"
         >
-          Transaction successful
+          Payment delivered successfully
         </motion.p>
 
         {/* Receipt Card - Glass design */}

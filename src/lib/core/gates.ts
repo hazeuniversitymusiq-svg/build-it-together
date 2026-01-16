@@ -3,6 +3,8 @@
  * 
  * Security gates that must pass before intent creation/resolution.
  * These are the fundamental access control rules.
+ * 
+ * In Prototype mode, gates are more permissive to allow smooth demos.
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -14,8 +16,20 @@ export interface GateResult {
 }
 
 /**
+ * Check if we're in prototype mode
+ */
+function isPrototypeMode(): boolean {
+  try {
+    return localStorage.getItem('flow_test_mode') !== 'field_test';
+  } catch {
+    return true; // Default to prototype if localStorage unavailable
+  }
+}
+
+/**
  * Global Identity Gate
  * Block if Users.identity_status ≠ active
+ * In prototype mode, auto-pass if user exists
  */
 export async function checkIdentityGate(userId: string): Promise<GateResult> {
   const { data: user, error } = await supabase
@@ -25,6 +39,10 @@ export async function checkIdentityGate(userId: string): Promise<GateResult> {
     .maybeSingle();
 
   if (error || !user) {
+    // In prototype mode, allow if we have a userId
+    if (isPrototypeMode()) {
+      return { passed: true };
+    }
     return {
       passed: false,
       blockedReason: 'Unable to verify identity',
@@ -33,6 +51,10 @@ export async function checkIdentityGate(userId: string): Promise<GateResult> {
   }
 
   if (user.identity_status !== 'active') {
+    // In prototype mode, auto-pass
+    if (isPrototypeMode()) {
+      return { passed: true };
+    }
     return {
       passed: false,
       blockedReason: 'Your account is not active',
@@ -46,8 +68,44 @@ export async function checkIdentityGate(userId: string): Promise<GateResult> {
 /**
  * Device Trust Gate
  * Block if device_id is not trusted
+ * In prototype mode, auto-trust the device
  */
 export async function checkDeviceTrustGate(userId: string, deviceId: string): Promise<GateResult> {
+  // In prototype mode, always pass and ensure device is trusted
+  if (isPrototypeMode()) {
+    // Check if device exists first
+    const { data: existingDevice } = await supabase
+      .from('trusted_devices')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('device_id', deviceId)
+      .maybeSingle();
+    
+    if (!existingDevice) {
+      // Insert new trusted device
+      await supabase
+        .from('trusted_devices')
+        .insert({
+          user_id: userId,
+          device_id: deviceId,
+          trusted: true,
+          last_seen_at: new Date().toISOString(),
+        });
+    } else {
+      // Update existing device
+      await supabase
+        .from('trusted_devices')
+        .update({ 
+          trusted: true,
+          last_seen_at: new Date().toISOString() 
+        })
+        .eq('user_id', userId)
+        .eq('device_id', deviceId);
+    }
+    
+    return { passed: true };
+  }
+
   const { data: device, error } = await supabase
     .from('trusted_devices')
     .select('trusted')
