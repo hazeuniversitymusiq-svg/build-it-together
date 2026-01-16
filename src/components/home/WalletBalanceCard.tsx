@@ -125,13 +125,13 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
           </motion.button>
         </div>
         
-        {/* Clean balance display - no trend pill */}
+        {/* Clean balance display with subtle dark mode glow */}
         <motion.p 
           key={totalBalance}
           initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight"
+          className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight dark:drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]"
         >
           RM {totalBalance.toFixed(2)}
         </motion.p>
