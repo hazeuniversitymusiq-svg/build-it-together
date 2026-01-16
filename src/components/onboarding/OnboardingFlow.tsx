@@ -80,14 +80,6 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     route: '/bills',
     gradient: 'from-amber-500 to-orange-500',
   },
-  {
-    id: 'demo',
-    title: 'Demo Mode Active',
-    description: 'We\'ve enabled Demo mode for you. Look for highlighted elements — tap them to learn how features work!',
-    icon: <Sparkles className="w-12 h-12" />,
-    route: '/home',
-    gradient: 'from-aurora-purple via-aurora-blue to-aurora-teal',
-  },
 ];
 
 export function OnboardingFlow() {
