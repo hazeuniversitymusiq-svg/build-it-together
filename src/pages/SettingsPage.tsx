@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
 
 import { useOrchestration } from "@/contexts/OrchestrationContext";
@@ -39,12 +40,15 @@ import {
   Settings2,
   Sliders,
   RotateCcw,
-  Loader2
+  Loader2,
+  Moon,
+  Sun
 } from "lucide-react";
 import { FlowLogoMark } from "@/components/brand/FlowLogo";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const { guardrails } = useOrchestration();
   const { isWebAuthnRegistered } = useSecurity();
   const { signOut } = useAuth();
@@ -151,6 +155,28 @@ const SettingsPage = () => {
                 <ChevronRight size={16} className="text-muted-foreground/50" />
               </div>
             </button>
+            
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl aurora-gradient-soft flex items-center justify-center">
+                  {theme === 'dark' ? (
+                    <Moon className="w-5 h-5 text-aurora-purple" />
+                  ) : (
+                    <Sun className="w-5 h-5 text-amber-500" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-foreground">Appearance</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+                  </p>
+                </div>
+              </div>
+              <Switch 
+                checked={theme === 'dark'} 
+                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+              />
+            </div>
           </div>
         </motion.div>
       </section>
