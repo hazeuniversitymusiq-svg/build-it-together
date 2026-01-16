@@ -107,12 +107,7 @@ export function OnboardingFlow() {
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
 
-  // Auto-enable demo mode on last step
-  useEffect(() => {
-    if (isLastStep) {
-      enableDemoMode();
-    }
-  }, [isLastStep, enableDemoMode]);
+  // Demo mode is user-triggered via the Demo tab - not auto-enabled
 
   const handleNext = () => {
     if (isLastStep) {
@@ -126,7 +121,6 @@ export function OnboardingFlow() {
   };
 
   const handleSkip = () => {
-    enableDemoMode();
     completeOnboarding();
     navigate('/home');
   };
