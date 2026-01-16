@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { generatePartnerPitchPDF } from '@/lib/pdf/partner-pitch-pdf';
+import { generateIntelligenceSummaryPDF } from '@/lib/pdf/intelligence-summary-pdf';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -91,12 +92,12 @@ export default function PartnerPitchPage() {
             </Button>
           </div>
           
-          {/* Download PDF Button */}
+          {/* Download PDF Buttons */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="mt-6"
+            className="mt-6 flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button 
               variant="ghost" 
@@ -105,7 +106,16 @@ export default function PartnerPitchPage() {
               onClick={generatePartnerPitchPDF}
             >
               <Download className="w-4 h-4 mr-2" />
-              Download PDF Summary
+              Download Partnership PDF
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-primary"
+              onClick={generateIntelligenceSummaryPDF}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download Intelligence Summary
             </Button>
           </motion.div>
         </motion.div>
