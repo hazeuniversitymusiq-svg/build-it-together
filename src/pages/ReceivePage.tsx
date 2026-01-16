@@ -1,14 +1,14 @@
 /**
  * FLOW Receive Page - Universal Receive Architecture
- * 
+ *
  * PROTOCOL:
  * 1. Receiver selects destination wallet (where money lands)
  * 2. FLOW generates DuitNow-interoperable QR
  * 3. Payer scans with ANY DuitNow-enabled wallet/bank (T&G, Maybank, GrabPay, CIMB, etc.)
  * 4. FLOW receives via DuitNow rails → Routes to receiver's chosen destination wallet
- * 
+ *
  * PROTOTYPE: Auto-simulates payment received after 5 seconds
- * 
+ *
  * iOS 26 Liquid Glass design
  */
 
