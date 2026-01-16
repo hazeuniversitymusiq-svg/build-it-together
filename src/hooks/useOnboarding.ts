@@ -88,6 +88,8 @@ export function useOnboarding() {
     setHasCompleted(false);
     setIsFirstTime(true);
     setCurrentStep(0);
+    // Force page reload to restart the flow
+    window.location.href = '/';
   }, []);
 
   const goToStep = useCallback((step: number) => {
