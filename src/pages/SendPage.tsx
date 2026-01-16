@@ -249,7 +249,7 @@ const SendPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom pb-28">
       {/* Header */}
-      <div className="px-6 pt-14 pb-2">
+      <div className="px-6 pt-4 pb-2">
         <div className="flex items-center gap-4 mb-2">
           <button 
             onClick={() => navigate("/home")}

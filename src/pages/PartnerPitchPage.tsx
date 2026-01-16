@@ -51,7 +51,7 @@ export default function PartnerPitchPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden safe-area-top safe-area-bottom">
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center px-6 py-20">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/5" />

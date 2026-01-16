@@ -381,7 +381,7 @@ const ConfirmPage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-16 pb-6"
+        className="pt-4 pb-6"
       >
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">
           Confirm

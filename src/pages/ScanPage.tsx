@@ -239,7 +239,7 @@ const ScanPage = () => {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-14 pb-2"
+        className="pt-4 pb-2"
       >
         <p className="text-muted-foreground text-sm mb-1">Pay merchants instantly</p>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">

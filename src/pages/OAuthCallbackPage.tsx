@@ -130,7 +130,7 @@ export default function OAuthCallbackPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-6">
+    <main className="min-h-screen bg-background flex items-center justify-center p-6 safe-area-top safe-area-bottom">
       <section className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-center">
         {status === "working" && (
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
