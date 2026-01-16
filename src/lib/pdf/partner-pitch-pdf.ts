@@ -2,7 +2,7 @@
  * FLOW Partner Pitch Deck PDF Generator
  * 
  * Generates a professional PDF summary for bank partners
- * Uses only ASCII characters for maximum compatibility
+ * Clean ASCII-only output with proper spacing
  */
 
 import { jsPDF } from 'jspdf';
@@ -59,138 +59,138 @@ export function generatePartnerPitchPDF(): void {
   // Helper: Section header
   const addSection = (title: string, y: number): number => {
     doc.setFillColor(...COLORS.primary);
-    doc.rect(margin, y, 4, 8, 'F');
-    addText(title, margin + 10, y + 6, { fontSize: 14, fontStyle: 'bold', color: COLORS.primary });
-    return y + 15;
+    doc.rect(margin, y, 4, 7, 'F');
+    addText(title, margin + 10, y + 5, { fontSize: 13, fontStyle: 'bold', color: COLORS.primary });
+    return y + 12;
   };
 
   // Helper: Bullet point
-  const addBullet = (text: string, y: number, indent: number = 0): number => {
+  const addBullet = (text: string, y: number): number => {
     doc.setFillColor(...COLORS.accent);
-    doc.circle(margin + indent + 3, y - 1.5, 1.5, 'F');
-    addText(text, margin + indent + 10, y, { fontSize: 10, maxWidth: pageWidth - margin * 2 - indent - 15 });
-    return y + 7;
-  };
-
-  // Helper: Page footer
-  const addPageFooter = (pageNum: number) => {
-    doc.setDrawColor(...COLORS.muted);
-    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
-    addText('FLOW Bank Partnership Summary', margin, pageHeight - 10, { fontSize: 8, color: COLORS.muted });
-    addText('Page ' + pageNum, pageWidth - margin, pageHeight - 10, { fontSize: 8, color: COLORS.muted, align: 'right' });
+    doc.circle(margin + 3, y - 1, 1.2, 'F');
+    addText(text, margin + 9, y, { fontSize: 9, maxWidth: pageWidth - margin * 2 - 12 });
+    return y + 6;
   };
 
   // ==================== PAGE 1: Cover ====================
   
   // Header band
   doc.setFillColor(...COLORS.primary);
-  doc.rect(0, 0, pageWidth, 60, 'F');
+  doc.rect(0, 0, pageWidth, 55, 'F');
   
-  // Logo and title
-  addText('FLOW', margin, 35, { fontSize: 36, fontStyle: 'bold', color: COLORS.white });
-  addText('Bank Partnership Proposal', margin, 48, { fontSize: 14, color: COLORS.white });
+  addText('FLOW', margin, 32, { fontSize: 32, fontStyle: 'bold', color: COLORS.white });
+  addText('Bank Partnership Proposal', margin, 44, { fontSize: 12, color: COLORS.white });
   
-  yPos = 80;
+  yPos = 70;
   
   // Tagline
-  addText('Unified Payment Orchestration for Malaysia', margin, yPos, { fontSize: 18, fontStyle: 'bold' });
+  addText('Unified Payment Orchestration for Malaysia', margin, yPos, { fontSize: 16, fontStyle: 'bold' });
+  yPos += 10;
   
-  yPos += 15;
   addText(
-    'Partner with FLOW to deliver seamless "Scan - Authorize - Pay" experiences across Malaysia\'s fragmented payment ecosystem.',
-    margin,
-    yPos,
-    { fontSize: 11, color: COLORS.muted, maxWidth: pageWidth - margin * 2 }
+    'Partner with FLOW to deliver seamless payment experiences across Malaysia\'s fragmented ecosystem.',
+    margin, yPos,
+    { fontSize: 10, color: COLORS.muted, maxWidth: pageWidth - margin * 2 }
   );
   
-  yPos += 25;
+  yPos += 18;
   
   // Key Stats
   yPos = addSection('Key Metrics', yPos);
   
-  const stats = [
-    { value: '3M+', label: 'Potential Users' },
-    { value: '40%', label: 'Higher Completion' },
-    { value: '<2s', label: 'Scan to Payment' },
-    { value: 'Bank-grade', label: 'Security Level' },
-  ];
-  
   doc.setFillColor(...COLORS.lightBg);
-  doc.roundedRect(margin, yPos - 5, pageWidth - margin * 2, 28, 3, 3, 'F');
+  doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, 22, 2, 2, 'F');
+  
+  const stats = [
+    { value: '3M+', label: 'Users' },
+    { value: '40%', label: 'Better Rates' },
+    { value: '<2s', label: 'Pay Time' },
+    { value: 'Bank-grade', label: 'Security' },
+  ];
   
   const statWidth = (pageWidth - margin * 2) / 4;
   stats.forEach((stat, i) => {
     const x = margin + (i * statWidth) + statWidth / 2;
-    addText(stat.value, x, yPos + 7, { fontSize: 16, fontStyle: 'bold', color: COLORS.primary, align: 'center' });
-    addText(stat.label, x, yPos + 15, { fontSize: 8, color: COLORS.muted, align: 'center' });
+    addText(stat.value, x, yPos + 6, { fontSize: 14, fontStyle: 'bold', color: COLORS.primary, align: 'center' });
+    addText(stat.label, x, yPos + 12, { fontSize: 7, color: COLORS.muted, align: 'center' });
   });
   
-  yPos += 35;
+  yPos += 28;
   
-  // Problem Statement
+  // Problem
   yPos = addSection('The Problem', yPos);
   yPos = addBullet('Malaysia has 50+ payment apps - users juggle 3-5 daily', yPos);
   yPos = addBullet('Constant app switching, balance checking, failed payments', yPos);
   yPos = addBullet('No unified view of spending across wallets and banks', yPos);
   
-  yPos += 8;
+  yPos += 6;
   
   // Solution
   yPos = addSection('FLOW Solution', yPos);
-  yPos = addBullet('One scan works with any DuitNow QR - FLOW finds the best way to pay', yPos);
-  yPos = addBullet('Smart resolution engine checks balances and applies user preferences', yPos);
-  yPos = addBullet('Biometric confirmation, then handoff to wallet for execution', yPos);
-  yPos = addBullet('FLOW orchestrates, not holds money - zero regulatory friction', yPos);
+  yPos = addBullet('One scan works with any DuitNow QR - FLOW finds the best rail', yPos);
+  yPos = addBullet('Smart resolution checks balances and applies preferences', yPos);
+  yPos = addBullet('Biometric confirmation, then handoff to wallet', yPos);
+  yPos = addBullet('FLOW orchestrates, never holds money - zero regulatory friction', yPos);
   
-  yPos += 8;
+  yPos += 6;
   
   // Integration Requirements
   yPos = addSection('Integration Requirements', yPos);
-  addText('Just 4 API endpoints to power millions of payments:', margin, yPos, { fontSize: 10, color: COLORS.muted });
-  yPos += 10;
+  addText('4 API endpoints to power millions of payments:', margin, yPos, { fontSize: 9, color: COLORS.muted });
+  yPos += 8;
+  
+  doc.setFillColor(...COLORS.lightBg);
+  doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, 28, 2, 2, 'F');
   
   const apis = [
-    'GET  /api/v1/accounts/{id}/balance',
-    'POST /api/v1/payments/initiate',
-    'GET  /api/v1/payments/{id}/status',
-    'GET  /api/v1/accounts/{id}/transactions',
+    'GET  /accounts/{id}/balance',
+    'POST /payments/initiate',
+    'GET  /payments/{id}/status',
+    'GET  /accounts/{id}/transactions',
   ];
   
   apis.forEach(api => {
-    addText(api, margin + 5, yPos, { fontSize: 9, font: 'courier' });
+    addText(api, margin + 5, yPos + 2, { fontSize: 8, font: 'courier' });
     yPos += 6;
   });
   
-  addPageFooter(1);
+  // Footer
+  yPos = pageHeight - 20;
+  doc.setDrawColor(...COLORS.muted);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  addText('FLOW Bank Partnership  |  Page 1', margin, yPos + 8, { fontSize: 7, color: COLORS.muted });
   
-  // ==================== PAGE 2: Technical Details ====================
+  // ==================== PAGE 2 ====================
   doc.addPage();
   yPos = margin;
   
-  // Header
-  addText('Technical Architecture', margin, yPos, { fontSize: 18, fontStyle: 'bold' });
-  yPos += 15;
+  addText('Technical Architecture', margin, yPos, { fontSize: 16, fontStyle: 'bold' });
+  yPos += 12;
   
-  // Production components
+  // Components
   yPos = addSection('Production-Ready Components', yPos);
   
   const components = [
     { name: 'Resolution Engine', status: 'READY', desc: 'Rule-based payment routing with fallback logic' },
-    { name: 'Security Layer', status: 'READY', desc: '4-layer security: device, transport, application, transaction' },
-    { name: 'Orchestration', status: 'READY', desc: 'Intent to Plan to Execute flow with full state management' },
-    { name: 'Bank Integration', status: 'SPEC', desc: 'Open Banking compliant API specification ready' },
+    { name: 'Security Layer', status: 'READY', desc: '4-layer security model' },
+    { name: 'Orchestration', status: 'READY', desc: 'Intent-Plan-Execute flow with state management' },
+    { name: 'Bank Integration', status: 'SPEC', desc: 'Open Banking compliant API specification' },
   ];
   
   components.forEach(comp => {
-    addText(comp.name, margin, yPos, { fontSize: 11, fontStyle: 'bold' });
+    doc.setFillColor(...COLORS.lightBg);
+    doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, 12, 1, 1, 'F');
+    
+    addText(comp.name, margin + 3, yPos + 2, { fontSize: 10, fontStyle: 'bold' });
+    
     const statusColor = comp.status === 'READY' ? COLORS.accent : COLORS.muted;
-    addText('[' + comp.status + ']', pageWidth - margin - 25, yPos, { fontSize: 9, color: statusColor, fontStyle: 'bold' });
-    yPos += 5;
-    addText(comp.desc, margin, yPos, { fontSize: 9, color: COLORS.muted });
-    yPos += 10;
+    addText(comp.status, pageWidth - margin - 18, yPos + 2, { fontSize: 8, color: statusColor, fontStyle: 'bold' });
+    
+    addText(comp.desc, margin + 3, yPos + 8, { fontSize: 8, color: COLORS.muted });
+    yPos += 15;
   });
   
-  yPos += 5;
+  yPos += 3;
   
   // Security
   yPos = addSection('Security and Compliance', yPos);
@@ -202,32 +202,30 @@ export function generatePartnerPitchPDF(): void {
     'Tamper-evident audit logging',
     'PCI-DSS ready architecture',
     'PDPA compliant data handling',
-    'BNM guideline alignment',
   ];
   
   securityItems.forEach(item => {
     yPos = addBullet(item, yPos);
   });
   
-  yPos += 8;
+  yPos += 6;
   
   // Partnership Models
   yPos = addSection('Partnership Models', yPos);
   
   const models = [
-    { name: 'White-Label (Recommended)', desc: 'Deploy FLOW as your branded payment app with full features and revenue share' },
-    { name: 'API Partner', desc: 'Provide API infrastructure for FLOW users with transaction fees' },
-    { name: 'Pilot Program', desc: 'Start with 1,000 users, RM500 daily limit, no commitment' },
+    { name: 'White-Label', desc: 'Your branded FLOW app with revenue share' },
+    { name: 'API Partner', desc: 'Provide API infrastructure with transaction fees' },
+    { name: 'Pilot Program', desc: '1,000 users, RM500 limit, no commitment' },
   ];
   
   models.forEach(model => {
-    addText('> ' + model.name, margin, yPos, { fontSize: 11, fontStyle: 'bold' });
-    yPos += 5;
-    addText(model.desc, margin + 5, yPos, { fontSize: 9, color: COLORS.muted, maxWidth: pageWidth - margin * 2 - 10 });
-    yPos += 12;
+    addText(model.name, margin, yPos, { fontSize: 10, fontStyle: 'bold', color: COLORS.primary });
+    addText(model.desc, margin + 30, yPos, { fontSize: 9, color: COLORS.muted });
+    yPos += 8;
   });
   
-  yPos += 5;
+  yPos += 6;
   
   // Next Steps
   yPos = addSection('Next Steps', yPos);
@@ -236,17 +234,19 @@ export function generatePartnerPitchPDF(): void {
   yPos = addBullet('API integration proof-of-concept', yPos);
   yPos = addBullet('Pilot program agreement', yPos);
   
-  // Contact footer
-  yPos = pageHeight - 35;
-  
+  // Contact box
+  yPos += 10;
   doc.setFillColor(...COLORS.primary);
-  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 20, 3, 3, 'F');
+  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 18, 2, 2, 'F');
   
-  addText('Contact: partners@flow.my', pageWidth / 2, yPos + 8, { fontSize: 10, color: COLORS.white, align: 'center' });
-  addText('2025 FLOW Payment Orchestration', pageWidth / 2, yPos + 15, { fontSize: 8, color: COLORS.white, align: 'center' });
+  addText('Contact: partners@flow.my', pageWidth / 2, yPos + 11, { fontSize: 11, fontStyle: 'bold', color: COLORS.white, align: 'center' });
   
-  addPageFooter(2);
+  // Footer
+  yPos = pageHeight - 20;
+  doc.setDrawColor(...COLORS.muted);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  addText('FLOW Bank Partnership  |  Page 2', margin, yPos + 8, { fontSize: 7, color: COLORS.muted });
   
-  // Save the PDF
+  // Save
   doc.save('FLOW_Bank_Partnership_Summary.pdf');
 }
