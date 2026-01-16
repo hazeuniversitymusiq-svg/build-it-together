@@ -1,14 +1,14 @@
 /**
  * Quick Connect Page
  * 
- * Apple Intelligence-style app sync experience.
- * Uses the floating constellation with orbital animations.
+ * Standalone page for the seamless app connection experience.
+ * This is FLOW's core promise delivery point.
  */
 
-import AppleSyncPage from './AppleSyncPage';
+import { QuickConnectFlow } from '@/components/connection/QuickConnectFlow';
 
 const QuickConnectPage = () => {
-  return <AppleSyncPage />;
+  return <QuickConnectFlow showSkip={true} />;
 };
 
 export default QuickConnectPage;
