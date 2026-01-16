@@ -1,32 +1,30 @@
 /**
- * Apple-Style Auto Sync Page
+ * Apple Intelligence-Style Sync Page
  * 
- * Immersive floating app sync experience with orbital animations,
- * liquid glass effects, and Apple Intelligence-inspired design.
+ * Immersive floating app constellation with:
+ * - Apps floating in orbital paths around a central FLOW orb
+ * - Magnetic convergence animation during sync
+ * - Liquid glass effects and aurora gradients
+ * - Particle trails and depth blur
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { 
   Wallet, 
   Building2, 
   Receipt, 
   Landmark, 
   Check, 
-  ShieldCheck, 
-  Loader2,
   CreditCard,
   Zap,
   Sparkles,
-  CheckCircle2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/useHaptics";
 
-// App configuration with visual properties
 interface AppConfig {
   name: string;
   displayName: string;
@@ -45,136 +43,166 @@ const APPS: AppConfig[] = [
   { name: "SPayLater", displayName: "SPayLater", icon: CreditCard, color: "#FF4500", category: 'bnpl' },
   { name: "TNB", displayName: "TNB", icon: Receipt, color: "#4169E1", category: 'biller' },
   { name: "Unifi", displayName: "Unifi", icon: Receipt, color: "#E91E63", category: 'biller' },
-  { name: "Maxis", displayName: "Maxis", icon: Receipt, color: "#00CED1", category: 'biller' },
 ];
 
-type SyncPhase = 'ready' | 'syncing' | 'complete';
+type SyncPhase = 'discovering' | 'ready' | 'syncing' | 'complete';
 
 interface FloatingAppProps {
   app: AppConfig;
   index: number;
+  total: number;
+  phase: SyncPhase;
   isSelected: boolean;
-  isSyncing: boolean;
   isSynced: boolean;
   onToggle: () => void;
-  disabled: boolean;
 }
 
-function FloatingAppCard({ app, index, isSelected, isSyncing, isSynced, onToggle, disabled }: FloatingAppProps) {
+function FloatingAppOrb({ app, index, total, phase, isSelected, isSynced, onToggle }: FloatingAppProps) {
   const controls = useAnimationControls();
   const Icon = app.icon;
   
-  // Floating animation
+  // Calculate orbital position
+  const angle = (index / total) * Math.PI * 2;
+  const radius = 130;
+  const baseX = Math.cos(angle) * radius;
+  const baseY = Math.sin(angle) * radius * 0.6; // Elliptical orbit
+  
+  // Floating orbit animation
   useEffect(() => {
-    if (!isSyncing && !isSynced) {
+    if (phase === 'discovering') {
       controls.start({
-        y: [0, -8, 0],
+        x: [baseX - 10, baseX + 10, baseX - 10],
+        y: [baseY - 5, baseY + 5, baseY - 5],
+        scale: [0, 1.1, 1],
+        opacity: [0, 1, 1],
         transition: {
-          duration: 3 + index * 0.3,
-          repeat: Infinity,
-          ease: 'easeInOut',
+          x: { duration: 4 + index * 0.2, repeat: Infinity, ease: 'easeInOut' },
+          y: { duration: 3.5 + index * 0.3, repeat: Infinity, ease: 'easeInOut' },
+          scale: { duration: 0.6, delay: index * 0.1 },
+          opacity: { duration: 0.4, delay: index * 0.1 },
         },
       });
-    }
-  }, [controls, index, isSyncing, isSynced]);
-
-  // Sync animation - fly to center
-  useEffect(() => {
-    if (isSyncing) {
+    } else if (phase === 'ready') {
       controls.start({
-        scale: [1, 0.8, 0],
-        opacity: [1, 1, 0],
-        y: [0, -50],
+        x: [baseX - 8, baseX + 8, baseX - 8],
+        y: [baseY - 4, baseY + 4, baseY - 4],
+        scale: 1,
+        opacity: 1,
         transition: {
-          duration: 0.6,
-          delay: index * 0.08,
+          x: { duration: 4 + index * 0.2, repeat: Infinity, ease: 'easeInOut' },
+          y: { duration: 3.5 + index * 0.3, repeat: Infinity, ease: 'easeInOut' },
+        },
+      });
+    } else if (phase === 'syncing') {
+      // Magnetic convergence to center
+      controls.start({
+        x: 0,
+        y: 0,
+        scale: [1, 0.5, 0],
+        opacity: [1, 1, 0],
+        transition: {
+          duration: 0.8,
+          delay: index * 0.06,
           ease: [0.32, 0.72, 0, 1],
         },
       });
-    }
-  }, [isSyncing, controls, index]);
-
-  // Return after sync
-  useEffect(() => {
-    if (isSynced && !isSyncing) {
+    } else if (phase === 'complete') {
+      // Explode back outward with celebration
       controls.start({
-        scale: 1,
+        x: baseX,
+        y: baseY,
+        scale: [0, 1.2, 1],
         opacity: 1,
-        y: 0,
         transition: {
-          duration: 0.4,
-          delay: 0.5 + index * 0.05,
+          duration: 0.5,
+          delay: 0.3 + index * 0.05,
           type: 'spring',
-          stiffness: 300,
+          stiffness: 400,
+          damping: 15,
         },
       });
     }
-  }, [isSynced, isSyncing, controls, index]);
+  }, [phase, controls, index, baseX, baseY]);
+
+  const disabled = phase === 'syncing' || phase === 'discovering';
 
   return (
     <motion.button
-      initial={{ opacity: 0, scale: 0.8 }}
       animate={controls}
-      whileHover={!disabled ? { scale: 1.05 } : undefined}
+      initial={{ x: baseX, y: baseY, scale: 0, opacity: 0 }}
+      whileHover={!disabled ? { scale: 1.15 } : undefined}
       whileTap={!disabled ? { scale: 0.95 } : undefined}
       onClick={!disabled ? onToggle : undefined}
       disabled={disabled}
-      className={`
-        relative p-4 rounded-3xl transition-all duration-300
-        ${isSelected || isSynced
-          ? 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg'
-          : 'bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10'
-        }
-        ${disabled ? 'cursor-default' : 'cursor-pointer'}
-      `}
-      style={{
-        boxShadow: isSelected || isSynced ? `0 8px 32px ${app.color}30` : undefined,
-      }}
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+      style={{ zIndex: isSelected ? 20 : 10 }}
     >
-      {/* Glow effect */}
-      {(isSelected || isSynced) && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.6 }}
-          className="absolute inset-0 rounded-3xl blur-xl -z-10"
-          style={{ backgroundColor: app.color }}
-        />
-      )}
-
-      {/* Icon */}
-      <div 
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 mx-auto"
-        style={{ 
-          backgroundColor: app.color,
-          boxShadow: `0 4px 16px ${app.color}40`,
+      {/* Outer glow ring */}
+      <motion.div
+        animate={{
+          boxShadow: isSelected || isSynced
+            ? `0 0 30px ${app.color}60, 0 0 60px ${app.color}30`
+            : `0 0 15px ${app.color}20`,
         }}
+        className="relative"
       >
-        <Icon className="w-7 h-7 text-white" />
-      </div>
-
-      {/* Name */}
-      <p className="text-sm font-medium text-foreground text-center mb-1">
-        {app.displayName}
-      </p>
-
-      {/* Status indicator */}
-      <div className="flex items-center justify-center gap-1">
-        {isSynced ? (
+        {/* Glass card */}
+        <motion.div
+          animate={{
+            borderColor: isSelected || isSynced
+              ? `${app.color}60`
+              : 'rgba(255,255,255,0.15)',
+          }}
+          className={`
+            relative w-20 h-20 rounded-[22px] 
+            bg-white/[0.08] backdrop-blur-xl
+            border-2 transition-all duration-300
+            flex flex-col items-center justify-center gap-1
+            overflow-hidden
+          `}
+        >
+          {/* Inner gradient glow */}
+          <div
+            className="absolute inset-0 opacity-30 rounded-[20px]"
+            style={{
+              background: `radial-gradient(circle at 30% 30%, ${app.color}40, transparent 70%)`,
+            }}
+          />
+          
+          {/* Icon container */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 500 }}
+            animate={{
+              scale: isSelected || isSynced ? 1.1 : 1,
+            }}
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ 
+              backgroundColor: app.color,
+              boxShadow: `0 4px 12px ${app.color}50`,
+            }}
           >
-            <CheckCircle2 className="w-4 h-4 text-green-400" />
+            <Icon className="w-5 h-5 text-white" />
           </motion.div>
-        ) : isSelected ? (
-          <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-            <Check className="w-2.5 h-2.5 text-white" />
-          </div>
-        ) : app.recommended ? (
-          <span className="text-[10px] text-aurora-blue font-medium">Recommended</span>
-        ) : null}
-      </div>
+          
+          {/* App name */}
+          <span className="text-[10px] font-medium text-white/90 text-center px-1 leading-tight">
+            {app.displayName}
+          </span>
+
+          {/* Selection indicator */}
+          <AnimatePresence>
+            {(isSelected || isSynced) && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-lg"
+              >
+                <Check className="w-3 h-3 text-green-500" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
     </motion.button>
   );
 }
@@ -186,12 +214,14 @@ export default function AppleSyncPage() {
   
   const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
   const [syncedApps, setSyncedApps] = useState<Set<string>>(new Set());
-  const [phase, setPhase] = useState<SyncPhase>('ready');
-  const [isLoading, setIsLoading] = useState(true);
+  const [phase, setPhase] = useState<SyncPhase>('discovering');
 
-  // Initialize with recommended apps and load existing connections
+  // Auto-discover apps
   useEffect(() => {
     const init = async () => {
+      // Short discovery animation
+      await new Promise(r => setTimeout(r, 1500));
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -211,15 +241,19 @@ export default function AppleSyncPage() {
           }
         });
         setSelectedApps(defaults);
+      } else {
+        // No user - select recommended by default
+        const defaults = new Set(APPS.filter(a => a.recommended).map(a => a.name));
+        setSelectedApps(defaults);
       }
       
-      setIsLoading(false);
+      setPhase('ready');
     };
     init();
   }, []);
 
   const toggleApp = useCallback((name: string) => {
-    if (syncedApps.has(name)) return;
+    if (syncedApps.has(name) || phase !== 'ready') return;
     haptics.selection();
     
     setSelectedApps(prev => {
@@ -231,10 +265,13 @@ export default function AppleSyncPage() {
       }
       return next;
     });
-  }, [syncedApps, haptics]);
+  }, [syncedApps, phase, haptics]);
 
   const handleSync = useCallback(async () => {
-    if (selectedApps.size === 0) return;
+    if (selectedApps.size === 0) {
+      navigate('/home');
+      return;
+    }
     
     haptics.impact();
     setPhase('syncing');
@@ -260,11 +297,10 @@ export default function AppleSyncPage() {
       SPayLater: 1000.00,
     };
 
+    // Wait for convergence animation
+    await new Promise(r => setTimeout(r, APPS.length * 60 + 800));
+    
     let priority = 1;
-    
-    // Simulate staggered connection with visual feedback
-    await new Promise(resolve => setTimeout(resolve, APPS.length * 80 + 600));
-    
     for (const appName of selectedApps) {
       const app = APPS.find(a => a.name === appName);
       if (!app) continue;
@@ -323,233 +359,243 @@ export default function AppleSyncPage() {
       }
     }
 
-    // Mark apps as synced
     setSyncedApps(prev => new Set([...prev, ...selectedApps]));
     setSelectedApps(new Set());
     setPhase('complete');
     
     haptics.success();
     toast({ 
-      title: "Apps Connected!",
+      title: "Connected!",
       description: `${selectedApps.size} apps linked to FLOW`
     });
     
-    // Navigate after celebration
-    setTimeout(() => {
-      navigate("/home");
-    }, 2000);
+    setTimeout(() => navigate("/home"), 2500);
   }, [selectedApps, toast, navigate, haptics]);
 
-  const handleSkip = () => {
-    navigate("/home");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-        >
-          <Loader2 className="w-8 h-8 text-muted-foreground" />
-        </motion.div>
-      </div>
-    );
-  }
+  const handleSkip = () => navigate("/home");
 
   const newAppsCount = [...selectedApps].filter(app => !syncedApps.has(app)).length;
+  const allConnected = APPS.every(app => syncedApps.has(app.name));
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-hidden safe-area-top safe-area-bottom">
-      {/* Animated background */}
+      {/* Deep space background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {/* Aurora gradients */}
         <motion.div
           animate={{
-            x: [0, 50, 0],
-            y: [0, -30, 0],
+            x: [0, 30, 0],
+            y: [0, -20, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-20 -right-20 w-[400px] h-[400px] rounded-full bg-aurora-purple/30 blur-[120px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, -25, 0],
+            y: [0, 25, 0],
+            scale: [1.1, 1, 1.1],
           }}
           transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-aurora-purple/20 blur-[100px]"
+          className="absolute -bottom-20 -left-20 w-[350px] h-[350px] rounded-full bg-aurora-blue/25 blur-[100px]"
         />
         <motion.div
           animate={{
-            x: [0, -40, 0],
-            y: [0, 40, 0],
+            opacity: [0.15, 0.25, 0.15],
+            scale: [1, 1.05, 1],
           }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-aurora-blue/15 blur-[100px]"
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-aurora-teal/15 blur-[100px]"
         />
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.1, 0.15, 0.1],
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-aurora-teal/10 blur-[80px]"
-        />
+        
+        {/* Subtle star particles */}
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }}
+            animate={{ 
+              opacity: [0, 0.6, 0],
+              scale: [0.5, 1, 0.5],
+            }}
+            transition={{
+              duration: 2 + Math.random() * 2,
+              delay: Math.random() * 3,
+              repeat: Infinity,
+            }}
+            className="absolute w-1 h-1 rounded-full bg-white"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+          />
+        ))}
       </div>
 
-      {/* Central sync orb (visible during sync) */}
-      <AnimatePresence>
-        {phase === 'syncing' && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 2, opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50"
-          >
-            <motion.div
-              animate={{
-                scale: [1, 1.2, 1],
-                boxShadow: [
-                  '0 0 40px rgba(139, 92, 246, 0.4)',
-                  '0 0 100px rgba(139, 92, 246, 0.8)',
-                  '0 0 40px rgba(139, 92, 246, 0.4)',
-                ],
-              }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="w-32 h-32 rounded-full aurora-gradient flex items-center justify-center"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              >
-                <Sparkles className="w-12 h-12 text-white" />
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Skip button */}
+      {phase !== 'syncing' && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          onClick={handleSkip}
+          className="absolute top-6 right-6 z-50 text-sm text-white/50 hover:text-white/80 transition-colors"
+        >
+          Skip
+        </motion.button>
+      )}
 
-      {/* Success state */}
-      <AnimatePresence>
-        {phase === 'complete' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="text-center"
-            >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: 'spring', stiffness: 500 }}
-                className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6"
-              >
-                <CheckCircle2 className="w-12 h-12 text-green-400" />
-              </motion.div>
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-2xl font-bold text-foreground mb-2"
-              >
-                All Set!
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="text-muted-foreground"
-              >
-                Your apps are connected to FLOW
-              </motion.p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Header */}
-      <header className="relative z-10 px-6 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSkip}
-            className="text-muted-foreground"
-          >
-            Skip
-          </Button>
-        </div>
-        
+      {/* Main content */}
+      <div className="flex-1 flex flex-col items-center justify-center relative z-10">
+        {/* Title */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mt-4"
+          transition={{ delay: 0.2 }}
+          className="text-center mb-8"
         >
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            Connect Your Apps
+          <h1 className="text-3xl font-bold text-white tracking-tight">
+            {phase === 'discovering' ? 'Discovering Apps' :
+             phase === 'syncing' ? 'Connecting' :
+             phase === 'complete' ? 'All Set!' :
+             'Your Apps'}
           </h1>
-          <p className="text-muted-foreground mt-2">
-            FLOW will use these for smart payments
+          <p className="text-white/60 mt-2">
+            {phase === 'discovering' ? 'Finding your payment apps...' :
+             phase === 'syncing' ? 'Linking to FLOW...' :
+             phase === 'complete' ? 'Ready for smart payments' :
+             'Tap to select, then connect'}
           </p>
         </motion.div>
-      </header>
 
-      {/* App grid */}
-      <div className="flex-1 relative z-10 px-4 py-6 overflow-y-auto">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-3 gap-3 max-w-md mx-auto"
-        >
-          {APPS.map((app, index) => (
-            <FloatingAppCard
+        {/* Orbital constellation */}
+        <div className="relative w-80 h-80">
+          {/* Central FLOW orb */}
+          <motion.div
+            animate={{
+              scale: phase === 'syncing' ? [1, 1.3, 1] : 1,
+              boxShadow: phase === 'syncing' 
+                ? ['0 0 40px rgba(139,92,246,0.5)', '0 0 100px rgba(139,92,246,0.8)', '0 0 40px rgba(139,92,246,0.5)']
+                : '0 0 40px rgba(139,92,246,0.4)',
+            }}
+            transition={{ duration: phase === 'syncing' ? 1 : 0.3, repeat: phase === 'syncing' ? Infinity : 0 }}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full aurora-gradient flex items-center justify-center z-30"
+          >
+            <motion.div
+              animate={phase === 'syncing' ? { rotate: 360 } : { rotate: 0 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            >
+              <Sparkles className="w-10 h-10 text-white" />
+            </motion.div>
+          </motion.div>
+
+          {/* Orbital ring (subtle) */}
+          <motion.div
+            animate={{ 
+              opacity: phase === 'syncing' ? 0 : 0.15,
+              rotate: 360,
+            }}
+            transition={{ 
+              opacity: { duration: 0.3 },
+              rotate: { duration: 60, repeat: Infinity, ease: 'linear' },
+            }}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-44 rounded-full border border-white/20"
+          />
+
+          {/* Floating app orbs */}
+          {APPS.map((app, i) => (
+            <FloatingAppOrb
               key={app.name}
               app={app}
-              index={index}
+              index={i}
+              total={APPS.length}
+              phase={phase}
               isSelected={selectedApps.has(app.name)}
-              isSyncing={phase === 'syncing' && selectedApps.has(app.name)}
               isSynced={syncedApps.has(app.name)}
               onToggle={() => toggleApp(app.name)}
-              disabled={phase !== 'ready' || syncedApps.has(app.name)}
             />
           ))}
-        </motion.div>
-      </div>
-
-      {/* Footer */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="relative z-10 px-6 pb-8 pt-4 space-y-4"
-      >
-        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck className="w-4 h-4" />
-          <span>FLOW never moves money without your confirmation</span>
         </div>
 
-        <Button
-          onClick={handleSync}
-          disabled={phase !== 'ready' || newAppsCount === 0}
-          className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora disabled:opacity-50 disabled:shadow-none"
-        >
-          {phase === 'syncing' ? (
-            <motion.span
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
+        {/* Selection count */}
+        <AnimatePresence>
+          {phase === 'ready' && newAppsCount > 0 && (
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-white/50 text-sm mt-6"
             >
-              Connecting...
-            </motion.span>
-          ) : newAppsCount > 0 ? (
-            <>
-              Connect {newAppsCount} App{newAppsCount !== 1 ? 's' : ''}
-              <Sparkles className="w-5 h-5 ml-2" />
-            </>
-          ) : (
-            "All Connected"
+              {newAppsCount} app{newAppsCount > 1 ? 's' : ''} selected
+            </motion.p>
           )}
-        </Button>
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom action */}
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="relative z-10 px-6 pb-10 pt-4"
+      >
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleSync}
+          disabled={phase === 'syncing' || phase === 'discovering'}
+          className={`
+            w-full h-14 rounded-2xl font-medium text-base
+            transition-all duration-300 relative overflow-hidden
+            ${phase === 'syncing' || phase === 'discovering'
+              ? 'bg-white/10 text-white/50 cursor-not-allowed'
+              : 'aurora-gradient text-white shadow-glow-aurora'
+            }
+          `}
+        >
+          {phase === 'discovering' ? (
+            <span className="flex items-center justify-center gap-2">
+              <motion.span
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <Sparkles className="w-5 h-5" />
+              </motion.span>
+              Discovering...
+            </span>
+          ) : phase === 'syncing' ? (
+            <span className="flex items-center justify-center gap-2">
+              <motion.span
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <Sparkles className="w-5 h-5" />
+              </motion.span>
+              Connecting...
+            </span>
+          ) : phase === 'complete' ? (
+            <span className="flex items-center justify-center gap-2">
+              <Check className="w-5 h-5" />
+              Continue
+            </span>
+          ) : allConnected ? (
+            'All Connected'
+          ) : newAppsCount > 0 ? (
+            `Connect ${newAppsCount} App${newAppsCount > 1 ? 's' : ''}`
+          ) : (
+            'Continue'
+          )}
+        </motion.button>
+
+        {/* Trust message */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.5 }}
+          transition={{ delay: 0.6 }}
+          className="text-center text-xs text-white/40 mt-4"
+        >
+          FLOW never moves money without your confirmation
+        </motion.p>
       </motion.div>
     </div>
   );
