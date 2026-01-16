@@ -14,19 +14,21 @@ import {
   Zap,
   Wifi,
   Phone,
-  Link as LinkIcon,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays, differenceInDays } from "date-fns";
 import BillPaymentHistory from "@/components/bills/BillPaymentHistory";
 import AutoPayToggle from "@/components/bills/AutoPayToggle";
+import BillLinkingFlow from "@/components/bills/BillLinkingFlow";
+import BillPaymentMethodPicker from "@/components/bills/BillPaymentMethodPicker";
 import { useDemo } from "@/contexts/DemoContext";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
+import { useFundingSources } from "@/hooks/useFundingSources";
 import type { Database } from "@/integrations/supabase/types";
 
 type BillerAccount = Database['public']['Tables']['biller_accounts']['Row'];
@@ -51,13 +53,15 @@ const BillsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { registerPageAction, clearPageActions } = useDemo();
+  const { sources: fundingSources } = useFundingSources();
 
   const [billers, setBillers] = useState<BillerInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [linkingBiller, setLinkingBiller] = useState<string | null>(null);
-  const [accountNumber, setAccountNumber] = useState("");
   const [isLinking, setIsLinking] = useState(false);
   const [isCreatingIntent, setIsCreatingIntent] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<Record<string, { id: string; rail: string }>>({});
+  const [showPaymentPicker, setShowPaymentPicker] = useState<string | null>(null);
 
   useEffect(() => {
     const loadBillers = async () => {
@@ -157,16 +161,7 @@ const BillsPage = () => {
     };
   }, [registerPageAction, clearPageActions, simulateBillPayment]);
 
-  const handleLinkBiller = useCallback(async (billerName: string) => {
-    if (!accountNumber.trim()) {
-      toast({
-        title: "Missing account number",
-        description: "Please enter your account number or reference",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleLinkBiller = useCallback(async (billerName: string, accountRef: string) => {
     setIsLinking(true);
 
     try {
@@ -176,7 +171,7 @@ const BillsPage = () => {
       await supabase.from("biller_accounts").insert({
         user_id: user.id,
         biller_name: billerName,
-        account_reference: accountNumber,
+        account_reference: accountRef,
         status: "linked",
       });
 
@@ -185,7 +180,7 @@ const BillsPage = () => {
           ? { 
               ...b, 
               isLinked: true, 
-              accountRef: accountNumber,
+              accountRef: accountRef,
               dueAmount: Math.floor(Math.random() * 150) + 50,
               dueDate: addDays(new Date(), Math.floor(Math.random() * 14) + 1),
             } 
@@ -193,11 +188,10 @@ const BillsPage = () => {
       ));
 
       setLinkingBiller(null);
-      setAccountNumber("");
 
       toast({
-        title: "Biller linked",
-        description: `${billerName} account has been linked`,
+        title: "✓ Biller activated",
+        description: `${billerName} is now linked and ready for payments`,
       });
     } catch (error) {
       console.error("Error linking biller:", error);
@@ -209,10 +203,17 @@ const BillsPage = () => {
     } finally {
       setIsLinking(false);
     }
-  }, [accountNumber, toast]);
+  }, [toast]);
 
   const handlePayNow = useCallback(async (biller: BillerInfo) => {
     if (!biller.dueAmount) return;
+
+    // Check if payment method is selected
+    const paymentMethod = selectedPaymentMethod[biller.name];
+    if (!paymentMethod) {
+      setShowPaymentPicker(biller.name);
+      return;
+    }
 
     setIsCreatingIntent(biller.name);
 
@@ -222,6 +223,10 @@ const BillsPage = () => {
         navigate("/auth");
         return;
       }
+
+      // Bill payments support: DuitNow, BankTransfer, VisaMastercard (cards)
+      // NOT Atome or other BNPL
+      const railsAvailable = ["DuitNow", "BankTransfer", "VisaMastercard", "Maybank"];
 
       const { data: intent, error } = await supabase
         .from("intents")
@@ -235,7 +240,9 @@ const BillsPage = () => {
           metadata: {
             billerType: biller.name,
             accountRef: biller.accountRef,
-            railsAvailable: ["DuitNow", "BankTransfer"],
+            railsAvailable,
+            selectedRail: paymentMethod.rail,
+            paymentMethodId: paymentMethod.id,
           },
         })
         .select("id")
@@ -255,7 +262,15 @@ const BillsPage = () => {
       });
       setIsCreatingIntent(null);
     }
-  }, [navigate, toast]);
+  }, [navigate, toast, selectedPaymentMethod]);
+  
+  const handleSelectPaymentMethod = (billerName: string, id: string, railName: string) => {
+    setSelectedPaymentMethod(prev => ({
+      ...prev,
+      [billerName]: { id, rail: railName }
+    }));
+    setShowPaymentPicker(null);
+  };
 
   if (isLoading) {
     return (
@@ -381,48 +396,15 @@ const BillsPage = () => {
                   </Button>
                 </motion.div>
               ) : linkingBiller === biller.name ? (
-                <motion.div
+                <BillLinkingFlow
                   key="linking"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="px-5 pb-5"
-                >
-                  <Input
-                    type="text"
-                    placeholder="Account number or reference"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    className="mb-3 h-12 rounded-2xl glass-subtle border-0"
-                  />
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setLinkingBiller(null);
-                        setAccountNumber("");
-                      }}
-                      className="flex-1 rounded-2xl h-11 glass-card border-0"
-                      disabled={isLinking}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => handleLinkBiller(biller.name)}
-                      disabled={isLinking}
-                      className="flex-1 rounded-2xl h-11 aurora-gradient text-white border-0"
-                    >
-                      {isLinking ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <LinkIcon className="w-4 h-4 mr-2" />
-                          Link
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </motion.div>
+                  billerName={biller.name}
+                  billerIcon={biller.icon}
+                  billerGradient={biller.gradient}
+                  onComplete={(accountRef) => handleLinkBiller(biller.name, accountRef)}
+                  onCancel={() => setLinkingBiller(null)}
+                  isLoading={isLinking}
+                />
               ) : (
                 <motion.div
                   key="unlinked"
@@ -436,8 +418,8 @@ const BillsPage = () => {
                     onClick={() => setLinkingBiller(biller.name)}
                     className="w-full rounded-2xl h-11 glass-card border-0 text-muted-foreground hover:text-foreground"
                   >
-                    <LinkIcon className="w-4 h-4 mr-2" />
-                    Link biller
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Link & Activate
                   </Button>
                 </motion.div>
               )}
