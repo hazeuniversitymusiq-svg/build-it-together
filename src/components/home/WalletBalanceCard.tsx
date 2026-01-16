@@ -75,23 +75,24 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
-      className={cn("glass-card overflow-hidden", className)}
+      className={cn("liquid-glass overflow-hidden", className)}
     >
       {/* Compact Header with Balance */}
       <div className="p-4 pb-3">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+        <div className="flex items-center justify-between mb-0.5">
+          <p className="text-[10px] text-muted-foreground/70 font-semibold uppercase tracking-widest">
             Total Available
           </p>
-          <button
+          <motion.button
             onClick={() => refetch()}
-            className="w-7 h-7 rounded-lg bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            whileTap={{ scale: 0.9 }}
+            className="w-7 h-7 rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
             title="Refresh balances"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          </motion.button>
         </div>
-        <p className="text-2xl font-semibold text-foreground tracking-tight">
+        <p className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight">
           RM {totalBalance.toFixed(2)}
         </p>
       </div>

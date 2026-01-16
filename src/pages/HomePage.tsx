@@ -10,7 +10,6 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Send, ArrowDownLeft, Receipt, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
 import { useDeepLink } from "@/hooks/useDeepLink";
@@ -18,7 +17,7 @@ import { useDemo } from "@/contexts/DemoContext";
 import { useToast } from "@/hooks/use-toast";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
 
-// Apple-style Quick Action Button
+// Apple-style Quick Action Button with Liquid Glass
 const QuickAction = ({
   icon,
   label,
@@ -33,13 +32,19 @@ const QuickAction = ({
   return (
     <motion.button
       onClick={onClick}
-      whileTap={{ scale: 0.95 }}
-      className="flex-1 flex flex-col items-center gap-2 py-4"
+      whileTap={{ scale: 0.92 }}
+      whileHover={{ scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="flex-1 flex flex-col items-center gap-2.5 py-3"
     >
-      <div className={`w-14 h-14 rounded-2xl ${color} flex items-center justify-center shadow-sm`}>
+      <div className={`w-14 h-14 rounded-[1.25rem] ${color} flex items-center justify-center shadow-lg`}
+        style={{
+          boxShadow: '0 8px 24px -6px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.3)'
+        }}
+      >
         {icon}
       </div>
-      <span className="text-xs font-medium text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground/80">{label}</span>
     </motion.button>
   );
 };
@@ -77,14 +82,14 @@ const HomePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col px-5 safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -107,14 +112,11 @@ const HomePage = () => {
             </h1>
           </div>
           
-          {/* Simple Active Status Badge */}
-          <Badge 
-            variant="secondary"
-            className="text-xs font-medium flex items-center gap-1.5 glass-card px-3 py-1.5"
-          >
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <span className="text-success">Active</span>
-          </Badge>
+          {/* Liquid Glass Status Pill */}
+          <div className="liquid-pill px-3 py-1.5 flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            <span className="text-[11px] font-medium text-success">Active</span>
+          </div>
         </div>
       </motion.div>
 
@@ -132,12 +134,12 @@ const HomePage = () => {
         />
       </DemoHighlight>
 
-      {/* Apple-style Quick Actions Row */}
+      {/* Apple-style Quick Actions Row - Liquid Glass */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.15 }}
-        className="glass-card flex items-center justify-around py-2 mb-4"
+        className="liquid-glass flex items-center justify-around py-1 mb-4"
       >
         <DemoHighlight
           id="send-action"
