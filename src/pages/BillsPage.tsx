@@ -3,9 +3,10 @@
  * 
  * iOS 26 Liquid Glass design - Linked billers and bill payments
  * With intelligent features: payment history, auto-pay, spending insights
+ * Shows real wallet balances from funding_sources
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -13,7 +14,9 @@ import {
   Loader2,
   Calendar,
   ArrowRight,
-  Plus
+  Plus,
+  Wallet,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,11 +29,13 @@ import BillerCatalog, { type BillerTemplate } from "@/components/bills/BillerCat
 import { useDemo } from "@/contexts/DemoContext";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
 import { useBillerAccounts, type LinkedBiller } from "@/hooks/useBillerAccounts";
+import { useFundingSources } from "@/hooks/useFundingSources";
 
 const BillsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { registerPageAction, clearPageActions } = useDemo();
+  const { sources, totalBalance, loading: balanceLoading } = useFundingSources();
   
   const { 
     linkedBillers, 
@@ -44,6 +49,12 @@ const BillsPage = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<BillerTemplate | null>(null);
   const [isLinking, setIsLinking] = useState(false);
   const [isCreatingIntent, setIsCreatingIntent] = useState<string | null>(null);
+
+  // Real wallets with balances
+  const linkedWallets = useMemo(() => 
+    sources.filter(s => s.isLinked && (s.type === 'wallet' || s.type === 'bank')),
+    [sources]
+  );
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -302,6 +313,27 @@ const BillsPage = () => {
                     <span>Due on {format(biller.dueDate, "MMM d, yyyy")}</span>
                   </div>
 
+                  {/* Balance Info */}
+                  <div className="flex items-center justify-between mb-3 glass-subtle rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Wallet className="w-4 h-4" />
+                      <span>Available balance</span>
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      totalBalance >= biller.dueAmount ? 'text-foreground' : 'text-destructive'
+                    }`}>
+                      RM {totalBalance.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Insufficient Balance Warning */}
+                  {totalBalance < biller.dueAmount && (
+                    <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-destructive/10 text-destructive text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Insufficient balance. Top up RM {(biller.dueAmount - totalBalance).toFixed(2)} to pay.</span>
+                    </div>
+                  )}
+
                   {/* Payment History */}
                   <BillPaymentHistory 
                     billerName={biller.name} 
@@ -316,8 +348,8 @@ const BillsPage = () => {
                   
                   <Button
                     onClick={() => handlePayNow(biller)}
-                    disabled={isCreatingIntent === biller.id}
-                    className="w-full rounded-2xl h-12 aurora-gradient text-white border-0 shadow-glow-aurora"
+                    disabled={isCreatingIntent === biller.id || totalBalance < biller.dueAmount}
+                    className="w-full rounded-2xl h-12 aurora-gradient text-white border-0 shadow-glow-aurora disabled:opacity-50"
                   >
                     {isCreatingIntent === biller.id ? (
                       <>
