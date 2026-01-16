@@ -113,19 +113,10 @@ export default function PartnerPitchPage() {
               variant="ghost" 
               size="sm" 
               className="text-muted-foreground hover:text-primary"
-              onClick={generatePartnerPitchPDF}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Partnership Only
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-muted-foreground hover:text-primary"
               onClick={generateIntelligenceSummaryPDF}
             >
               <Download className="w-4 h-4 mr-2" />
-              Intelligence Only
+              Intelligence Summary
             </Button>
           </motion.div>
         </motion.div>
