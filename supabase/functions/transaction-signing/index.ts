@@ -85,7 +85,90 @@ serve(async (req) => {
       });
     }
 
-    const { action, payload } = await req.json();
+    const { action, payload, intentId, planId, signatureId } = await req.json();
+
+    // ---------------------------------------------------------------------
+    // Compatibility API used by the app (security-service.ts)
+    // ---------------------------------------------------------------------
+    if (action === "sign") {
+      if (!intentId || !planId || !payload) {
+        return new Response(JSON.stringify({ error: "Missing intentId/planId/payload" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const payloadString = JSON.stringify({
+        intentId,
+        planId,
+        payload,
+        signedAt: new Date().toISOString(),
+      });
+
+      const payloadHash = await sha256Hash(payloadString);
+      const signature = await hmacSign(payloadString, signingKey);
+
+      const { data: sigRow, error: sigError } = await supabase
+        .from("transaction_signatures")
+        .insert({
+          intent_id: intentId,
+          plan_id: planId,
+          signature_type: "execution",
+          payload_hash: payloadHash,
+          signature,
+          verified: false,
+        })
+        .select("id, signature, verified")
+        .single();
+
+      if (sigError || !sigRow) {
+        console.error("Transaction signature insert error:", sigError);
+        return new Response(JSON.stringify({ error: "Failed to store signature" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        id: sigRow.id,
+        signature: sigRow.signature,
+        verified: sigRow.verified === true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "verify") {
+      if (!signatureId) {
+        return new Response(JSON.stringify({ error: "Missing signatureId" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: sig, error: sigFetchError } = await supabase
+        .from("transaction_signatures")
+        .select("id, signature, verified")
+        .eq("id", signatureId)
+        .maybeSingle();
+
+      if (sigFetchError || !sig?.signature) {
+        return new Response(JSON.stringify({ verified: false }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!sig.verified) {
+        await supabase
+          .from("transaction_signatures")
+          .update({ verified: true, verified_at: new Date().toISOString() })
+          .eq("id", signatureId);
+      }
+
+      return new Response(JSON.stringify({ verified: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (action === "sign_intent") {
       // Sign an intent
