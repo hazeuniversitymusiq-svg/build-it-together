@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Send, Receipt, Loader2 } from "lucide-react";
+import { Send, ArrowDownLeft, Receipt, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
@@ -18,35 +18,28 @@ import { useDemo } from "@/contexts/DemoContext";
 import { useToast } from "@/hooks/use-toast";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
 
-// Aurora color variants for action cards
-const actionCardStyles = {
-  scan: "from-aurora-blue/20 to-aurora-cyan/10 hover:from-aurora-blue/30 hover:to-aurora-cyan/20",
-  send: "from-aurora-purple/20 to-aurora-pink/10 hover:from-aurora-purple/30 hover:to-aurora-pink/20",
-  request: "from-aurora-teal/20 to-aurora-blue/10 hover:from-aurora-teal/30 hover:to-aurora-blue/20",
-  bills: "from-aurora-pink/20 to-aurora-purple/10 hover:from-aurora-pink/30 hover:to-aurora-purple/20",
-};
-
-const ActionCard = ({
+// Apple-style Quick Action Button
+const QuickAction = ({
   icon,
   label,
   onClick,
-  variant,
+  color,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  variant: keyof typeof actionCardStyles;
+  color: string;
 }) => {
   return (
     <motion.button
       onClick={onClick}
-      whileTap={{ scale: 0.97 }}
-      className={`flex flex-col items-center justify-center gap-3 p-5 rounded-3xl bg-gradient-to-br ${actionCardStyles[variant]} border border-white/40 shadow-float transition-all duration-300`}
+      whileTap={{ scale: 0.95 }}
+      className="flex-1 flex flex-col items-center gap-2 py-4"
     >
-      <div className="w-11 h-11 rounded-2xl bg-white/80 dark:bg-white/10 flex items-center justify-center shadow-sm">
+      <div className={`w-14 h-14 rounded-2xl ${color} flex items-center justify-center shadow-sm`}>
         {icon}
       </div>
-      <span className="text-sm font-medium text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
     </motion.button>
   );
 };
@@ -139,42 +132,25 @@ const HomePage = () => {
         />
       </DemoHighlight>
 
-      {/* Primary Actions - 2x2 grid */}
+      {/* Apple-style Quick Actions Row */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.15 }}
-        className="grid grid-cols-2 gap-3 mb-4"
+        className="glass-card flex items-center justify-around py-2 mb-4"
       >
-        <DemoHighlight
-          id="scan-action"
-          title="Scan to Pay"
-          description="Scan any QR code — DuitNow, TnG, GrabPay. FLOW detects the type and routes payment automatically."
-          onTryIt={() => !isDemoMode && navigate("/scan")}
-          position="bottom"
-          className="contents"
-        >
-          <ActionCard
-            icon={<QrCode className="w-5 h-5 text-aurora-blue" />}
-            label="Scan"
-            onClick={() => !isDemoMode && navigate("/scan")}
-            variant="scan"
-          />
-        </DemoHighlight>
-        
         <DemoHighlight
           id="send-action"
           title="Send Money"
           description="Send to any contact. FLOW finds their preferred wallet and delivers instantly."
           onTryIt={() => !isDemoMode && navigate("/send")}
           position="bottom"
-          className="contents"
         >
-          <ActionCard
-            icon={<Send className="w-5 h-5 text-aurora-purple" />}
+          <QuickAction
+            icon={<Send className="w-6 h-6 text-white" />}
             label="Send"
             onClick={() => !isDemoMode && navigate("/send")}
-            variant="send"
+            color="bg-gradient-to-br from-aurora-purple to-aurora-pink"
           />
         </DemoHighlight>
         
@@ -183,14 +159,13 @@ const HomePage = () => {
           title="Receive Money"
           description="Generate a QR code for others to pay you. Works with any wallet or bank app."
           onTryIt={() => !isDemoMode && navigate("/receive")}
-          position="top"
-          className="contents"
+          position="bottom"
         >
-          <ActionCard
-            icon={<QrCode className="w-5 h-5 text-aurora-teal" />}
+          <QuickAction
+            icon={<ArrowDownLeft className="w-6 h-6 text-white" />}
             label="Receive"
             onClick={() => !isDemoMode && navigate("/receive")}
-            variant="request"
+            color="bg-gradient-to-br from-aurora-teal to-aurora-blue"
           />
         </DemoHighlight>
         
@@ -199,14 +174,13 @@ const HomePage = () => {
           title="Pay Bills"
           description="Link billers like TNB, Unifi, Maxis. FLOW reminds you before due dates."
           onTryIt={() => !isDemoMode && navigate("/bills")}
-          position="top"
-          className="contents"
+          position="bottom"
         >
-          <ActionCard
-            icon={<Receipt className="w-5 h-5 text-aurora-pink" />}
+          <QuickAction
+            icon={<Receipt className="w-6 h-6 text-white" />}
             label="Bills"
             onClick={() => !isDemoMode && navigate("/bills")}
-            variant="bills"
+            color="bg-gradient-to-br from-aurora-pink to-aurora-purple"
           />
         </DemoHighlight>
       </motion.div>
