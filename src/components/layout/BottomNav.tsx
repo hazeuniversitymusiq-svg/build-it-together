@@ -68,12 +68,12 @@ const BottomNav = () => {
           transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
           className="pointer-events-auto"
         >
-          {/* Outer subtle shadow for depth */}
-          <div className="relative">
+          {/* Outer container - allows scan button to overflow */}
+          <div className="relative pt-8">
             {/* Glass container */}
             <div 
               className={`
-                relative overflow-hidden
+                relative
                 bg-white/80 dark:bg-gray-900/70
                 backdrop-blur-3xl
                 rounded-[28px]
@@ -85,7 +85,7 @@ const BottomNav = () => {
               `}
             >
               {/* Inner highlight for glass effect */}
-              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent rounded-t-[28px]" />
               
               <div className="flex items-center justify-around px-3 py-3">
                 {navItems.map((item) => {
