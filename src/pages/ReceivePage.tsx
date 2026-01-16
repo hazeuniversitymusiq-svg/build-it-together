@@ -12,7 +12,7 @@
  * iOS 26 Liquid Glass design
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -40,16 +40,9 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useFundingSources } from "@/hooks/useFundingSources";
 import { SuccessCircle, SyncSpinner, PulsingDot } from "@/components/ui/micro-animations";
 import flowIcon from "@/assets/flow-icon.png";
-
-// Destination wallet options (where receiver wants money to land)
-const DESTINATION_WALLETS = [
-  { id: 'TouchNGo', name: 'Touch\'n Go', shortName: 'TNG', color: 'from-blue-500 to-blue-600', icon: Wallet },
-  { id: 'GrabPay', name: 'GrabPay', shortName: 'Grab', color: 'from-green-500 to-emerald-600', icon: Wallet },
-  { id: 'Boost', name: 'Boost', shortName: 'Boost', color: 'from-orange-500 to-red-500', icon: Wallet },
-  { id: 'Maybank', name: 'Maybank Account', shortName: 'Maybank', color: 'from-yellow-500 to-amber-600', icon: Building2 },
-] as const;
 
 // Payer can use ANY of these (shown for info)
 const COMPATIBLE_PAYER_APPS = [
@@ -61,8 +54,6 @@ const COMPATIBLE_PAYER_APPS = [
 const SIMULATED_PAYERS = ['Ahmad', 'Sarah', 'Wei Ming', 'Nurul', 'Jason'];
 const SIMULATED_PAYER_APPS = ['Maybank', 'Touch\'n Go', 'CIMB', 'GrabPay'];
 
-type DestinationWalletId = typeof DESTINATION_WALLETS[number]['id'];
-
 // Amount presets
 const AMOUNT_PRESETS = [10, 20, 50, 100];
 
@@ -70,13 +61,38 @@ const ReceivePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { success: hapticSuccess } = useHaptics();
+  const { sources, totalBalance, loading: balanceLoading } = useFundingSources();
+
+  // Get real wallets from funding sources
+  const destinationWallets = useMemo(() => {
+    const linkedSources = sources.filter(s => s.isLinked && (s.type === 'wallet' || s.type === 'bank'));
+    
+    // Map to destination wallet format with real balances
+    const walletColors: Record<string, string> = {
+      'Touch\'n Go': 'from-blue-500 to-blue-600',
+      'TouchNGo': 'from-blue-500 to-blue-600',
+      'GrabPay': 'from-green-500 to-emerald-600',
+      'Boost': 'from-orange-500 to-red-500',
+      'Maybank': 'from-yellow-500 to-amber-600',
+      'DuitNow': 'from-purple-500 to-purple-600',
+    };
+    
+    return linkedSources.map(s => ({
+      id: s.id,
+      name: s.name.replace('|', ' '),
+      shortName: s.name.split('|')[0].substring(0, 6),
+      color: walletColors[s.name] || 'from-gray-500 to-gray-600',
+      icon: s.type === 'bank' ? Building2 : Wallet,
+      balance: s.balance,
+    }));
+  }, [sources]);
 
   // Flow state: 'setup' → 'display-qr' → 'received'
   const [flowStep, setFlowStep] = useState<'setup' | 'display-qr' | 'received'>('setup');
   
   // Setup state
   const [amount, setAmount] = useState("");
-  const [destinationWallet, setDestinationWallet] = useState<DestinationWalletId>('TouchNGo');
+  const [destinationWallet, setDestinationWallet] = useState<string>(destinationWallets[0]?.id || '');
   
   // User data
   const [userPhone, setUserPhone] = useState<string | null>(null);
@@ -95,6 +111,13 @@ const ReceivePage = () => {
     transactionId: string;
     timestamp: Date;
   } | null>(null);
+
+  // Set default wallet when sources load
+  useEffect(() => {
+    if (destinationWallets.length > 0 && !destinationWallet) {
+      setDestinationWallet(destinationWallets[0].id);
+    }
+  }, [destinationWallets, destinationWallet]);
 
   // Prototype simulation (native-safe timers - use number for browser compatibility)
   const simulationTimerRef = useRef<number | null>(null);
@@ -339,7 +362,7 @@ const ReceivePage = () => {
     return pattern;
   }, [userPhone, amount, destinationWallet]);
 
-  const selectedWalletData = DESTINATION_WALLETS.find(w => w.id === destinationWallet);
+  const selectedWalletData = destinationWallets.find(w => w.id === destinationWallet);
 
   if (isLoading) {
     return (
@@ -464,7 +487,7 @@ const ReceivePage = () => {
               </p>
               
               <div className="grid grid-cols-2 gap-3">
-                {DESTINATION_WALLETS.map((wallet) => {
+                {destinationWallets.length > 0 ? destinationWallets.map((wallet) => {
                   const IconComponent = wallet.icon;
                   return (
                     <motion.button
@@ -483,6 +506,7 @@ const ReceivePage = () => {
                         </div>
                         <div className="text-left">
                           <p className="font-medium text-foreground text-sm">{wallet.shortName}</p>
+                          <p className="text-xs text-muted-foreground">RM {wallet.balance.toFixed(2)}</p>
                         </div>
                       </div>
                       
@@ -497,7 +521,13 @@ const ReceivePage = () => {
                       )}
                     </motion.button>
                   );
-                })}
+                }) : (
+                  <div className="col-span-2 glass-card rounded-2xl p-6 text-center">
+                    <Wallet className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No wallets linked</p>
+                    <p className="text-xs text-muted-foreground">Connect a wallet to receive payments</p>
+                  </div>
+                )}
               </div>
             </div>
 

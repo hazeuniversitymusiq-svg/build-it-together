@@ -3,9 +3,10 @@
  * 
  * iOS 26 Liquid Glass design - Contact selection + amount entry
  * With intelligent features: frequent contacts, send history, note field
+ * Shows real wallet balances from funding_sources
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -16,7 +17,8 @@ import {
   Loader2,
   Check,
   Wallet,
-  MessageSquare
+  MessageSquare,
+  AlertCircle
 } from "lucide-react";
 import { useDemo } from "@/contexts/DemoContext";
 import { DemoHighlight } from "@/components/demo/DemoHighlight";
@@ -26,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import FrequentContacts from "@/components/send/FrequentContacts";
 import ContactSendHistory from "@/components/send/ContactSendHistory";
+import { useFundingSources } from "@/hooks/useFundingSources";
 import type { Database } from "@/integrations/supabase/types";
 
 type Contact = Database['public']['Tables']['contacts']['Row'];
@@ -53,6 +56,7 @@ const SendPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { registerPageAction, clearPageActions } = useDemo();
+  const { sources, totalBalance, loading: balanceLoading } = useFundingSources();
 
   const [contacts, setContacts] = useState<ContactDisplayItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,6 +67,18 @@ const SendPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasContactsPermission, setHasContactsPermission] = useState(false);
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+
+  // Real wallets with balances
+  const linkedWallets = useMemo(() => 
+    sources.filter(s => s.isLinked && (s.type === 'wallet' || s.type === 'bank')),
+    [sources]
+  );
+
+  // Check if user has sufficient balance
+  const hasInsufficientBalance = useMemo(() => {
+    const amountNum = parseFloat(amount) || 0;
+    return amountNum > 0 && amountNum > totalBalance;
+  }, [amount, totalBalance]);
 
   useEffect(() => {
     const loadContacts = async () => {
@@ -504,7 +520,12 @@ const SendPage = () => {
               transition={{ delay: 0.2 }}
               className="mb-4"
             >
-              <label className="block text-sm text-muted-foreground mb-2">Amount</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-muted-foreground">Amount</label>
+                <span className="text-xs text-muted-foreground">
+                  Available: <span className="font-medium text-foreground">RM {totalBalance.toFixed(2)}</span>
+                </span>
+              </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-muted-foreground">
                   RM
@@ -514,11 +535,27 @@ const SendPage = () => {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-14 h-14 text-xl font-semibold rounded-2xl glass-card border-0 shadow-float"
+                  className={`pl-14 h-14 text-xl font-semibold rounded-2xl glass-card border-0 shadow-float ${
+                    hasInsufficientBalance ? 'ring-2 ring-destructive/50' : ''
+                  }`}
                   step="0.01"
                   min="0"
                 />
               </div>
+              {/* Insufficient Balance Warning */}
+              <AnimatePresence>
+                {hasInsufficientBalance && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="flex items-center gap-2 mt-2 text-destructive text-sm"
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Insufficient balance. Top up to continue.</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
             {/* Note Field */}
@@ -544,7 +581,7 @@ const SendPage = () => {
             {/* Primary Button */}
             <Button
               onClick={handleResolveAndSend}
-              disabled={!selectedContact || !amount || parseFloat(amount) <= 0 || isCreatingIntent}
+              disabled={!selectedContact || !amount || parseFloat(amount) <= 0 || isCreatingIntent || hasInsufficientBalance}
               size="lg"
               className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white border-0 shadow-glow-aurora disabled:opacity-50 disabled:shadow-none mb-4"
             >
