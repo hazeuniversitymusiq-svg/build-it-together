@@ -141,10 +141,48 @@ export function useFundingSources() {
     }
   }, [user]);
 
-  // Initial fetch
+  // Initial fetch + realtime subscription
   useEffect(() => {
     fetchSources();
-  }, [fetchSources]);
+
+    // Subscribe to realtime changes for this user's funding sources
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`funding_sources_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'funding_sources',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[FLOW] Funding source realtime update:', payload.eventType);
+          
+          if (payload.eventType === 'INSERT') {
+            setRawSources(prev => [...prev, payload.new as FundingSourceRow]);
+          } else if (payload.eventType === 'UPDATE') {
+            setRawSources(prev => 
+              prev.map(s => s.id === (payload.new as FundingSourceRow).id 
+                ? payload.new as FundingSourceRow 
+                : s
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setRawSources(prev => 
+              prev.filter(s => s.id !== (payload.old as FundingSourceRow).id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchSources, user]);
 
   // ============================================
   // Derived Data (memoized)
