@@ -110,11 +110,11 @@ const HandoffPage = () => {
   }, [planId, navigate]);
 
   // Handle visibility change (user returning from wallet app)
+  // This is a fallback in case they backgrounded the app
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && state === 'handed_off') {
-        // User returned from wallet app
-        setState('confirming');
+      if (document.visibilityState === 'visible' && state === 'confirming') {
+        // User returned - just provide haptic feedback
         haptics.impact();
       }
     };
@@ -128,7 +128,6 @@ const HandoffPage = () => {
 
     await haptics.confirm();
     setHandoffTime(new Date());
-    setState('handed_off');
 
     // Attempt to open the wallet app
     const result = openWalletApp(plan.chosen_rail, {
@@ -137,10 +136,10 @@ const HandoffPage = () => {
       reference: plan.id,
     });
 
-    if (!result.attempted) {
-      // No handoff possible, go to confirming state immediately
-      setTimeout(() => setState('confirming'), 1000);
-    }
+    // Go directly to confirming state - skip the "handed_off" intermediate screen
+    // Visibility change handler will also trigger this, but we set it immediately
+    // for a smoother UX when wallet can't be opened
+    setState('confirming');
   };
 
   const handleConfirmComplete = async () => {
@@ -387,39 +386,6 @@ const HandoffPage = () => {
                 </Button>
               </motion.div>
             </div>
-          </motion.div>
-        )}
-
-        {/* Handed Off State - Waiting for user to return */}
-        {state === 'handed_off' && (
-          <motion.div
-            key="handed_off"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-center px-6 text-center"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6"
-            >
-              <ExternalLink className="w-8 h-8 text-primary" />
-            </motion.div>
-            <p className="text-xl font-medium text-foreground mb-2">
-              Complete in {railName}
-            </p>
-            <p className="text-muted-foreground">
-              Return here when done
-            </p>
-            
-            <Button
-              variant="ghost"
-              onClick={() => setState('confirming')}
-              className="mt-8 text-muted-foreground"
-            >
-              I'm back
-            </Button>
           </motion.div>
         )}
 
