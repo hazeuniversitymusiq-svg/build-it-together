@@ -99,8 +99,9 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
       setCreatingFor(reminder.id);
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          console.error("Auth error:", authError);
           navigate("/auth");
           return;
         }
@@ -110,7 +111,7 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
           .from("intents")
           .insert({
             user_id: user.id,
-            type: "PayBill",
+            type: "PayBill" as const,
             amount: reminder.dueAmount,
             currency: "MYR",
             payee_name: reminder.billerName,
@@ -127,8 +128,13 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
           .select("id")
           .single();
 
-        if (error || !intent) {
-          throw new Error("Failed to create bill payment");
+        if (error) {
+          console.error("Intent creation error:", error);
+          throw new Error(error.message || "Failed to create bill payment");
+        }
+        
+        if (!intent) {
+          throw new Error("No intent returned");
         }
 
         // Hand off to FLOW journey
@@ -137,7 +143,7 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
         console.error("Bill payment error:", error);
         toast({
           title: "Error",
-          description: "Failed to start bill payment",
+          description: error instanceof Error ? error.message : "Failed to start bill payment",
           variant: "destructive",
         });
         setCreatingFor(null);

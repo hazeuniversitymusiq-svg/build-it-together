@@ -74,16 +74,6 @@ export function AppleOnboardingFlow() {
 
   // Auto-advance through phases with elegant timing
   useEffect(() => {
-    if (currentPhase === 0) {
-      // Welcome phase - wait for user interaction or auto-advance
-      const timer = setTimeout(() => {
-        handleNext();
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [currentPhase]);
-
-  useEffect(() => {
     // Update orbit phase based on current phase
     if (currentPhase === 0) {
       setOrbitPhase('idle');
@@ -94,7 +84,49 @@ export function AppleOnboardingFlow() {
     } else if (currentPhase === 3) {
       setOrbitPhase('complete');
     }
-  }, [currentPhase]);
+
+    // Auto-advance timers for each phase
+    let timer: NodeJS.Timeout | null = null;
+    
+    if (currentPhase === 0) {
+      // Welcome phase - 3 seconds
+      timer = setTimeout(() => {
+        if (!isTransitioning) {
+          setIsTransitioning(true);
+          setTimeout(() => {
+            setCurrentPhase(1);
+            setIsTransitioning(false);
+          }, 300);
+        }
+      }, 3000);
+    } else if (currentPhase === 1) {
+      // Detecting phase - 2.5 seconds
+      timer = setTimeout(() => {
+        if (!isTransitioning) {
+          setIsTransitioning(true);
+          setTimeout(() => {
+            setCurrentPhase(2);
+            setIsTransitioning(false);
+          }, 300);
+        }
+      }, 2500);
+    } else if (currentPhase === 2) {
+      // Syncing phase - 2 seconds
+      timer = setTimeout(() => {
+        if (!isTransitioning) {
+          setIsTransitioning(true);
+          setTimeout(() => {
+            setCurrentPhase(3);
+            setIsTransitioning(false);
+          }, 300);
+        }
+      }, 2000);
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [currentPhase, isTransitioning]);
 
   const handleNext = () => {
     if (isTransitioning) return;
