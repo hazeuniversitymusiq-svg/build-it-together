@@ -181,8 +181,9 @@ const SendPage = () => {
     setIsCreatingIntent(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error("Auth error:", authError);
         navigate("/auth");
         return;
       }
@@ -200,7 +201,7 @@ const SendPage = () => {
         .from("intents")
         .insert({
           user_id: user.id,
-          type: "SendMoney",
+          type: "SendMoney" as const,
           amount: parseFloat(amount),
           currency: "MYR",
           payee_name: selectedContact.name,
@@ -217,8 +218,13 @@ const SendPage = () => {
         .select("id")
         .single();
 
-      if (error || !intent) {
-        throw new Error("Failed to create payment request");
+      if (error) {
+        console.error("Intent creation error:", error);
+        throw new Error(error.message || "Failed to create payment request");
+      }
+      
+      if (!intent) {
+        throw new Error("No intent returned");
       }
 
       navigate(`/resolve/${intent.id}`);
@@ -226,7 +232,7 @@ const SendPage = () => {
       console.error("Error creating intent:", error);
       toast({
         title: "Error",
-        description: "Failed to create payment request",
+        description: error instanceof Error ? error.message : "Failed to create payment request",
         variant: "destructive",
       });
       setIsCreatingIntent(false);

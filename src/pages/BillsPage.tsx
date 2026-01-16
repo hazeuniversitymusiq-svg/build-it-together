@@ -73,6 +73,11 @@ const BillsPage = () => {
 
   // Handle paying a bill
   const handlePayNow = useCallback(async (biller: LinkedBiller) => {
+    if (!userId) {
+      navigate("/auth");
+      return;
+    }
+    
     setIsCreatingIntent(biller.id);
 
     try {
@@ -84,7 +89,7 @@ const BillsPage = () => {
         .from("intents")
         .insert({
           user_id: userId,
-          type: "PayBill",
+          type: "PayBill" as const,
           amount: biller.dueAmount,
           currency: "MYR",
           payee_name: biller.name,
@@ -98,8 +103,13 @@ const BillsPage = () => {
         .select("id")
         .single();
 
-      if (error || !intent) {
-        throw new Error("Failed to create bill payment");
+      if (error) {
+        console.error("Intent creation error:", error);
+        throw new Error(error.message || "Failed to create bill payment");
+      }
+      
+      if (!intent) {
+        throw new Error("No intent returned");
       }
 
       navigate(`/resolve/${intent.id}`);
@@ -107,7 +117,7 @@ const BillsPage = () => {
       console.error("Error creating intent:", error);
       toast({
         title: "Error",
-        description: "Failed to create bill payment",
+        description: error instanceof Error ? error.message : "Failed to create bill payment",
         variant: "destructive",
       });
       setIsCreatingIntent(null);
