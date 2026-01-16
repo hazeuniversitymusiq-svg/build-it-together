@@ -25,7 +25,7 @@ import WelcomePage from "./pages/WelcomePage";
 import AuthPage from "./pages/AuthPage";
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import OAuthStartPage from "./pages/OAuthStartPage";
-import AutoSyncPage from "./pages/AutoSyncPage";
+import AppleSyncPage from "./pages/AppleSyncPage";
 import HomePage from "./pages/HomePage";
 import ScanPage from "./pages/ScanPage";
 import ResolvePage from "./pages/ResolvePage";
@@ -42,7 +42,7 @@ import ReceivePage from "./pages/ReceivePage";
 import PartnerPitchPage from "./pages/PartnerPitchPage";
 import FlowCardPage from "./pages/FlowCardPage";
 import FlowCardActivityPage from "./pages/FlowCardActivityPage";
-import { OnboardingFlow } from "./components/onboarding/OnboardingFlow";
+import { AppleOnboardingFlow } from "./components/onboarding/AppleOnboardingFlow";
 import QuickConnectPage from "./pages/QuickConnectPage";
 import NotFound from "./pages/NotFound";
 
@@ -121,7 +121,7 @@ const AnimatedRoutes = () => {
         <Route path="/oauth/start" element={<OAuthStartPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/connect" element={<PageTransition><QuickConnectPage /></PageTransition>} />
-        <Route path="/auto-sync" element={<PageTransition><AutoSyncPage /></PageTransition>} />
+        <Route path="/auto-sync" element={<PageTransition><AppleSyncPage /></PageTransition>} />
 
         {/* Transaction Flow (No Bottom Nav - focused experience) */}
         <Route path="/resolve/:intentId" element={<PageTransition><ResolvePage /></PageTransition>} />
@@ -165,7 +165,7 @@ const App = () => (
             <Router>
               <DemoProvider>
                 <RecoveryRedirect />
-                <OnboardingFlow />
+                <AppleOnboardingFlow />
                 <AnimatedRoutes />
               </DemoProvider>
             </Router>
