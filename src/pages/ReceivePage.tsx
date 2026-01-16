@@ -93,8 +93,8 @@ const ReceivePage = () => {
     timestamp: Date;
   } | null>(null);
 
-  // Prototype simulation (native-safe timers)
-  const simulationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  // Prototype simulation (native-safe timers - use number for browser compatibility)
+  const simulationTimerRef = useRef<number | null>(null);
   const simulationRafRef = useRef<number | null>(null);
   const simulationStartedAtRef = useRef<number | null>(null);
   const simulationCompletedRef = useRef(false);
