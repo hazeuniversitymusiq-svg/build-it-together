@@ -10,10 +10,11 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, RefreshCw, ChevronDown, X } from 'lucide-react';
+import { Plus, RefreshCw, ChevronDown, X, TrendingUp } from 'lucide-react';
 import { useFundingSources } from '@/hooks/useFundingSources';
 import { cn } from '@/lib/utils';
 import { getBrandedIcon } from '@/components/icons/BrandedIcons';
+import { PulsingDot, SyncSpinner, ShimmerEffect } from '@/components/ui/micro-animations';
 
 interface WalletBalanceCardProps {
   className?: string;
@@ -24,11 +25,21 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
   const { sources, totalBalance, loading, refetch } = useFundingSources();
   const [isExpanded, setIsExpanded] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastBalance, setLastBalance] = useState(totalBalance);
 
   const linkedWallets = sources.filter(s => s.isLinked && s.type === 'wallet');
   const linkedBanks = sources.filter(s => s.isLinked && s.type === 'bank');
   const allSources = [...linkedWallets, ...linkedBanks];
   const hasLowBalance = linkedWallets.some(w => w.balance < 20);
+  const balanceIncreased = totalBalance > lastBalance;
+
+  const handleRefresh = async () => {
+    setIsSyncing(true);
+    setLastBalance(totalBalance);
+    await refetch();
+    setTimeout(() => setIsSyncing(false), 800);
+  };
 
   if (loading) {
     return (
@@ -78,23 +89,69 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
       className={cn("liquid-glass overflow-hidden", className)}
     >
       {/* Compact Header with Balance */}
-      <div className="p-4 pb-3">
+      <div className="p-4 pb-3 relative overflow-hidden">
+        {/* Shimmer effect on sync */}
+        <AnimatePresence>
+          {isSyncing && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 pointer-events-none"
+            >
+              <ShimmerEffect />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex items-center justify-between mb-0.5">
-          <p className="text-[10px] text-muted-foreground/70 font-semibold uppercase tracking-widest">
-            Total Available
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] text-muted-foreground/70 font-semibold uppercase tracking-widest">
+              Total Available
+            </p>
+            <PulsingDot color="bg-success" size="sm" />
+          </div>
           <motion.button
-            onClick={() => refetch()}
+            onClick={handleRefresh}
             whileTap={{ scale: 0.9 }}
             className="w-7 h-7 rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
             title="Refresh balances"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            {isSyncing ? (
+              <SyncSpinner size={14} />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5" />
+            )}
           </motion.button>
         </div>
-        <p className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight">
-          RM {totalBalance.toFixed(2)}
-        </p>
+        
+        {/* Animated balance with increase indicator */}
+        <div className="flex items-center gap-2">
+          <motion.p 
+            key={totalBalance}
+            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight"
+          >
+            RM {totalBalance.toFixed(2)}
+          </motion.p>
+          
+          <AnimatePresence>
+            {balanceIncreased && !isSyncing && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0, x: -10 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium"
+              >
+                <TrendingUp className="w-3 h-3" />
+                <span>+{(totalBalance - lastBalance).toFixed(2)}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Compact Wallet Icons Row */}
