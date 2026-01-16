@@ -70,35 +70,10 @@ interface DemoPayment {
 const DEMO_PAYMENTS: DemoPayment[] = [
   { merchant: 'Ah Seng Mamak', amount: 12.50, qrId: 'DQR001', rail: 'DuitNow', railColor: 'text-pink-600', railIcon: '🏦' },
   { merchant: 'Starbucks KLCC', amount: 18.90, qrId: 'TNG002', rail: 'TouchNGo', railColor: 'text-blue-600', railIcon: '💙' },
-  { merchant: 'Village Park Restaurant', amount: 75.00, qrId: 'GP003', rail: 'GrabPay', railColor: 'text-green-600', railIcon: '💚' },
+  { merchant: 'Village Park', amount: 75.00, qrId: 'GP003', rail: 'GrabPay', railColor: 'text-green-600', railIcon: '💚' },
   { merchant: 'Parking MBPJ', amount: 3.00, qrId: 'BST004', rail: 'Boost', railColor: 'text-orange-500', railIcon: '🔶' },
-  { merchant: 'Shopee Mall Purchase', amount: 156.00, qrId: 'SPY007', rail: 'ShopeePay', railColor: 'text-orange-600', railIcon: '🧡' },
-  { merchant: 'AirAsia Flight Booking', amount: 289.00, qrId: 'BPY008', rail: 'BigPay', railColor: 'text-red-500', railIcon: '✈️' },
-  // Card Payment Demos
   { 
-    merchant: 'Sephora Mid Valley', 
-    amount: 245.00, 
-    qrId: 'CARD001', 
-    rail: 'VisaMastercard', 
-    railColor: 'text-indigo-600', 
-    railIcon: '💳',
-    isCardPayment: true,
-    cardType: 'visa',
-    cardLast4: '4242'
-  },
-  { 
-    merchant: 'Uniqlo Pavilion', 
-    amount: 189.90, 
-    qrId: 'CARD002', 
-    rail: 'VisaMastercard', 
-    railColor: 'text-orange-600', 
-    railIcon: '💳',
-    isCardPayment: true,
-    cardType: 'mastercard',
-    cardLast4: '8888'
-  },
-  { 
-    merchant: 'Nasi Lemak Antarabangsa', 
+    merchant: 'Nasi Lemak', 
     amount: 45.00, 
     qrId: 'ERR005', 
     rail: 'GrabPay', 
@@ -108,17 +83,6 @@ const DEMO_PAYMENTS: DemoPayment[] = [
     fallbackRail: 'TouchNGo',
     fallbackIcon: '💙',
     fallbackColor: 'text-blue-600'
-  },
-  { 
-    merchant: 'Harvey Norman Electronics', 
-    amount: 899.00, 
-    qrId: 'ATM006', 
-    rail: 'Atome', 
-    railColor: 'text-teal-500', 
-    railIcon: '💎',
-    showBnplOption: true,
-    bnplInstallments: 3,
-    bnplPerInstallment: 299.67
   },
 ];
 
@@ -357,29 +321,27 @@ const DemoPage = () => {
       {/* Split Screen Layout */}
       <div className="flex flex-col lg:flex-row h-[calc(100vh-57px)]">
         {/* Left: Demo Experience */}
-        <div className="flex-1 p-6 overflow-auto border-b lg:border-b-0 lg:border-r">
-          <div className="max-w-md mx-auto space-y-6">
+        <div className="flex-1 p-4 overflow-auto border-b lg:border-b-0 lg:border-r">
+          <div className="max-w-md mx-auto space-y-4">
             {/* Balance Card */}
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-              <CardContent className="pt-4">
+              <CardContent className="py-3 px-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Building2 className="h-3 w-3" />
                       RYT Bank Balance
                     </p>
-                    <p className="text-3xl font-bold mt-1">
+                    <p className="text-2xl font-bold">
                       RM {balance?.toFixed(2) ?? '---'}
                     </p>
                   </div>
                   <Button 
                     size="sm" 
-                    variant="outline" 
+                    variant="ghost" 
                     onClick={fetchBalance}
-                    className="gap-1"
                   >
-                    <RefreshCw className="h-3 w-3" />
-                    Refresh
+                    <RefreshCw className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -393,7 +355,7 @@ const DemoPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="space-y-3"
+                  className="space-y-2"
                 >
                   <p className="text-sm font-medium text-center text-muted-foreground">
                     Select a QR payment to demo:
@@ -403,56 +365,29 @@ const DemoPage = () => {
                       key={payment.qrId}
                       className={cn(
                         "cursor-pointer hover:border-primary/50 hover:shadow-md transition-all",
-                        payment.simulateError && "border-amber-500/30 bg-amber-50/30 dark:bg-amber-950/10",
-                        payment.showBnplOption && "border-teal-500/30 bg-teal-50/30 dark:bg-teal-950/10",
-                        payment.isCardPayment && "border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/10"
+                        payment.simulateError && "border-amber-500/30 bg-amber-50/30 dark:bg-amber-950/10"
                       )}
                       onClick={() => startDemo(payment)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "h-12 w-12 rounded-xl flex items-center justify-center text-2xl",
-                              payment.isCardPayment 
-                                ? "bg-gradient-to-br from-indigo-500 to-indigo-600" 
-                                : "bg-gradient-to-br from-muted to-muted/50"
-                            )}>
-                              {payment.isCardPayment ? (
-                                <span className="text-white text-lg">💳</span>
-                              ) : (
-                                payment.railIcon
-                              )}
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="h-9 w-9 rounded-lg flex items-center justify-center text-lg bg-muted shrink-0">
+                              {payment.railIcon}
                             </div>
-                            <div>
-                              <p className="font-medium">{payment.merchant}</p>
-                              <p className={cn("text-xs font-medium", payment.railColor)}>
-                                {payment.isCardPayment 
-                                  ? `${payment.cardType === 'visa' ? 'Visa' : 'Mastercard'} •••• ${payment.cardLast4}`
-                                  : `${payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail} • ${payment.qrId}`
-                                }
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{payment.merchant}</p>
+                              <p className={cn("text-xs", payment.railColor)}>
+                                {payment.rail === 'TouchNGo' ? "Touch 'n Go" : payment.rail}
                               </p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-lg">RM {payment.amount.toFixed(2)}</p>
-                            <ArrowRight className="h-4 w-4 text-primary ml-auto" />
+                          <div className="text-right shrink-0">
+                            <p className="font-bold">RM {payment.amount.toFixed(2)}</p>
                           </div>
                         </div>
                         {payment.simulateError && (
-                          <Badge variant="outline" className="mt-2 text-xs border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30">
-                            ⚠️ Demo: Insufficient balance → Fallback
-                          </Badge>
-                        )}
-                        {payment.showBnplOption && (
-                          <Badge variant="outline" className="mt-2 text-xs border-teal-500 text-teal-600 bg-teal-50 dark:bg-teal-950/30">
-                            💎 Pay in 3 interest-free installments
-                          </Badge>
-                        )}
-                        {payment.isCardPayment && (
-                          <Badge variant="outline" className="mt-2 text-xs border-indigo-500 text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30">
-                            💳 Direct Card Payment - No wallet top-up
-                          </Badge>
+                          <p className="text-xs text-amber-600 mt-1">Demo: Fallback flow</p>
                         )}
                       </CardContent>
                     </Card>
