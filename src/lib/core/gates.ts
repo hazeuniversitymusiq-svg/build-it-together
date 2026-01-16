@@ -17,8 +17,9 @@ export interface GateResult {
 
 /**
  * Check if we're in prototype mode
+ * Exported so other parts of the app can use consistent logic
  */
-function isPrototypeMode(): boolean {
+export function isPrototypeMode(): boolean {
   try {
     return localStorage.getItem('flow_test_mode') !== 'field_test';
   } catch {
@@ -142,8 +143,14 @@ export async function checkDeviceTrustGate(userId: string, deviceId: string): Pr
 /**
  * Consent Gate
  * Validate active consent before using any connector
+ * In prototype mode, auto-pass to allow smooth demos
  */
 export async function checkConsentGate(userId: string, connectorId: string): Promise<GateResult> {
+  // In prototype mode, auto-pass consent checks
+  if (isPrototypeMode()) {
+    return { passed: true };
+  }
+
   const { data: consent, error } = await supabase
     .from('consents')
     .select('status')

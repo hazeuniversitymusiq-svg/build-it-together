@@ -7,6 +7,7 @@
 
 // Gates
 export {
+  isPrototypeMode,
   checkIdentityGate,
   checkDeviceTrustGate,
   checkConsentGate,
