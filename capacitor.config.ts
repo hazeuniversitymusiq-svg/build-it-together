@@ -31,7 +31,6 @@ const config: CapacitorConfig = {
   // iOS configuration
   ios: {
     appendUserAgent: 'FLOW-App',
-    scheme: 'flow',
   },
 };
 
