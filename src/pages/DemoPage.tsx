@@ -294,7 +294,7 @@ const DemoPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background safe-area-top lg:w-screen lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw]">
+    <div className="min-h-screen bg-background safe-area-top pb-24">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 py-3">
@@ -306,46 +306,40 @@ const DemoPage = () => {
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              <h1 className="font-semibold">Bank Partnership Demo</h1>
-            </div>
+            <h1 className="font-semibold text-base">Bank Demo</h1>
           </div>
-          <Badge variant="outline" className="gap-1">
+          <Badge variant="outline" className="text-xs gap-1">
             <Zap className="h-3 w-3" />
-            RYT Bank API (Simulated)
+            Simulated
           </Badge>
         </div>
       </header>
 
-      {/* Split Screen Layout */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-57px)]">
-        {/* Left: Demo Experience */}
-        <div className="flex-1 p-4 overflow-auto border-b lg:border-b-0 lg:border-r">
-          <div className="max-w-md mx-auto space-y-4">
-            {/* Balance Card */}
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-              <CardContent className="py-3 px-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Building2 className="h-3 w-3" />
-                      RYT Bank Balance
-                    </p>
-                    <p className="text-2xl font-bold">
-                      RM {balance?.toFixed(2) ?? '---'}
-                    </p>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={fetchBalance}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Single Column Layout for Mobile */}
+      <div className="p-4 space-y-4">
+        {/* Balance Card - Compact */}
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  RYT Bank
+                </p>
+                <p className="text-2xl font-bold tabular-nums">
+                  RM {balance?.toFixed(2) ?? '---'}
+                </p>
+              </div>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={fetchBalance}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
             {/* Demo Flow */}
             <AnimatePresence mode="wait">
@@ -1018,7 +1012,7 @@ const DemoPage = () => {
             </AnimatePresence>
 
             {/* Flow Steps Indicator */}
-            <div className="flex items-center justify-center gap-2 pt-4">
+            <div className="flex items-center justify-center gap-2 pt-6 pb-4">
               {['Scan', 'Authorize', 'Done'].map((label, i) => {
                 const stepIndex = step === 'idle' ? -1 
                   : step === 'scanning' ? 0 
@@ -1031,9 +1025,9 @@ const DemoPage = () => {
                 const isCurrent = Math.floor(stepIndex) === i;
                 
                 return (
-                  <div key={label} className="flex items-center gap-2">
+                  <div key={label} className="flex items-center gap-1.5">
                     <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                      "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all",
                       isActive 
                         ? "bg-primary text-primary-foreground" 
                         : "bg-muted text-muted-foreground",
@@ -1042,189 +1036,19 @@ const DemoPage = () => {
                       {i + 1}
                     </div>
                     <span className={cn(
-                      "text-sm",
+                      "text-xs",
                       isActive ? "text-foreground" : "text-muted-foreground"
                     )}>
                       {label}
                     </span>
                     {i < 2 && (
-                      <ArrowRight className="h-4 w-4 text-muted-foreground mx-1" />
+                      <ArrowRight className="h-3 w-3 text-muted-foreground mx-0.5" />
                     )}
                   </div>
                 );
               })}
             </div>
           </div>
-        </div>
-
-        {/* Right: API Logs */}
-        <div className="flex-1 flex flex-col bg-muted/30 min-h-[300px] lg:min-h-0">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'logs' | 'spec')} className="flex flex-col h-full">
-            <div className="border-b px-4 py-2 flex items-center justify-between bg-background">
-              <TabsList className="h-9">
-                <TabsTrigger value="logs" className="gap-1.5 text-xs">
-                  <Terminal className="h-3.5 w-3.5" />
-                  Live API Logs
-                </TabsTrigger>
-                <TabsTrigger value="spec" className="gap-1.5 text-xs">
-                  <Code2 className="h-3.5 w-3.5" />
-                  API Spec
-                </TabsTrigger>
-              </TabsList>
-              {activeTab === 'logs' && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={clearLogs}
-                  className="text-xs h-7"
-                >
-                  Clear
-                </Button>
-              )}
-            </div>
-
-            <TabsContent value="logs" className="flex-1 m-0 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="p-4 space-y-3 font-mono text-sm">
-                  {apiLogs.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-12">
-                      <Terminal className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                      <p>API calls will appear here</p>
-                      <p className="text-xs mt-1">Select a payment to start the demo</p>
-                    </div>
-                  ) : (
-                    apiLogs.map((log) => (
-                      <motion.div
-                        key={log.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className={cn(
-                          "rounded-lg p-3 border",
-                          log.type === 'request' 
-                            ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900"
-                            : log.status && log.status >= 400
-                              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900"
-                              : "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {log.type === 'request' ? (
-                              <ArrowUpRight className="h-4 w-4 text-blue-500" />
-                            ) : (
-                              <ArrowDownLeft className={cn(
-                                "h-4 w-4",
-                                log.status && log.status >= 400 ? "text-red-500" : "text-green-500"
-                              )} />
-                            )}
-                            <Badge variant="outline" className={cn(
-                              "text-xs",
-                              log.method === 'GET' ? "border-green-500 text-green-600" : "border-blue-500 text-blue-600"
-                            )}>
-                              {log.method}
-                            </Badge>
-                            <code className="text-xs">/mock-bank-api/{log.endpoint}</code>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {log.status && (
-                              <Badge variant={log.status >= 400 ? "destructive" : "secondary"} className="text-xs">
-                                {log.status}
-                              </Badge>
-                            )}
-                            {log.duration && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {log.duration}ms
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {log.body && (
-                          <pre className="text-xs bg-background/50 rounded p-2 overflow-x-auto">
-                            {JSON.stringify(log.body, null, 2)}
-                          </pre>
-                        )}
-                      </motion.div>
-                    ))
-                  )}
-                  <div ref={logsEndRef} />
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="spec" className="flex-1 m-0 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="p-4 space-y-4 text-sm">
-                  <div>
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <Code2 className="h-4 w-4" />
-                      API Endpoints Used
-                    </h3>
-                    <div className="space-y-3 font-mono">
-                      <div className="bg-background rounded-lg p-3 border">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="border-green-500 text-green-600 text-xs">GET</Badge>
-                          <code>/balance</code>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Fetch real-time account balance</p>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <ArrowDown className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      
-                      <div className="bg-background rounded-lg p-3 border">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">POST</Badge>
-                          <code>/payments/initiate</code>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Start payment, returns authorization challenge if amount &gt; RM50</p>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <ArrowDown className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      
-                      <div className="bg-background rounded-lg p-3 border">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">POST</Badge>
-                          <code>/payments/:id/authorize</code>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Complete 2FA with biometric signature</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-2">Security Features</h3>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      <li>• OAuth 2.0 + PKCE authentication</li>
-                      <li>• Biometric authorization for payments &gt; RM50</li>
-                      <li>• Idempotency keys prevent duplicates</li>
-                      <li>• Real-time balance validation</li>
-                      <li>• Daily transaction limits</li>
-                    </ul>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-2">Response Times</h3>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-background rounded p-2 border">
-                        <p className="text-muted-foreground">Balance API</p>
-                        <p className="font-mono font-medium">&lt; 200ms</p>
-                      </div>
-                      <div className="bg-background rounded p-2 border">
-                        <p className="text-muted-foreground">Payment API</p>
-                        <p className="font-mono font-medium">&lt; 500ms</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
     </div>
   );
 };

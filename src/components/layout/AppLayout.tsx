@@ -10,9 +10,9 @@ import BottomNav from "./BottomNav";
 
 const AppLayout = () => {
   return (
-    <div className="min-h-screen bg-background max-w-md mx-auto relative">
+    <div className="min-h-screen bg-background max-w-md mx-auto relative overflow-x-hidden">
       {/* Main content area with bottom padding for nav */}
-      <main className="pb-24">
+      <main className="pb-28">
         <Outlet />
       </main>
       
