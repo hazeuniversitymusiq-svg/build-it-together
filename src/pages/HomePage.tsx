@@ -77,14 +77,14 @@ const HomePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 flex flex-col px-5 safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background flex flex-col px-5 safe-area-top safe-area-bottom pb-28">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

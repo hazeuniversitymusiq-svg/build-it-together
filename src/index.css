@@ -90,60 +90,69 @@
   }
 
   .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
+    /* === PREMIUM DARK MODE === */
+    /* Deep, rich blacks for OLED */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 95%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
 
     --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 8%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 0 0% 12%;
+    --secondary: 0 0% 10%;
     --secondary-foreground: 0 0% 90%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 50%;
 
-    /* Aurora spectrum - slightly brighter in dark */
-    --aurora-blue: 211 100% 55%;
-    --aurora-purple: 271 91% 70%;
-    --aurora-pink: 340 82% 65%;
-    --aurora-teal: 175 84% 45%;
-    --aurora-cyan: 192 91% 55%;
+    /* Aurora spectrum - vibrant glowing colors in dark */
+    --aurora-blue: 211 100% 60%;
+    --aurora-purple: 271 91% 72%;
+    --aurora-pink: 340 82% 68%;
+    --aurora-teal: 175 84% 50%;
+    --aurora-cyan: 192 91% 58%;
 
-    --accent: 211 100% 55%;
+    --accent: 211 100% 60%;
     --accent-foreground: 0 0% 100%;
 
-    --success: 158 64% 45%;
+    /* Success - vibrant green that glows */
+    --success: 158 72% 48%;
     --success-foreground: 0 0% 100%;
-    --success-soft: 158 40% 12%;
+    --success-soft: 158 50% 10%;
 
-    --warning: 38 92% 55%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 0 0% 0%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 211 100% 55%;
+    /* Subtle borders for depth */
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    --ring: 211 100% 60%;
 
-    /* Liquid glass in dark */
-    --glass-bg: 0 0% 10% / 0.8;
-    --glass-border: 0 0% 100% / 0.08;
+    /* Liquid glass in dark - translucent with subtle glow */
+    --glass-bg: 0 0% 8% / 0.85;
+    --glass-border: 0 0% 100% / 0.06;
 
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 211 100% 55%;
+    /* Flow tokens - enhanced glow */
+    --flow-scanner-frame: 211 100% 60%;
+    --flow-biometric: 158 72% 48%;
+    --flow-glow: 211 100% 60%;
+
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 211 100% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 211 100% 55%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 211 100% 60%;
   }
 }
 
@@ -228,23 +237,24 @@
   .dark .liquid-glass {
     background: linear-gradient(
       180deg,
-      hsla(0, 0%, 15%, 0.9) 0%,
-      hsla(0, 0%, 10%, 0.85) 100%
+      hsla(0, 0%, 12%, 0.95) 0%,
+      hsla(0, 0%, 6%, 0.9) 100%
     );
     box-shadow: 
-      0 12px 40px -12px hsla(0, 0%, 0%, 0.5),
-      0 4px 16px -4px hsla(0, 0%, 0%, 0.3),
-      inset 0 2px 0 0 hsla(0, 0%, 100%, 0.1),
-      inset 0 0 0 1px hsla(0, 0%, 100%, 0.05);
+      0 12px 40px -12px hsla(0, 0%, 0%, 0.7),
+      0 4px 16px -4px hsla(0, 0%, 0%, 0.4),
+      inset 0 1px 0 0 hsla(0, 0%, 100%, 0.08),
+      inset 0 0 0 1px hsla(0, 0%, 100%, 0.04),
+      0 0 60px -20px hsla(211, 100%, 60%, 0.15);
   }
   
   .dark .liquid-glass::before {
     background: linear-gradient(
       100deg,
       transparent 0%,
-      hsla(0, 0%, 100%, 0.04) 40%,
-      hsla(0, 0%, 100%, 0.08) 50%,
-      hsla(0, 0%, 100%, 0.04) 60%,
+      hsla(211, 100%, 70%, 0.03) 40%,
+      hsla(271, 91%, 70%, 0.05) 50%,
+      hsla(211, 100%, 70%, 0.03) 60%,
       transparent 100%
     );
   }
@@ -268,12 +278,13 @@
   .dark .liquid-pill {
     background: linear-gradient(
       180deg,
-      hsla(0, 0%, 18%, 0.95) 0%,
-      hsla(0, 0%, 12%, 0.9) 100%
+      hsla(0, 0%, 14%, 0.95) 0%,
+      hsla(0, 0%, 8%, 0.9) 100%
     );
     box-shadow: 
-      0 4px 16px -4px hsla(0, 0%, 0%, 0.4),
-      inset 0 1px 0 0 hsla(0, 0%, 100%, 0.1);
+      0 4px 16px -4px hsla(0, 0%, 0%, 0.5),
+      inset 0 1px 0 0 hsla(0, 0%, 100%, 0.08),
+      0 0 20px -8px hsla(158, 72%, 48%, 0.2);
   }
   
   /* Glass card with subtle shimmer */
@@ -319,24 +330,24 @@
   .dark .glass-card {
     background: linear-gradient(
       135deg,
-      hsla(0, 0%, 12%, 0.85) 0%,
-      hsla(0, 0%, 8%, 0.8) 100%
+      hsla(0, 0%, 10%, 0.9) 0%,
+      hsla(0, 0%, 5%, 0.85) 100%
     );
-    border: 1px solid hsla(0, 0%, 100%, 0.1);
+    border: 1px solid hsla(0, 0%, 100%, 0.06);
     box-shadow: 
-      0 8px 32px -8px hsla(0, 0%, 0%, 0.4),
-      0 2px 8px -2px hsla(0, 0%, 0%, 0.2),
-      inset 0 1px 0 0 hsla(0, 0%, 100%, 0.08),
-      inset 0 -1px 0 0 hsla(0, 0%, 0%, 0.1);
+      0 8px 32px -8px hsla(0, 0%, 0%, 0.6),
+      0 2px 8px -2px hsla(0, 0%, 0%, 0.3),
+      inset 0 1px 0 0 hsla(0, 0%, 100%, 0.06),
+      inset 0 -1px 0 0 hsla(0, 0%, 0%, 0.2);
   }
   
   .dark .glass-card::before {
     background: linear-gradient(
       100deg,
       transparent 0%,
-      hsla(0, 0%, 100%, 0.03) 40%,
-      hsla(0, 0%, 100%, 0.05) 50%,
-      hsla(0, 0%, 100%, 0.03) 60%,
+      hsla(211, 100%, 60%, 0.02) 40%,
+      hsla(271, 91%, 70%, 0.04) 50%,
+      hsla(211, 100%, 60%, 0.02) 60%,
       transparent 100%
     );
   }
