@@ -94,7 +94,7 @@ const SettingsPage = () => {
   return (
     <div className="min-h-screen bg-background safe-area-top safe-area-bottom pb-28">
       {/* Header */}
-      <header className="px-6 pt-14 pb-6">
+      <header className="px-6 pt-4 pb-6">
         <p className="text-muted-foreground text-sm mb-1">Account</p>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Settings</h1>
       </header>

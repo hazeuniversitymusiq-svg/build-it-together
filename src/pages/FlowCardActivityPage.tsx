@@ -53,9 +53,9 @@ export default function FlowCardActivityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-32 safe-area-top">
       {/* Header */}
-      <div className="sticky top-0 z-10 glass border-b border-border">
+      <div className="sticky top-0 z-10 glass border-b border-border pt-2">
         <div className="p-4 flex items-center gap-3">
           <Button
             variant="ghost"

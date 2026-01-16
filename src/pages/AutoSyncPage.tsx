@@ -284,7 +284,7 @@ const AutoSyncPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom">
       {/* Header */}
-      <header className="px-6 pt-14 pb-2">
+      <header className="px-6 pt-4 pb-2">
         <button 
           onClick={() => navigate(-1)}
           className="flex items-center gap-1 text-primary mb-4 -ml-1"

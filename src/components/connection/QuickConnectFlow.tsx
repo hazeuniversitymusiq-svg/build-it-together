@@ -398,7 +398,7 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
 
       {/* Skip button */}
       {showSkip && phase !== 'complete' && phase !== 'connecting' && (
-        <div className="absolute top-4 right-4 z-10 safe-area-top">
+        <div className="absolute top-4 right-4 z-10">
           <Button
             variant="ghost"
             size="sm"
