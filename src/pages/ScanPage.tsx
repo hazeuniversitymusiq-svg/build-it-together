@@ -67,7 +67,7 @@ const ScanPage = () => {
   
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [isScannerOpen, setIsScannerOpen] = useState(true); // Auto-open camera
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isMyCodeOpen, setIsMyCodeOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scannedData, setScannedData] = useState<ParsedQRIntent | null>(null);
@@ -134,9 +134,6 @@ const ScanPage = () => {
       }
       setUserId(user.id);
       setIsLoading(false);
-      
-      // Auto-open scanner on page load (camera ready)
-      setIsScannerOpen(true);
       
       // Pre-select first available funding source
       if (sources.length > 0 && !selectedFundingSourceId) {
