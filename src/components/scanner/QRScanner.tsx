@@ -67,93 +67,150 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
     if (isOpen) loadUser();
   }, [isOpen]);
 
+  // Serialize start/stop operations to avoid html5-qrcode state transition errors
+  const opQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const startSeqRef = useRef(0);
+
+  const enqueueOp = useCallback((op: () => Promise<void>) => {
+    opQueueRef.current = opQueueRef.current
+      .then(op)
+      .catch((e) => {
+        console.log('Scanner op error:', e);
+      });
+    return opQueueRef.current;
+  }, []);
+
   const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
+    await enqueueOp(async () => {
+      const scanner = scannerRef.current;
+      if (!scanner) return;
+
       try {
-        const state = scannerRef.current.getState();
+        const state = scanner.getState();
+        // 2 = SCANNING (html5-qrcode internal enum)
         if (state === 2) {
-          await scannerRef.current.stop();
+          await scanner.stop();
         }
       } catch (e) {
         console.log('Stop scanner error:', e);
       }
-    }
-  }, []);
+
+      try {
+        // clear() throws if still scanning/transitioning; best-effort only
+        // @ts-ignore - clear exists in html5-qrcode
+        scanner.clear?.();
+      } catch (e) {
+        console.log('Clear scanner error:', e);
+      }
+    });
+  }, [enqueueOp]);
 
   const startScanner = useCallback(async () => {
-    if (mode !== 'scan') return; // Only start camera in scan mode
-    
+    if (!isOpen || mode !== 'scan') return;
+
+    const seq = ++startSeqRef.current;
     setIsInitializing(true);
     setError(null);
     setIsSimulator(false);
 
-    try {
-      const devices = await navigator.mediaDevices?.enumerateDevices?.();
-      const hasCamera = devices?.some(device => device.kind === 'videoinput');
-      
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !hasCamera) {
+    await enqueueOp(async () => {
+      // Abandon if a newer start/stop request happened
+      if (seq !== startSeqRef.current) return;
+      if (!isOpen || mode !== 'scan') return;
+
+      try {
+        const devices = await navigator.mediaDevices?.enumerateDevices?.();
+        const hasCamera = devices?.some(device => device.kind === 'videoinput');
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !hasCamera) {
+          setIsInitializing(false);
+          setIsSimulator(true);
+          setError('Camera not available. Use test mode to simulate scans.');
+          return;
+        }
+      } catch {
+        // Continue anyway
+      }
+
+      try {
+        if (!scannerRef.current) {
+          scannerRef.current = new Html5Qrcode('qr-reader', {
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+            verbose: false,
+          });
+        }
+
+        // Stop + clear any prior run before starting
+        try {
+          const state = scannerRef.current.getState();
+          if (state === 2) {
+            await scannerRef.current.stop();
+          }
+        } catch (e) {
+          console.log('Stop scanner error:', e);
+        }
+
+        try {
+          // @ts-ignore
+          scannerRef.current.clear?.();
+        } catch (e) {
+          console.log('Clear scanner error:', e);
+        }
+
+        if (seq !== startSeqRef.current) return;
+        if (!isOpen || mode !== 'scan') return;
+
+        await scannerRef.current.start(
+          { facingMode },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1,
+          },
+          (decodedText) => {
+            onScan(decodedText);
+            // Stop in background (queued) to prevent multi-scan bursts
+            stopScanner();
+          },
+          () => {}
+        );
+
+        if (seq !== startSeqRef.current) return;
         setIsInitializing(false);
-        setIsSimulator(true);
-        setError('Camera not available. Use test mode to simulate scans.');
-        return;
+      } catch (e: any) {
+        console.error('Scanner start error:', e);
+        setIsInitializing(false);
+
+        const errorStr = e?.toString?.() || '';
+
+        if (errorStr.includes('NotAllowedError') || errorStr.includes('Permission')) {
+          setError('Camera permission denied. Please allow camera access.');
+        } else if (errorStr.includes('NotFoundError') || errorStr.includes('NotReadableError')) {
+          setIsSimulator(true);
+          setError('Camera not available. Use test mode to simulate scans.');
+        } else if (errorStr.includes('not supported') || errorStr.includes('NotSupportedError')) {
+          setIsSimulator(true);
+          setError('Camera not supported in this environment. Use test mode.');
+        } else {
+          setIsSimulator(true);
+          setError('Camera unavailable. Use test mode to test scanning.');
+        }
       }
-    } catch {
-      // Continue anyway
-    }
-
-    try {
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode('qr-reader', {
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-          verbose: false,
-        });
-      }
-
-      await stopScanner();
-
-      await scannerRef.current.start(
-        { facingMode },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1,
-        },
-        (decodedText) => {
-          onScan(decodedText);
-          stopScanner();
-        },
-        () => {}
-      );
-
-      setIsInitializing(false);
-    } catch (e: any) {
-      console.error('Scanner start error:', e);
-      setIsInitializing(false);
-      
-      const errorStr = e?.toString?.() || '';
-      
-      if (errorStr.includes('NotAllowedError') || errorStr.includes('Permission')) {
-        setError('Camera permission denied. Please allow camera access.');
-      } else if (errorStr.includes('NotFoundError') || errorStr.includes('NotReadableError')) {
-        setIsSimulator(true);
-        setError('Camera not available. Use test mode to simulate scans.');
-      } else if (errorStr.includes('not supported') || errorStr.includes('NotSupportedError')) {
-        setIsSimulator(true);
-        setError('Camera not supported in this environment. Use test mode.');
-      } else {
-        setIsSimulator(true);
-        setError('Camera unavailable. Use test mode to test scanning.');
-      }
-    }
-  }, [facingMode, onScan, stopScanner, mode]);
+    });
+  }, [enqueueOp, facingMode, isOpen, mode, onScan, stopScanner]);
 
   useEffect(() => {
     if (isOpen && mode === 'scan') {
       startScanner();
-    } else if (!isOpen || mode !== 'scan') {
+    } else {
+      // Cancel any pending start
+      startSeqRef.current += 1;
+      setIsInitializing(false);
       stopScanner();
     }
+
     return () => {
+      startSeqRef.current += 1;
       stopScanner();
     };
   }, [isOpen, mode, startScanner, stopScanner]);
