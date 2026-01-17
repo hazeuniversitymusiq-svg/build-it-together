@@ -12,7 +12,6 @@ import { Send, ArrowDownLeft, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
-import { AutoTopUpStatus } from "@/components/apps/AutoTopUpStatus";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { useToast } from "@/hooks/use-toast";
 import { FlowLogo } from "@/components/brand/FlowLogo";
@@ -131,16 +130,6 @@ const HomePage = () => {
           label="Bills"
           onClick={() => navigate("/bills")}
         />
-      </motion.div>
-
-      {/* Auto Top-Up Status - Compact indicator */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="mb-4"
-      >
-        <AutoTopUpStatus compact onViewDetails={() => navigate('/apps')} />
       </motion.div>
 
       {/* Bill Reminder Surface - Only shows if there are upcoming bills */}
