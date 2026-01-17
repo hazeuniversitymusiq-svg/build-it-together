@@ -10,17 +10,18 @@ import flowLogoNew from "@/assets/flow-logo-new.png";
 
 interface FlowLogoProps {
   variant?: "icon" | "full";
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "home" | "md" | "lg" | "xl";
   animate?: boolean;
   className?: string;
 }
 
 const sizeMap = {
-  xs: { icon: 24, full: 80 },
-  sm: { icon: 40, full: 100 },
-  md: { icon: 56, full: 140 },
-  lg: { icon: 72, full: 180 },
-  xl: { icon: 112, full: 280 },
+  xs: { icon: 24, full: 70 },
+  sm: { icon: 36, full: 90 },
+  home: { icon: 44, full: 90 },  // Optimized for dashboard headers
+  md: { icon: 56, full: 130 },
+  lg: { icon: 72, full: 170 },
+  xl: { icon: 112, full: 260 },
 };
 
 export const FlowLogo = ({ 
