@@ -448,9 +448,8 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
                   </div>
                   <p className="text-white/80 font-medium mb-4">Starting camera...</p>
                   <Button 
-                    variant="outline" 
                     onClick={handleClose} 
-                    className="text-white border-white/20 hover:bg-white/10"
+                    className="bg-white/20 text-white border border-white/40 hover:bg-white/30 px-6"
                   >
                     Cancel
                   </Button>
