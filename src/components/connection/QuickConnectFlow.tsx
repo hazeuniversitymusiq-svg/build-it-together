@@ -481,7 +481,7 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
               exit={{ opacity: 0, y: -20 }}
             >
               {/* Header */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-6">
                 <motion.div
                   initial={{ scale: 0.8 }}
                   animate={{ scale: 1 }}
@@ -495,20 +495,27 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                 <p className="text-muted-foreground">
                   Tap to select the apps you use
                 </p>
-                
-                {/* Select All / Deselect All toggle */}
-                {!isLoading && detectedApps.length > 0 && (
-                  <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    onClick={allSelected ? deselectAll : selectAll}
-                    className="mt-4 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    {allSelected ? 'Deselect All' : `Select All (${detectedApps.length})`}
-                  </motion.button>
-                )}
               </div>
+              
+              {/* Global Select All / Deselect All - subtle bar */}
+              {!isLoading && detectedApps.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center justify-between px-1 mb-4"
+                >
+                  <p className="text-xs text-muted-foreground">
+                    {selectedApps.size} of {detectedApps.length} selected
+                  </p>
+                  <button
+                    onClick={allSelected ? deselectAll : selectAll}
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    {allSelected ? 'Deselect All' : 'Select All'}
+                  </button>
+                </motion.div>
+              )}
 
               {/* Loading state */}
               {isLoading ? (
