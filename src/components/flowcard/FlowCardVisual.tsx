@@ -169,7 +169,7 @@ export function FlowCardVisual({
               <img 
                 src={flowCardLogo} 
                 alt="Flow Card" 
-                className="h-16 w-auto max-w-[60%] object-contain brightness-0 invert drop-shadow-lg"
+                className="h-20 w-auto max-w-[65%] object-contain brightness-0 invert drop-shadow-xl"
               />
               
               {/* Status indicator with pulse */}
