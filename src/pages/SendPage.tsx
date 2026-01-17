@@ -402,7 +402,7 @@ const SendPage = () => {
                   className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all shadow-float ${
                     selectedContact?.id === contact.id
                       ? "aurora-gradient-soft aurora-border"
-                      : "glass-card hover:bg-white/60 dark:hover:bg-white/5"
+                      : "glass-card hover:bg-black/5 dark:hover:bg-white/10"
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-medium transition-all ${

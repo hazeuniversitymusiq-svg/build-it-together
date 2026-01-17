@@ -125,7 +125,7 @@ const BillPaymentHistory = ({ billerName, currentAmount }: BillPaymentHistoryPro
     <div className="mb-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full glass-subtle rounded-xl p-3 flex items-center justify-between transition-all hover:bg-white/60 dark:hover:bg-white/10"
+        className="w-full glass-subtle rounded-xl p-3 flex items-center justify-between transition-all hover:bg-black/5 dark:hover:bg-white/10"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-aurora-blue/10 flex items-center justify-center">

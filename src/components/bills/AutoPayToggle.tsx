@@ -52,7 +52,7 @@ const AutoPayToggle = ({ billerName, accountRef, isEnabled = false, onToggle }: 
       <div className="flex items-center justify-between p-3 glass-subtle rounded-xl">
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            enabled ? 'bg-aurora-purple/20' : 'bg-muted'
+            enabled ? 'bg-aurora-purple/20' : 'bg-white/20 dark:bg-white/10'
           }`}>
             <Zap className={`w-4 h-4 ${enabled ? 'text-aurora-purple' : 'text-muted-foreground'}`} />
           </div>
