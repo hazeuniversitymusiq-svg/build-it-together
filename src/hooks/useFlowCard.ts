@@ -282,13 +282,13 @@ export function useFlowCard() {
         .update({ event_status: 'evaluating' })
         .eq('id', eventId);
 
-      // Use existing resolution engine
+      // Use existing resolution engine with Flow Card priority chain
       const resolution = resolvePaymentRequest({
         amount,
         currency: 'MYR',
         intentId: `card_event_${eventId}`,
         merchantId: merchantName,
-      });
+      }, true); // Enable Flow Card priority
 
       // Build decision object
       const decisionJson = {

@@ -7,6 +7,7 @@
 // Payment types
 export type {
   FundingRailType,
+  FundingPriorityGroup,
   FundingSource,
   CardBrand,
   LinkedCard,

@@ -42,6 +42,7 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
   const eligibility = useFlowCardEligibility();
 
   const linkedSources = sources.filter(s => s.isLinked);
+  const debitCards = linkedSources.filter(s => s.type === 'debit_card' || s.type === 'duitnow');
   const wallets = linkedSources.filter(s => s.type === 'wallet');
   const banks = linkedSources.filter(s => s.type === 'bank');
 
@@ -136,6 +137,7 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
             {/* Step 3: Funding Sources */}
             {currentStep === 3 && (
               <FundingSourcesStep 
+                debitCards={debitCards}
                 wallets={wallets}
                 banks={banks}
                 tier={eligibility.tier}
@@ -439,13 +441,15 @@ function SecurityStep({ deviceId }: { deviceId: string }) {
   );
 }
 
-// Funding Sources Step Component
+// Funding Sources Step Component - Shows Flow Card Priority Chain
 function FundingSourcesStep({ 
+  debitCards,
   wallets, 
   banks, 
   tier,
   onLinkBank 
 }: { 
+  debitCards: { id: string; name: string; type: string; balance: number }[];
   wallets: { id: string; name: string; type: string; balance: number }[];
   banks: { id: string; name: string; type: string; balance: number }[];
   tier: FlowCardTier;
@@ -462,36 +466,70 @@ function FundingSourcesStep({
         <div className="w-20 h-20 rounded-full bg-aurora-teal/10 flex items-center justify-center mb-6 mx-auto">
           <Wallet size={36} className="text-aurora-teal" />
         </div>
-        <h1 className="text-2xl font-bold mb-2">Funding Sources</h1>
+        <h1 className="text-2xl font-bold mb-2">Payment Priority</h1>
         <p className="text-muted-foreground text-sm max-w-sm">
-          {tier === 'full' 
-            ? 'Wallet pays first, bank auto-tops up when needed'
-            : 'Your wallet will be used for payments'
-          }
+          Flow Card uses this order when you pay
         </p>
       </motion.div>
 
       <div className="space-y-4 max-w-sm w-full">
-        {/* Wallets Section */}
+        {/* PRIORITY 1: Debit Card / DuitNow */}
         <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2 text-left">
-            Primary • Wallet
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-5 h-5 rounded-full aurora-gradient text-white text-xs flex items-center justify-center font-bold">1</span>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              Primary • Debit Card / DuitNow
+            </p>
+          </div>
+          {debitCards.length > 0 ? (
+            debitCards.map((card, idx) => (
+              <motion.div
+                key={card.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * idx }}
+                className="glass-card rounded-xl p-4 flex items-center gap-3 mb-2 border border-aurora-blue/30"
+              >
+                <div className="w-8 h-8 rounded-full bg-aurora-blue/10 flex items-center justify-center">
+                  <CreditCard size={16} className="text-aurora-blue" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-sm">{card.name}</p>
+                  <p className="text-xs text-aurora-blue">Instant bank debit</p>
+                </div>
+                <Sparkles size={16} className="text-aurora-blue" />
+              </motion.div>
+            ))
+          ) : (
+            <div className="glass-card rounded-xl p-3 text-center border border-dashed border-muted-foreground/30">
+              <p className="text-muted-foreground text-xs">No debit card linked yet</p>
+            </div>
+          )}
+        </div>
+
+        {/* PRIORITY 2: E-Wallets */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-5 h-5 rounded-full bg-aurora-purple text-white text-xs flex items-center justify-center font-bold">2</span>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              Secondary • E-Wallets
+            </p>
+          </div>
           {wallets.length > 0 ? (
             wallets.map((wallet, idx) => (
               <motion.div
                 key={wallet.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * idx }}
+                transition={{ delay: 0.15 + 0.1 * idx }}
                 className="glass-card rounded-xl p-4 flex items-center gap-3 mb-2"
               >
-                <div className="w-8 h-8 rounded-full bg-aurora-blue/10 flex items-center justify-center text-sm font-bold text-aurora-blue">
-                  <Wallet size={16} />
+                <div className="w-8 h-8 rounded-full bg-aurora-purple/10 flex items-center justify-center">
+                  <Wallet size={16} className="text-aurora-purple" />
                 </div>
                 <div className="text-left flex-1">
                   <p className="font-medium text-sm">{wallet.name}</p>
-                  <p className="text-xs text-muted-foreground">Primary payment source</p>
+                  <p className="text-xs text-muted-foreground">Uses wallet balance</p>
                 </div>
                 <span className="text-sm font-medium">
                   RM {wallet.balance.toFixed(2)}
@@ -499,40 +537,45 @@ function FundingSourcesStep({
               </motion.div>
             ))
           ) : (
-            <div className="glass-card rounded-xl p-4 text-center border border-warning/30">
-              <p className="text-muted-foreground text-sm">No wallet linked</p>
+            <div className="glass-card rounded-xl p-3 text-center border border-warning/30">
+              <p className="text-muted-foreground text-xs">No wallet linked</p>
             </div>
           )}
         </div>
 
-        {/* Banks Section */}
+        {/* PRIORITY 3: Bank (Backup) */}
         <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2 text-left">
-            Backup • Bank {tier === 'full' ? '(Auto Top-Up)' : ''}
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-5 h-5 rounded-full bg-aurora-teal text-white text-xs flex items-center justify-center font-bold">3</span>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              Backup • Bank {tier === 'full' ? '(Auto Top-Up)' : ''}
+            </p>
+          </div>
           {banks.length > 0 ? (
             banks.map((bank, idx) => (
               <motion.div
                 key={bank.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + 0.1 * idx }}
+                transition={{ delay: 0.25 + 0.1 * idx }}
                 className="glass-card rounded-xl p-4 flex items-center gap-3 mb-2 border border-aurora-teal/30"
               >
-                <div className="w-8 h-8 rounded-full bg-aurora-teal/10 flex items-center justify-center text-sm font-bold text-aurora-teal">
-                  <Landmark size={16} />
+                <div className="w-8 h-8 rounded-full bg-aurora-teal/10 flex items-center justify-center">
+                  <Landmark size={16} className="text-aurora-teal" />
                 </div>
                 <div className="text-left flex-1">
                   <p className="font-medium text-sm">{bank.name}</p>
-                  <p className="text-xs text-aurora-teal">Auto top-up enabled</p>
+                  <p className="text-xs text-aurora-teal">
+                    {tier === 'full' ? 'Auto top-up enabled' : 'Available for top-up'}
+                  </p>
                 </div>
-                <Sparkles size={16} className="text-aurora-teal" />
+                {tier === 'full' && <Sparkles size={16} className="text-aurora-teal" />}
               </motion.div>
             ))
           ) : (
             <button
               onClick={onLinkBank}
-              className="w-full glass-card rounded-xl p-4 flex items-center gap-3 border border-dashed border-muted-foreground/30 hover:border-aurora-purple/50 transition-colors"
+              className="w-full glass-card rounded-xl p-3 flex items-center gap-3 border border-dashed border-muted-foreground/30 hover:border-aurora-purple/50 transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                 <Landmark size={16} className="text-muted-foreground" />
@@ -546,6 +589,16 @@ function FundingSourcesStep({
           )}
         </div>
       </div>
+
+      {/* Priority explanation */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-xs text-muted-foreground mt-6 max-w-xs"
+      >
+        Flow automatically selects the best option at each payment
+      </motion.p>
     </div>
   );
 }

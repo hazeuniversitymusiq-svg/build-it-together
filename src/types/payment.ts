@@ -9,7 +9,15 @@
 // Funding Source Types
 // ============================================
 
-export type FundingRailType = 'wallet' | 'bank' | 'card' | 'debit_card' | 'credit_card' | 'bnpl';
+export type FundingRailType = 'wallet' | 'bank' | 'card' | 'debit_card' | 'credit_card' | 'bnpl' | 'duitnow';
+
+/**
+ * Priority groups for Flow Card resolution
+ * - primary: Debit Card / DuitNow (instant bank debit, no balance needed)
+ * - secondary: E-Wallets (uses existing balance)
+ * - backup: Bank Transfer (fallback / auto top-up source)
+ */
+export type FundingPriorityGroup = 'primary' | 'secondary' | 'backup';
 
 export interface FundingSource {
   id: string;
@@ -19,6 +27,7 @@ export interface FundingSource {
   isLinked: boolean;
   isAvailable: boolean;
   priority: number;
+  priorityGroup?: FundingPriorityGroup;
   maxAutoTopUp?: number;
   requireConfirmAbove?: number;
   currency?: string;
