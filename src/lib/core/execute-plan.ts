@@ -253,6 +253,17 @@ async function executeSyncPlan(
   );
 
   // === CREATE TRANSACTION LOG FOR ACTIVITY FEED ===
+  // Determine trigger based on intent type
+  const triggerType = (() => {
+    switch (intent.type) {
+      case 'PayMerchant': return 'qr_scan';
+      case 'SendMoney': return 'contact';
+      case 'RequestMoney': return 'request';
+      case 'PayBill': return 'bill_payment';
+      default: return 'manual';
+    }
+  })();
+
   await supabase.from('transaction_logs').insert({
     user_id: context.userId,
     intent_id: plan.intent_id,
@@ -260,12 +271,12 @@ async function executeSyncPlan(
     amount: Number(intent.amount),
     currency: intent.currency,
     status: 'success',
-    trigger: 'qr_scan',
+    trigger: triggerType,
     rail_used: plan.chosen_rail,
-    merchant_name: intent.type === 'PayMerchant' ? intent.payee_name : null,
-    merchant_id: intent.type === 'PayMerchant' ? intent.payee_identifier : null,
-    recipient_name: intent.type === 'SendMoney' ? intent.payee_name : null,
-    recipient_id: intent.type === 'SendMoney' ? intent.payee_identifier : null,
+    merchant_name: (intent.type === 'PayMerchant' || intent.type === 'PayBill') ? intent.payee_name : null,
+    merchant_id: (intent.type === 'PayMerchant' || intent.type === 'PayBill') ? intent.payee_identifier : null,
+    recipient_name: (intent.type === 'SendMoney' || intent.type === 'RequestMoney') ? intent.payee_name : null,
+    recipient_id: (intent.type === 'SendMoney' || intent.type === 'RequestMoney') ? intent.payee_identifier : null,
     reference: transaction.id.substring(0, 8).toUpperCase(),
   });
 
