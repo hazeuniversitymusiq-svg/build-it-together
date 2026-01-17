@@ -1,23 +1,29 @@
 /**
  * Flow Card Page
  * 
- * Clean, focused card view with credentials and pending events only.
+ * Clean, focused card view with credentials, tap-to-pay demo, and pending events.
  * Demo actions registered with Global Demo Intelligence.
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pause, Play } from 'lucide-react';
+import { Plus, Pause, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { FlowCardVisual } from '@/components/flowcard/FlowCardVisual';
 import { CreateFlowCardFlow } from '@/components/flowcard/CreateFlowCardFlow';
 import { FlowCardEventItem } from '@/components/flowcard/FlowCardEventItem';
+import { TapToPayDemo } from '@/components/flowcard/TapToPayDemo';
 import { useToast } from '@/hooks/use-toast';
 import { useDemo } from '@/contexts/DemoContext';
 import { DemoHighlight } from '@/components/demo/DemoHighlight';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 export default function FlowCardPage() {
   const navigate = useNavigate();
@@ -42,6 +48,7 @@ export default function FlowCardPage() {
 
   const [showCreateFlow, setShowCreateFlow] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showCardDetails, setShowCardDetails] = useState(false);
 
   // Register demo action for this page
   useEffect(() => {
@@ -160,7 +167,7 @@ export default function FlowCardPage() {
     <div className="min-h-screen bg-background pb-32 safe-area-top">
       {/* Header */}
       <div className="p-6 pt-4">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold">Flow Card</h1>
             <p className="text-sm text-muted-foreground">
@@ -178,30 +185,53 @@ export default function FlowCardPage() {
           </Button>
         </div>
 
-        {/* Card Visual with Credentials */}
-        <DemoHighlight
-          id="flow-card-visual"
-          title="Your Flow Card"
-          description="This is your virtual payment card. Tap to pay at any terminal that accepts contactless payments."
-          onTryIt={async () => {
-            if (isCardActive) {
-              const amount = Math.floor(Math.random() * 50) + 10;
-              await simulateTerminalTap(amount, 'Demo Merchant', 'retail');
-              toast({ title: 'Tap Simulated', description: `RM ${amount.toFixed(2)} payment` });
-            }
-          }}
-        >
-          <FlowCardVisual
-            status={profile?.status || 'not_created'}
-            mode={profile?.mode || 'in_app'}
-            lastFourDigits={profile?.card_last_four || undefined}
-            cardNumber={profile?.card_number}
-            cardCvv={profile?.card_cvv}
-            cardExpiry={profile?.card_expiry}
-            cardBrand={profile?.card_brand}
-            showCredentials={true}
-          />
-        </DemoHighlight>
+        {/* Collapsible Card Visual with Credentials */}
+        <Collapsible open={showCardDetails} onOpenChange={setShowCardDetails}>
+          <CollapsibleTrigger asChild>
+            <button className="w-full">
+              <DemoHighlight
+                id="flow-card-visual"
+                title="Your Flow Card"
+                description="This is your virtual payment card. Tap to pay at any terminal."
+              >
+                <FlowCardVisual
+                  status={profile?.status || 'not_created'}
+                  mode={profile?.mode || 'in_app'}
+                  lastFourDigits={profile?.card_last_four || undefined}
+                  cardNumber={profile?.card_number}
+                  cardCvv={profile?.card_cvv}
+                  cardExpiry={profile?.card_expiry}
+                  cardBrand={profile?.card_brand}
+                  showCredentials={false}
+                  isCompact={false}
+                />
+              </DemoHighlight>
+              <div className="flex items-center justify-center gap-1 mt-2 text-sm text-muted-foreground">
+                {showCardDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                <span>{showCardDetails ? 'Hide' : 'Show'} Card Details</span>
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-4"
+            >
+              <FlowCardVisual
+                status={profile?.status || 'not_created'}
+                mode={profile?.mode || 'in_app'}
+                lastFourDigits={profile?.card_last_four || undefined}
+                cardNumber={profile?.card_number}
+                cardCvv={profile?.card_cvv}
+                cardExpiry={profile?.card_expiry}
+                cardBrand={profile?.card_brand}
+                showCredentials={true}
+                isCompact={true}
+              />
+            </motion.div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Generate Credentials Button (for legacy cards without credentials) */}
         {hasCard && !hasCredentials && isCardActive && (
@@ -240,6 +270,16 @@ export default function FlowCardPage() {
             </Button>
           </motion.div>
         )}
+      </div>
+
+      {/* Tap to Pay Demo Section */}
+      <div className="px-6 mb-6">
+        <div className="glass rounded-2xl p-4">
+          <h2 className="text-lg font-semibold text-foreground mb-2 text-center">
+            Demo: Tap to Pay
+          </h2>
+          <TapToPayDemo />
+        </div>
       </div>
 
       {/* Pending Events - Only shown when there are pending confirmations */}
