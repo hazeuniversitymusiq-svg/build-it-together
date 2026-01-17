@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pause, Play, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pause, Play, Settings, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
 import { useFlowCardEligibility } from '@/hooks/useFlowCardEligibility';
@@ -189,9 +189,38 @@ export default function FlowCardPage() {
         animate={{ opacity: 1, y: 0 }}
         className="px-6 mb-6"
       >
-        <p className="text-muted-foreground text-sm text-center leading-relaxed">
-          Smart Tap-to-Pay — one card, all your wallets
-        </p>
+        <div className="flex items-center justify-center gap-2">
+          <motion.div
+            animate={{ 
+              scale: [1, 1.1, 1],
+              opacity: [0.6, 1, 0.6]
+            }}
+            transition={{ 
+              duration: 2, 
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <Sparkles size={14} className="text-primary" />
+          </motion.div>
+          <p className="text-muted-foreground text-sm text-center leading-relaxed">
+            Smart Tap-to-Pay — one card, all your wallets
+          </p>
+          <motion.div
+            animate={{ 
+              scale: [1, 1.1, 1],
+              opacity: [0.6, 1, 0.6]
+            }}
+            transition={{ 
+              duration: 2, 
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 1
+            }}
+          >
+            <Sparkles size={14} className="text-primary" />
+          </motion.div>
+        </div>
       </motion.div>
 
       {/* Card Visual - Hero Element */}
