@@ -10,14 +10,14 @@
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, User, Scan, Wallet, Clock } from "lucide-react";
+import { Home, User, Scan, Wallet, CreditCard } from "lucide-react";
 
 // Nav items configuration - 5 balanced items
 const navItems = [
   { path: "/home", icon: Home, label: "Home" },
   { path: "/apps", icon: Wallet, label: "Apps" },
   { path: "/scan", icon: Scan, label: "Scan", primary: true },
-  { path: "/activity", icon: Clock, label: "Activity" },
+  { path: "/flow-card", icon: CreditCard, label: "Card" },
   { path: "/settings", icon: User, label: "Me" },
 ];
 
