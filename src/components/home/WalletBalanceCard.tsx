@@ -9,8 +9,9 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, RefreshCw, ChevronDown, X, TrendingUp } from 'lucide-react';
+import { Plus, RefreshCw, ChevronDown, X, ChevronRight } from 'lucide-react';
 import { useFundingSources } from '@/hooks/useFundingSources';
 import { cn } from '@/lib/utils';
 import { getBrandedIcon } from '@/components/icons/BrandedIcons';
@@ -22,6 +23,7 @@ interface WalletBalanceCardProps {
 }
 
 export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCardProps) {
+  const navigate = useNavigate();
   const { sources, totalBalance, loading, refetch } = useFundingSources();
   const [isExpanded, setIsExpanded] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
@@ -137,9 +139,9 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
         </motion.p>
       </div>
 
-      {/* Compact Wallet Icons Row */}
+      {/* Compact Wallet Icons Row - Tap to go to Apps page */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => navigate('/apps')}
         className="w-full px-4 py-2.5 flex items-center justify-between border-t border-border/30 hover:bg-muted/20 transition-colors"
       >
         <div className="flex items-center gap-1">
@@ -170,64 +172,11 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
           </span>
         </div>
         
-        <motion.div
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </motion.div>
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <span className="text-xs">Manage</span>
+          <ChevronRight className="w-4 h-4" />
+        </div>
       </button>
-
-      {/* Expandable Details */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="overflow-hidden border-t border-border/30"
-          >
-            <div className="p-3 space-y-1">
-              {allSources.map((source, index) => {
-                const IconComponent = getBrandedIcon(
-                  source.name, 
-                  source.type === 'wallet' ? 'wallet' : 'bank'
-                );
-                const isLow = source.type === 'wallet' && source.balance < 20;
-                
-                return (
-                  <motion.div
-                    key={source.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="flex items-center justify-between py-1.5 px-1"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <IconComponent size={24} />
-                      <span className={cn(
-                        "text-sm",
-                        source.type === 'bank' ? "text-muted-foreground" : "text-foreground"
-                      )}>
-                        {source.name}
-                      </span>
-                    </div>
-                    <span className={cn(
-                      "text-sm font-medium tabular-nums",
-                      isLow ? "text-amber-500" : 
-                      source.type === 'bank' ? "text-muted-foreground" : "text-foreground"
-                    )}>
-                      RM {source.balance.toFixed(2)}
-                    </span>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Minimal Low Balance Warning - just text, no background */}
       <AnimatePresence>
         {hasLowBalance && !warningDismissed && (
