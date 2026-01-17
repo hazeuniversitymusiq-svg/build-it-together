@@ -90,7 +90,7 @@ const HomePage = () => {
         className="pt-4 pb-2"
       >
         <div className="flex items-center justify-between">
-          <FlowLogo variant="full" size="md" animate={false} />
+          <FlowLogo variant="full" size="home" animate={false} />
           
           {/* Liquid Glass Status Pill */}
           <div className="liquid-pill px-3 py-1.5 flex items-center gap-1.5">
