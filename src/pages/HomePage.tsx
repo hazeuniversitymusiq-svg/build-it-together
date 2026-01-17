@@ -81,18 +81,21 @@ const HomePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-5 safe-area-top safe-area-bottom pb-28">
-      {/* Header */}
+    <div className="min-h-screen bg-background flex flex-col px-5 pb-28">
+      {/* iOS Safe Area Spacer */}
+      <div className="h-[env(safe-area-inset-top,44px)]" />
+      
+      {/* Header - Clean and compact */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-4 pb-2"
+        className="pt-2 pb-4"
       >
         <div className="flex items-center justify-between">
-          <FlowLogo variant="full" size="home" animate={false} />
+          <FlowLogo variant="icon" size="sm" animate={false} />
           
-          {/* Liquid Glass Status Pill */}
+          {/* Status Pill */}
           <div className="liquid-pill px-3 py-1.5 flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
             <span className="text-[11px] font-medium text-success">Active</span>
