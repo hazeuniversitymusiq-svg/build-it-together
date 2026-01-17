@@ -16,6 +16,7 @@ import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { FlowCardVisual } from '@/components/flowcard/FlowCardVisual';
 import { CreateFlowCardFlow } from '@/components/flowcard/CreateFlowCardFlow';
 import { FlowCardEventItem } from '@/components/flowcard/FlowCardEventItem';
+import { CompactTapDemo } from '@/components/flowcard/CompactTapDemo';
 import { useToast } from '@/hooks/use-toast';
 import { useDemo } from '@/contexts/DemoContext';
 
@@ -237,6 +238,18 @@ export default function FlowCardPage() {
           isCompact={false}
         />
       </div>
+
+      {/* Compact Demo - Only show when card is active */}
+      {isCardActive && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="px-6 mt-4"
+        >
+          <CompactTapDemo />
+        </motion.div>
+      )}
 
       {/* Generate Credentials Button (for legacy cards without credentials) */}
       {hasCard && !hasCredentials && isCardActive && (
