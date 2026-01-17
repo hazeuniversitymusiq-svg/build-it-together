@@ -2,7 +2,7 @@
  * FLOW Home Page
  * 
  * Simplified, clean design - focus on core actions
- * Interactive Demo Layer - tap highlighted elements to learn.
+ * Prototype mode - entire app runs in demo context.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -13,9 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
 import { useDeepLink } from "@/hooks/useDeepLink";
-import { useDemo } from "@/contexts/DemoContext";
 import { useToast } from "@/hooks/use-toast";
-import { DemoHighlight } from "@/components/demo/DemoHighlight";
 import { FlowLogo } from "@/components/brand/FlowLogo";
 
 // Apple-style Minimal Quick Action Button
@@ -47,7 +45,6 @@ const QuickAction = ({
 const HomePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isDemoMode } = useDemo();
   const [isLoading, setIsLoading] = useState(true);
   
   useDeepLink();
@@ -104,18 +101,10 @@ const HomePage = () => {
       </motion.div>
 
       {/* Wallet Balance Card - Primary Focus */}
-      <DemoHighlight
-        id="wallet-balance"
-        title="Wallet Balance"
-        description="Your unified balance across all linked wallets. FLOW syncs automatically from TnG, GrabPay, and bank accounts."
-        onTryIt={simulateIncomingPayment}
-        position="bottom"
-      >
-        <WalletBalanceCard 
-          className="mb-4" 
-          onLinkWallet={() => !isDemoMode && navigate("/auto-sync")}
-        />
-      </DemoHighlight>
+      <WalletBalanceCard 
+        className="mb-4" 
+        onLinkWallet={() => navigate("/auto-sync")}
+      />
 
       {/* Apple-style Quick Actions Row - Liquid Glass */}
       <motion.div 
@@ -124,47 +113,23 @@ const HomePage = () => {
         transition={{ duration: 0.4, delay: 0.15 }}
         className="liquid-glass flex items-center justify-around py-1 mb-4"
       >
-        <DemoHighlight
-          id="send-action"
-          title="Send Money"
-          description="Send to any contact. FLOW finds their preferred wallet and delivers instantly."
-          onTryIt={() => !isDemoMode && navigate("/send")}
-          position="bottom"
-        >
-          <QuickAction
-            icon={<Send className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
-            label="Send"
-            onClick={() => !isDemoMode && navigate("/send")}
-          />
-        </DemoHighlight>
+        <QuickAction
+          icon={<Send className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
+          label="Send"
+          onClick={() => navigate("/send")}
+        />
         
-        <DemoHighlight
-          id="receive-action"
-          title="Receive Money"
-          description="Generate a QR code for others to pay you. Works with any wallet or bank app."
-          onTryIt={() => !isDemoMode && navigate("/receive")}
-          position="bottom"
-        >
-          <QuickAction
-            icon={<ArrowDownLeft className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
-            label="Receive"
-            onClick={() => !isDemoMode && navigate("/receive")}
-          />
-        </DemoHighlight>
+        <QuickAction
+          icon={<ArrowDownLeft className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
+          label="Receive"
+          onClick={() => navigate("/receive")}
+        />
         
-        <DemoHighlight
-          id="bills-action"
-          title="Pay Bills"
-          description="Link billers like TNB, Unifi, Maxis. FLOW reminds you before due dates."
-          onTryIt={() => !isDemoMode && navigate("/bills")}
-          position="bottom"
-        >
-          <QuickAction
-            icon={<FileText className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
-            label="Bills"
-            onClick={() => !isDemoMode && navigate("/bills")}
-          />
-        </DemoHighlight>
+        <QuickAction
+          icon={<FileText className="w-5 h-5 text-blue-500" strokeWidth={1.8} />}
+          label="Bills"
+          onClick={() => navigate("/bills")}
+        />
       </motion.div>
 
       {/* Bill Reminder Surface - Only shows if there are upcoming bills */}
