@@ -66,6 +66,19 @@ const DEMO_MERCHANTS = [
   { name: 'AEON', category: 'Retail', icon: '🛒' },
   { name: 'Village Park', category: 'Restaurant', icon: '🍜' },
   { name: 'Grab', category: 'Transport', icon: '🚗' },
+  { name: 'Starbucks', category: 'Food & Beverage', icon: '☕' },
+  { name: 'Shell', category: 'Transport', icon: '⛽' },
+  { name: 'Uniqlo', category: 'Retail', icon: '👕' },
+];
+
+// Demo sources to rotate through for varied payment experience
+const DEMO_SOURCES = [
+  { name: 'Touch \'n Go', type: 'wallet', balance: 245.80 },
+  { name: 'GrabPay', type: 'wallet', balance: 128.50 },
+  { name: 'Boost', type: 'wallet', balance: 89.20 },
+  { name: 'Maybank', type: 'bank', balance: 3450.00 },
+  { name: 'CIMB Debit', type: 'card', balance: 1280.00 },
+  { name: 'DuitNow', type: 'bank', balance: 520.00 },
 ];
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -74,6 +87,9 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Retail': '🛒',
   'Restaurant': '🍜',
 };
+
+// Track last used source index to ensure variety
+let lastSourceIndex = -1;
 
 export function CompactTapDemo() {
   const { toast } = useToast();
@@ -91,6 +107,17 @@ export function CompactTapDemo() {
     const amount = parseFloat((Math.random() * 80 + 5).toFixed(2));
     return { ...merchant, amount };
   };
+
+  // Get a different source each time for demo variety
+  const getNextDemoSource = useCallback(() => {
+    // Cycle through sources, avoiding the last used one
+    let nextIndex = Math.floor(Math.random() * DEMO_SOURCES.length);
+    while (nextIndex === lastSourceIndex && DEMO_SOURCES.length > 1) {
+      nextIndex = Math.floor(Math.random() * DEMO_SOURCES.length);
+    }
+    lastSourceIndex = nextIndex;
+    return DEMO_SOURCES[nextIndex];
+  }, []);
 
   const addReceipt = useCallback((
     paymentDetails: PaymentDetails,
@@ -135,33 +162,29 @@ export function CompactTapDemo() {
     await new Promise(r => setTimeout(r, 1200));
     setStep('resolving');
 
-    const resolution = resolvePaymentRequest({
-      amount: merchant.amount,
-      currency: 'MYR',
-      intentId: `demo_tap_${Date.now()}`,
-      merchantId: merchant.name,
-    });
+    // Get a varied demo source for this payment
+    const demoSource = getNextDemoSource();
+    
+    // Determine if top-up is needed based on amount vs balance
+    const needsTopUp = merchant.amount > demoSource.balance;
+    const topUpAmount = needsTopUp ? merchant.amount - demoSource.balance + 10 : 0;
 
     await new Promise(r => setTimeout(r, 1500));
 
-    const primaryStep = resolution.steps[0];
-    const selectedSource = primaryStep ? sources.find(s => s.id === primaryStep.sourceId) : null;
-    const topUpStep = resolution.steps.find(s => s.action === 'top_up');
-
     setPayment(prev => prev ? {
       ...prev,
-      selectedSource: selectedSource ? {
-        name: selectedSource.name,
-        type: selectedSource.type,
-        balance: selectedSource.balance,
-      } : null,
-      topUpNeeded: !!topUpStep,
-      topUpAmount: topUpStep?.amount || 0,
-      topUpSource: topUpStep?.sourceId || null,
+      selectedSource: {
+        name: demoSource.name,
+        type: demoSource.type,
+        balance: demoSource.balance,
+      },
+      topUpNeeded: needsTopUp,
+      topUpAmount: topUpAmount,
+      topUpSource: needsTopUp ? 'Maybank' : null,
     } : null);
 
     setStep('confirm');
-  }, [isCardActive, resolvePaymentRequest, sources, toast]);
+  }, [isCardActive, toast, getNextDemoSource]);
 
   const confirmPayment = useCallback(async () => {
     if (!payment) return;
