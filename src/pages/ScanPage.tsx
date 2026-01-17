@@ -407,21 +407,41 @@ const ScanPage = () => {
                   )}
                 </>
               ) : (
-                /* Error Message */
+                /* Error Message - with action to go back */
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="glass-card border-destructive/20 rounded-3xl p-6 mb-6"
+                  className="flex-1 flex flex-col"
                 >
-                  <p className="text-center text-destructive">
-                    {scannedData.error}
-                  </p>
+                  <div className="glass-card border-destructive/20 rounded-3xl p-6 mb-6">
+                    <p className="text-center text-destructive">
+                      {scannedData.error}
+                    </p>
+                  </div>
+                  
+                  {/* Error Actions - Always visible */}
+                  <div className="mt-auto space-y-3 pb-4">
+                    <Button
+                      onClick={handleScanAnother}
+                      className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white border-0 shadow-glow-aurora"
+                    >
+                      <Camera className="w-5 h-5 mr-2" />
+                      Scan Again
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setScannedData(null)}
+                      className="w-full h-12 rounded-2xl glass-card border-0"
+                    >
+                      Back to Scan
+                    </Button>
+                  </div>
                 </motion.div>
               )}
 
-              {/* Actions */}
-              <div className="mt-auto space-y-3 pb-4">
-                {scannedData.success && (
+              {/* Actions - Only show for successful scans */}
+              {scannedData.success && (
+                <div className="mt-auto space-y-3 pb-4">
                   <Button
                     onClick={handleProceed}
                     disabled={isProcessing || !selectedFundingSourceId || (isStaticQR && !manualAmount)}
@@ -439,17 +459,17 @@ const ScanPage = () => {
                       </>
                     )}
                   </Button>
-                )}
-                
-                <Button
-                  variant="outline"
-                  onClick={handleScanAnother}
-                  className="w-full h-12 rounded-2xl glass-card border-0"
-                >
-                  <Camera className="w-5 h-5 mr-2" />
-                  Scan Another
-                </Button>
-              </div>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={handleScanAnother}
+                    className="w-full h-12 rounded-2xl glass-card border-0"
+                  >
+                    <Camera className="w-5 h-5 mr-2" />
+                    Scan Another
+                  </Button>
+                </div>
+              )}
             </motion.div>
           ) : (
             /* Initial State - Auto-open scanner, show demo */
