@@ -310,6 +310,32 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
 
   const allSelected = detectedApps.length > 0 && selectedApps.size === detectedApps.length;
 
+  const toggleCategory = useCallback((categoryApps: AppDefinition[]) => {
+    haptics.selection();
+    setSelectedApps(prev => {
+      const newSet = new Set(prev);
+      const categoryAppNames = categoryApps.map(app => app.name);
+      const allCategorySelected = categoryAppNames.every(name => newSet.has(name));
+      
+      if (allCategorySelected) {
+        // Deselect all in category
+        categoryAppNames.forEach(name => newSet.delete(name));
+      } else {
+        // Select all in category
+        categoryAppNames.forEach(name => newSet.add(name));
+      }
+      return newSet;
+    });
+  }, [haptics]);
+
+  const isCategoryFullySelected = useCallback((categoryApps: AppDefinition[]) => {
+    return categoryApps.length > 0 && categoryApps.every(app => selectedApps.has(app.name));
+  }, [selectedApps]);
+
+  const getCategorySelectedCount = useCallback((categoryApps: AppDefinition[]) => {
+    return categoryApps.filter(app => selectedApps.has(app.name)).length;
+  }, [selectedApps]);
+
   const updateAppStatus = useCallback((appName: string, status: AppStatus, message?: string) => {
     setAppStates(prev => {
       const newStates = new Map(prev);
@@ -492,29 +518,50 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
               ) : (
                 /* Selectable apps by category */
                 <div className="space-y-4 max-h-[40vh] overflow-y-auto">
-                  {Object.entries(groupedApps).map(([category, apps], catIndex) => (
-                    <motion.div
-                      key={category}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: catIndex * 0.1 }}
-                    >
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                        {CATEGORY_LABELS[category] || category}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {apps.map(app => (
-                          <SelectableAppPill
-                            key={app.name}
-                            app={app}
-                            isSelected={selectedApps.has(app.name)}
-                            onToggle={() => toggleApp(app.name)}
-                            isPopular={POPULAR_APPS.includes(app.name)}
-                          />
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
+                  {Object.entries(groupedApps).map(([category, apps], catIndex) => {
+                    const categoryFullySelected = isCategoryFullySelected(apps);
+                    const selectedCount = getCategorySelectedCount(apps);
+                    
+                    return (
+                      <motion.div
+                        key={category}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: catIndex * 0.1 }}
+                      >
+                        {/* Category header with toggle */}
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            {CATEGORY_LABELS[category] || category}
+                            <span className="ml-1.5 text-primary/70">
+                              ({selectedCount}/{apps.length})
+                            </span>
+                          </p>
+                          <button
+                            onClick={() => toggleCategory(apps)}
+                            className={`text-xs font-medium transition-colors ${
+                              categoryFullySelected 
+                                ? 'text-muted-foreground hover:text-foreground' 
+                                : 'text-primary hover:text-primary/80'
+                            }`}
+                          >
+                            {categoryFullySelected ? 'Deselect' : 'Select All'}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {apps.map(app => (
+                            <SelectableAppPill
+                              key={app.name}
+                              app={app}
+                              isSelected={selectedApps.has(app.name)}
+                              onToggle={() => toggleApp(app.name)}
+                              isPopular={POPULAR_APPS.includes(app.name)}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
