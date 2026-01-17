@@ -6,8 +6,7 @@
  */
 
 import { motion } from "framer-motion";
-import flowLogoFull from "@/assets/flow-logo-full.png";
-import flowIcon from "@/assets/flow-icon.png";
+import flowLogoNew from "@/assets/flow-logo-new.png";
 
 interface FlowLogoProps {
   variant?: "icon" | "full";
@@ -36,7 +35,7 @@ export const FlowLogo = ({
   return (
     <motion.div
       className={`relative inline-flex items-center justify-center ${className}`}
-      style={{ width: logoSize, height: variant === "icon" ? logoSize * 0.6 : logoSize }}
+      style={{ width: logoSize, height: logoSize }}
     >
       {/* Animated flowing glow behind the logo */}
       {animate && (
@@ -59,13 +58,12 @@ export const FlowLogo = ({
       
       {/* Logo image */}
       <motion.img
-        src={variant === "icon" ? flowIcon : flowLogoFull}
+        src={flowLogoNew}
         alt="FLOW"
-        className="relative z-10 object-contain dark:brightness-[1.8] dark:contrast-[1.1]"
+        className="relative z-10 object-contain"
         style={{ 
           width: logoSize, 
-          height: variant === "icon" ? logoSize * 0.6 : logoSize,
-          filter: "contrast(1.25) saturate(1.6) brightness(1.1)",
+          height: logoSize,
         }}
         initial={animate ? { opacity: 0, scale: 0.9 } : false}
         animate={animate ? { opacity: 1, scale: 1 } : false}
@@ -188,13 +186,12 @@ export const FlowLogoMark = ({
       )}
       
       <motion.img
-        src={flowIcon}
+        src={flowLogoNew}
         alt="FLOW"
         className="relative z-10 object-contain"
         style={{ 
           width: size, 
-          height: size * 0.6,
-          filter: "contrast(1.25) saturate(1.6) brightness(1.1)",
+          height: size,
         }}
         animate={animate ? {
           filter: [
@@ -266,13 +263,12 @@ export const FlowLoadingLogo = ({
       
       {/* Center logo */}
       <motion.img
-        src={flowIcon}
+        src={flowLogoNew}
         alt="FLOW"
         className="relative z-10 object-contain"
         style={{ 
           width: size, 
-          height: size * 0.6,
-          filter: "contrast(1.25) saturate(1.6) brightness(1.1)",
+          height: size,
         }}
         animate={{
           opacity: [0.8, 1, 0.8],
