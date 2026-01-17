@@ -1,8 +1,9 @@
 /**
  * Create Flow Card Flow
  * 
- * Step-by-step card creation with clear explanations.
- * Follows Apple-level simplicity.
+ * Step-by-step card creation with eligibility checking and tiered activation.
+ * - Lite tier: Wallet only (manual top-up)
+ * - Full tier: Wallet + Bank (auto top-up enabled)
  */
 
 import { useState } from 'react';
@@ -14,54 +15,55 @@ import {
   CheckCircle2, 
   ArrowRight,
   Smartphone,
-  Wallet
+  Wallet,
+  Landmark,
+  AlertCircle,
+  Sparkles,
+  ArrowUpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
+import { useFlowCardEligibility, FlowCardTier } from '@/hooks/useFlowCardEligibility';
 import { useOrchestration } from '@/contexts/OrchestrationContext';
 import { FlowCardVisual } from './FlowCardVisual';
+import { useNavigate } from 'react-router-dom';
 
 interface CreateFlowCardFlowProps {
   onComplete: () => void;
   onCancel: () => void;
 }
 
-const steps = [
-  {
-    id: 'intro',
-    title: 'What is Flow Card?',
-    icon: CreditCard,
-  },
-  {
-    id: 'security',
-    title: 'Device & Security',
-    icon: Shield,
-  },
-  {
-    id: 'sources',
-    title: 'Funding Sources',
-    icon: Wallet,
-  },
-  {
-    id: 'complete',
-    title: 'All Set',
-    icon: CheckCircle2,
-  },
-];
-
 export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowProps) {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
-  const { createFlowCard, deviceId, eligibleSources } = useFlowCard();
+  const { createFlowCard, deviceId } = useFlowCard();
   const { sources } = useOrchestration();
+  const eligibility = useFlowCardEligibility();
 
   const linkedSources = sources.filter(s => s.isLinked);
+  const wallets = linkedSources.filter(s => s.type === 'wallet');
+  const banks = linkedSources.filter(s => s.type === 'bank');
+
+  // Dynamic steps based on eligibility
+  const steps = [
+    { id: 'eligibility', title: 'Eligibility Check', icon: Shield },
+    { id: 'intro', title: 'What is Flow Card?', icon: CreditCard },
+    { id: 'security', title: 'Device & Security', icon: Shield },
+    { id: 'sources', title: 'Funding Sources', icon: Wallet },
+    { id: 'complete', title: 'All Set', icon: CheckCircle2 },
+  ];
 
   const handleNext = async () => {
+    // Skip eligibility step if already eligible
+    if (currentStep === 0 && !eligibility.canActivate) {
+      return; // Can't proceed without meeting minimum criteria
+    }
+    
     if (currentStep === steps.length - 2) {
-      // Create the card
+      // Create the card with appropriate tier
       setIsCreating(true);
-      const success = await createFlowCard();
+      const success = await createFlowCard(eligibility.tier);
       setIsCreating(false);
       
       if (success) {
@@ -80,6 +82,10 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
     } else {
       setCurrentStep(prev => prev - 1);
     }
+  };
+
+  const handleLinkBank = () => {
+    navigate('/apps');
   };
 
   return (
@@ -109,175 +115,37 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
             transition={{ duration: 0.3 }}
             className="flex-1 flex flex-col"
           >
-            {/* Step 1: Introduction */}
+            {/* Step 0: Eligibility Check */}
             {currentStep === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="mb-8"
-                >
-                  <div className="w-20 h-20 rounded-full aurora-gradient flex items-center justify-center mb-6 mx-auto shadow-glow-blue">
-                    <CreditCard size={36} className="text-white" />
-                  </div>
-                  <h1 className="text-2xl font-bold mb-4">Flow Card</h1>
-                  <p className="text-muted-foreground max-w-sm leading-relaxed">
-                    Flow Card lets Flow decide the best way to pay using your authorised wallets and banks.
-                  </p>
-                </motion.div>
+              <EligibilityStep 
+                eligibility={eligibility}
+                onLinkBank={handleLinkBank}
+              />
+            )}
 
-                <div className="space-y-4 max-w-sm w-full">
-                  <div className="glass-card rounded-xl p-4 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-aurora-blue/10 flex items-center justify-center flex-shrink-0">
-                      <Shield size={16} className="text-aurora-blue" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-sm">Not a wallet</p>
-                      <p className="text-xs text-muted-foreground">Flow Card does not hold money</p>
-                    </div>
-                  </div>
-                  
-                  <div className="glass-card rounded-xl p-4 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-aurora-purple/10 flex items-center justify-center flex-shrink-0">
-                      <Fingerprint size={16} className="text-aurora-purple" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-sm">You're in control</p>
-                      <p className="text-xs text-muted-foreground">Every payment requires your confirmation</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Step 1: Introduction */}
+            {currentStep === 1 && (
+              <IntroStep tier={eligibility.tier} />
             )}
 
             {/* Step 2: Security */}
-            {currentStep === 1 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="mb-8"
-                >
-                  <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-6 mx-auto">
-                    <Shield size={36} className="text-success" />
-                  </div>
-                  <h1 className="text-2xl font-bold mb-4">Device & Security</h1>
-                  <p className="text-muted-foreground max-w-sm leading-relaxed">
-                    Flow Card is tied to this device and protected by biometrics.
-                  </p>
-                </motion.div>
-
-                <div className="space-y-4 max-w-sm w-full">
-                  <div className="glass-card rounded-xl p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <Smartphone size={20} className="text-foreground" />
-                    </div>
-                    <div className="text-left flex-1">
-                      <p className="font-medium text-sm">This Device</p>
-                      <p className="text-xs text-muted-foreground font-mono">{deviceId}</p>
-                    </div>
-                    <CheckCircle2 size={20} className="text-success" />
-                  </div>
-                  
-                  <div className="glass-card rounded-xl p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <Fingerprint size={20} className="text-foreground" />
-                    </div>
-                    <div className="text-left flex-1">
-                      <p className="font-medium text-sm">Biometric Protection</p>
-                      <p className="text-xs text-muted-foreground">Face ID or Fingerprint</p>
-                    </div>
-                    <CheckCircle2 size={20} className="text-success" />
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted-foreground mt-6 max-w-xs">
-                  If your device changes, Flow Card will re-bind safely.
-                </p>
-              </div>
+            {currentStep === 2 && (
+              <SecurityStep deviceId={deviceId} />
             )}
 
             {/* Step 3: Funding Sources */}
-            {currentStep === 2 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="mb-6"
-                >
-                  <div className="w-20 h-20 rounded-full bg-aurora-teal/10 flex items-center justify-center mb-6 mx-auto">
-                    <Wallet size={36} className="text-aurora-teal" />
-                  </div>
-                  <h1 className="text-2xl font-bold mb-2">Funding Sources</h1>
-                  <p className="text-muted-foreground text-sm max-w-sm">
-                    Flow Card will use your linked sources in priority order
-                  </p>
-                </motion.div>
-
-                <div className="space-y-3 max-w-sm w-full">
-                  {linkedSources.length > 0 ? (
-                    linkedSources.map((source, idx) => (
-                      <motion.div
-                        key={source.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 * idx }}
-                        className="glass-card rounded-xl p-4 flex items-center gap-3"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
-                          {idx + 1}
-                        </div>
-                        <div className="text-left flex-1">
-                          <p className="font-medium text-sm">{source.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{source.type}</p>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          RM {source.balance.toFixed(2)}
-                        </span>
-                      </motion.div>
-                    ))
-                  ) : (
-                    <div className="glass-card rounded-xl p-6 text-center">
-                      <p className="text-muted-foreground text-sm">No linked sources yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        You can link sources in Settings
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {currentStep === 3 && (
+              <FundingSourcesStep 
+                wallets={wallets}
+                banks={banks}
+                tier={eligibility.tier}
+                onLinkBank={handleLinkBank}
+              />
             )}
 
             {/* Step 4: Complete */}
-            {currentStep === 3 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="mb-8"
-                >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                    className="w-20 h-20 rounded-full bg-success flex items-center justify-center mb-6 mx-auto shadow-glow-success"
-                  >
-                    <CheckCircle2 size={40} className="text-white" />
-                  </motion.div>
-                  <h1 className="text-2xl font-bold mb-2">You're All Set</h1>
-                  <p className="text-muted-foreground max-w-sm">
-                    Your Flow Card is ready. One tap when the world needs a card.
-                  </p>
-                </motion.div>
-
-                <div className="max-w-sm w-full">
-                  <FlowCardVisual status="created" mode="in_app" />
-                </div>
-              </div>
+            {currentStep === 4 && (
+              <CompleteStep tier={eligibility.tier} />
             )}
           </motion.div>
         </AnimatePresence>
@@ -286,8 +154,8 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
         <div className="mt-auto pt-6 space-y-3">
           <Button
             onClick={handleNext}
-            disabled={isCreating}
-            className="w-full h-14 rounded-2xl aurora-gradient text-white font-semibold text-lg shadow-glow-blue"
+            disabled={isCreating || (currentStep === 0 && !eligibility.canActivate)}
+            className="w-full h-14 rounded-2xl aurora-gradient text-white font-semibold text-lg shadow-glow-blue disabled:opacity-50"
           >
             {isCreating ? (
               <motion.div
@@ -297,6 +165,8 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
               />
             ) : currentStep === steps.length - 1 ? (
               'Done'
+            ) : currentStep === 0 && !eligibility.canActivate ? (
+              'Requirements Not Met'
             ) : (
               <>
                 Continue
@@ -316,6 +186,412 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Eligibility Step Component
+function EligibilityStep({ 
+  eligibility, 
+  onLinkBank 
+}: { 
+  eligibility: ReturnType<typeof useFlowCardEligibility>;
+  onLinkBank: () => void;
+}) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="mb-6"
+      >
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 mx-auto ${
+          eligibility.canActivate ? 'bg-success/10' : 'bg-warning/10'
+        }`}>
+          {eligibility.canActivate ? (
+            <CheckCircle2 size={36} className="text-success" />
+          ) : (
+            <AlertCircle size={36} className="text-warning" />
+          )}
+        </div>
+        <h1 className="text-2xl font-bold mb-2">
+          {eligibility.canActivate ? 'Ready to Activate' : 'Almost There'}
+        </h1>
+        <p className="text-muted-foreground text-sm max-w-sm">
+          {eligibility.canActivate 
+            ? `You qualify for Flow Card ${eligibility.tier === 'full' ? 'Full' : 'Lite'}`
+            : 'Complete these requirements to activate Flow Card'
+          }
+        </p>
+      </motion.div>
+
+      {/* Tier Badge */}
+      {eligibility.canActivate && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-6"
+        >
+          <TierBadge tier={eligibility.tier} />
+        </motion.div>
+      )}
+
+      {/* Criteria List */}
+      <div className="space-y-3 max-w-sm w-full">
+        {eligibility.criteria.map((criterion, idx) => (
+          <motion.div
+            key={criterion.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 * idx }}
+            className={`glass-card rounded-xl p-4 flex items-center gap-3 ${
+              !criterion.met && criterion.required ? 'border border-warning/30' : ''
+            }`}
+          >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+              criterion.met ? 'bg-success/10' : criterion.required ? 'bg-warning/10' : 'bg-muted'
+            }`}>
+              {criterion.met ? (
+                <CheckCircle2 size={16} className="text-success" />
+              ) : criterion.required ? (
+                <AlertCircle size={16} className="text-warning" />
+              ) : (
+                <ArrowUpCircle size={16} className="text-muted-foreground" />
+              )}
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-medium text-sm">{criterion.label}</p>
+              <p className="text-xs text-muted-foreground">{criterion.description}</p>
+            </div>
+            {!criterion.required && !criterion.met && (
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded">
+                For Full
+              </span>
+            )}
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Upgrade Prompt */}
+      {eligibility.canActivate && eligibility.tier === 'lite' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-6 max-w-sm w-full"
+        >
+          <button
+            onClick={onLinkBank}
+            className="w-full glass-card rounded-xl p-4 flex items-center gap-3 border border-aurora-purple/30 hover:bg-aurora-purple/5 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-aurora-purple/10 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={20} className="text-aurora-purple" />
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-medium text-sm">Upgrade to Full</p>
+              <p className="text-xs text-muted-foreground">Link a bank for auto top-up</p>
+            </div>
+            <ArrowRight size={16} className="text-muted-foreground" />
+          </button>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// Tier Badge Component
+function TierBadge({ tier }: { tier: FlowCardTier }) {
+  if (tier === 'full') {
+    return (
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full aurora-gradient text-white text-sm font-medium shadow-glow-blue">
+        <Sparkles size={16} />
+        Flow Card Full
+      </div>
+    );
+  }
+  
+  return (
+    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted text-foreground text-sm font-medium">
+      <CreditCard size={16} />
+      Flow Card Lite
+    </div>
+  );
+}
+
+// Introduction Step Component
+function IntroStep({ tier }: { tier: FlowCardTier }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <div className="w-20 h-20 rounded-full aurora-gradient flex items-center justify-center mb-6 mx-auto shadow-glow-blue">
+          <CreditCard size={36} className="text-white" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Flow Card</h1>
+        <TierBadge tier={tier} />
+        <p className="text-muted-foreground max-w-sm leading-relaxed mt-4">
+          Flow Card lets Flow decide the best way to pay using your authorised wallets and banks.
+        </p>
+      </motion.div>
+
+      <div className="space-y-4 max-w-sm w-full">
+        <div className="glass-card rounded-xl p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-aurora-blue/10 flex items-center justify-center flex-shrink-0">
+            <Shield size={16} className="text-aurora-blue" />
+          </div>
+          <div className="text-left">
+            <p className="font-medium text-sm">Not a wallet</p>
+            <p className="text-xs text-muted-foreground">Flow Card does not hold money</p>
+          </div>
+        </div>
+        
+        <div className="glass-card rounded-xl p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-full bg-aurora-purple/10 flex items-center justify-center flex-shrink-0">
+            <Fingerprint size={16} className="text-aurora-purple" />
+          </div>
+          <div className="text-left">
+            <p className="font-medium text-sm">You're in control</p>
+            <p className="text-xs text-muted-foreground">Every payment requires your confirmation</p>
+          </div>
+        </div>
+
+        {tier === 'full' && (
+          <div className="glass-card rounded-xl p-4 flex items-start gap-3 border border-aurora-teal/30">
+            <div className="w-8 h-8 rounded-full bg-aurora-teal/10 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={16} className="text-aurora-teal" />
+            </div>
+            <div className="text-left">
+              <p className="font-medium text-sm">Auto Top-Up Enabled</p>
+              <p className="text-xs text-muted-foreground">Bank backs up your wallet automatically</p>
+            </div>
+          </div>
+        )}
+
+        {tier === 'lite' && (
+          <div className="glass-card rounded-xl p-4 flex items-start gap-3 border border-warning/30">
+            <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
+              <AlertCircle size={16} className="text-warning" />
+            </div>
+            <div className="text-left">
+              <p className="font-medium text-sm">Manual Top-Up Only</p>
+              <p className="text-xs text-muted-foreground">Link a bank to enable auto top-up</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Security Step Component
+function SecurityStep({ deviceId }: { deviceId: string }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-6 mx-auto">
+          <Shield size={36} className="text-success" />
+        </div>
+        <h1 className="text-2xl font-bold mb-4">Device & Security</h1>
+        <p className="text-muted-foreground max-w-sm leading-relaxed">
+          Flow Card is tied to this device and protected by biometrics.
+        </p>
+      </motion.div>
+
+      <div className="space-y-4 max-w-sm w-full">
+        <div className="glass-card rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+            <Smartphone size={20} className="text-foreground" />
+          </div>
+          <div className="text-left flex-1">
+            <p className="font-medium text-sm">This Device</p>
+            <p className="text-xs text-muted-foreground font-mono">{deviceId}</p>
+          </div>
+          <CheckCircle2 size={20} className="text-success" />
+        </div>
+        
+        <div className="glass-card rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+            <Fingerprint size={20} className="text-foreground" />
+          </div>
+          <div className="text-left flex-1">
+            <p className="font-medium text-sm">Biometric Protection</p>
+            <p className="text-xs text-muted-foreground">Face ID or Fingerprint</p>
+          </div>
+          <CheckCircle2 size={20} className="text-success" />
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground mt-6 max-w-xs">
+        If your device changes, Flow Card will re-bind safely.
+      </p>
+    </div>
+  );
+}
+
+// Funding Sources Step Component
+function FundingSourcesStep({ 
+  wallets, 
+  banks, 
+  tier,
+  onLinkBank 
+}: { 
+  wallets: { id: string; name: string; type: string; balance: number }[];
+  banks: { id: string; name: string; type: string; balance: number }[];
+  tier: FlowCardTier;
+  onLinkBank: () => void;
+}) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="mb-6"
+      >
+        <div className="w-20 h-20 rounded-full bg-aurora-teal/10 flex items-center justify-center mb-6 mx-auto">
+          <Wallet size={36} className="text-aurora-teal" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Funding Sources</h1>
+        <p className="text-muted-foreground text-sm max-w-sm">
+          {tier === 'full' 
+            ? 'Wallet pays first, bank auto-tops up when needed'
+            : 'Your wallet will be used for payments'
+          }
+        </p>
+      </motion.div>
+
+      <div className="space-y-4 max-w-sm w-full">
+        {/* Wallets Section */}
+        <div>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2 text-left">
+            Primary • Wallet
+          </p>
+          {wallets.length > 0 ? (
+            wallets.map((wallet, idx) => (
+              <motion.div
+                key={wallet.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * idx }}
+                className="glass-card rounded-xl p-4 flex items-center gap-3 mb-2"
+              >
+                <div className="w-8 h-8 rounded-full bg-aurora-blue/10 flex items-center justify-center text-sm font-bold text-aurora-blue">
+                  <Wallet size={16} />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-sm">{wallet.name}</p>
+                  <p className="text-xs text-muted-foreground">Primary payment source</p>
+                </div>
+                <span className="text-sm font-medium">
+                  RM {wallet.balance.toFixed(2)}
+                </span>
+              </motion.div>
+            ))
+          ) : (
+            <div className="glass-card rounded-xl p-4 text-center border border-warning/30">
+              <p className="text-muted-foreground text-sm">No wallet linked</p>
+            </div>
+          )}
+        </div>
+
+        {/* Banks Section */}
+        <div>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2 text-left">
+            Backup • Bank {tier === 'full' ? '(Auto Top-Up)' : ''}
+          </p>
+          {banks.length > 0 ? (
+            banks.map((bank, idx) => (
+              <motion.div
+                key={bank.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + 0.1 * idx }}
+                className="glass-card rounded-xl p-4 flex items-center gap-3 mb-2 border border-aurora-teal/30"
+              >
+                <div className="w-8 h-8 rounded-full bg-aurora-teal/10 flex items-center justify-center text-sm font-bold text-aurora-teal">
+                  <Landmark size={16} />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-sm">{bank.name}</p>
+                  <p className="text-xs text-aurora-teal">Auto top-up enabled</p>
+                </div>
+                <Sparkles size={16} className="text-aurora-teal" />
+              </motion.div>
+            ))
+          ) : (
+            <button
+              onClick={onLinkBank}
+              className="w-full glass-card rounded-xl p-4 flex items-center gap-3 border border-dashed border-muted-foreground/30 hover:border-aurora-purple/50 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Landmark size={16} className="text-muted-foreground" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-medium text-sm text-muted-foreground">Link a Bank</p>
+                <p className="text-xs text-muted-foreground">Enable auto top-up</p>
+              </div>
+              <ArrowRight size={16} className="text-muted-foreground" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Complete Step Component
+function CompleteStep({ tier }: { tier: FlowCardTier }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+          className="w-20 h-20 rounded-full bg-success flex items-center justify-center mb-6 mx-auto shadow-glow-success"
+        >
+          <CheckCircle2 size={40} className="text-white" />
+        </motion.div>
+        <h1 className="text-2xl font-bold mb-2">You're All Set</h1>
+        <TierBadge tier={tier} />
+        <p className="text-muted-foreground max-w-sm mt-4">
+          {tier === 'full'
+            ? 'Your Flow Card Full is ready with auto top-up enabled.'
+            : 'Your Flow Card Lite is ready. Link a bank anytime to upgrade.'
+          }
+        </p>
+      </motion.div>
+
+      <div className="max-w-sm w-full">
+        <FlowCardVisual status="created" mode="in_app" />
+      </div>
+
+      {tier === 'lite' && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-xs text-muted-foreground mt-4 max-w-xs"
+        >
+          💡 Tip: Link a bank in Settings to unlock auto top-up
+        </motion.p>
+      )}
     </div>
   );
 }

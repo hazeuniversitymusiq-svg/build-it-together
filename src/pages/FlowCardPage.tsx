@@ -2,15 +2,17 @@
  * Flow Card Page
  * 
  * Clean, focused card view with credentials, tap-to-pay demo, and pending events.
+ * Shows tier status (Lite/Full) with upgrade prompts.
  * Demo actions registered with Global Demo Intelligence.
  */
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pause, Play } from 'lucide-react';
+import { Plus, Pause, Play, Sparkles, ArrowRight, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
+import { useFlowCardEligibility } from '@/hooks/useFlowCardEligibility';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { FlowCardVisual } from '@/components/flowcard/FlowCardVisual';
 import { CreateFlowCardFlow } from '@/components/flowcard/CreateFlowCardFlow';
@@ -40,9 +42,14 @@ export default function FlowCardPage() {
     suspendCard,
     reactivateCard,
   } = useFlowCard();
+  const eligibility = useFlowCardEligibility();
 
   const [showCreateFlow, setShowCreateFlow] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Determine current tier from profile or eligibility
+  const currentTier = profile?.tier || eligibility.tier;
+  const canUpgrade = currentTier === 'lite' && eligibility.hasBankLinked;
 
   // Register demo action for this page
   useEffect(() => {
@@ -163,9 +170,22 @@ export default function FlowCardPage() {
       <div className="p-6 pt-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Flow Card</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold">Flow Card</h1>
+              {/* Tier Badge */}
+              {currentTier === 'full' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full aurora-gradient text-white text-xs font-medium">
+                  <Sparkles size={10} />
+                  Full
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                  Lite
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
-              Your payment identity
+              {currentTier === 'full' ? 'Auto top-up enabled' : 'Your payment identity'}
             </p>
           </div>
           {/* Subtle suspend/reactivate icon */}
@@ -178,6 +198,42 @@ export default function FlowCardPage() {
             {isCardSuspended ? <Play size={20} /> : <Pause size={20} />}
           </Button>
         </div>
+
+        {/* Upgrade to Full Banner (for Lite users without bank) */}
+        {currentTier === 'lite' && !eligibility.hasBankLinked && (
+          <motion.button
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => navigate('/apps')}
+            className="w-full mb-4 glass-card rounded-xl p-3 flex items-center gap-3 border border-aurora-purple/30 hover:bg-aurora-purple/5 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-aurora-purple/10 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={16} className="text-aurora-purple" />
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-medium text-sm">Upgrade to Full</p>
+              <p className="text-xs text-muted-foreground">Link a bank for auto top-up</p>
+            </div>
+            <ArrowRight size={16} className="text-muted-foreground" />
+          </motion.button>
+        )}
+
+        {/* Auto-upgrade notice (for Lite users who now have a bank) */}
+        {canUpgrade && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full mb-4 glass-card rounded-xl p-3 flex items-center gap-3 border border-aurora-teal/30"
+          >
+            <div className="w-8 h-8 rounded-full bg-aurora-teal/10 flex items-center justify-center flex-shrink-0">
+              <Landmark size={16} className="text-aurora-teal" />
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-medium text-sm text-aurora-teal">Bank Linked!</p>
+              <p className="text-xs text-muted-foreground">Auto top-up now available</p>
+            </div>
+          </motion.div>
+        )}
 
         {/* Card Visual with Credentials */}
         <DemoHighlight

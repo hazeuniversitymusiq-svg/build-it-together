@@ -492,6 +492,7 @@ export type Database = {
           last_device_id: string | null
           mode: string
           status: string
+          tier: string
           updated_at: string
           user_id: string
         }
@@ -507,6 +508,7 @@ export type Database = {
           last_device_id?: string | null
           mode?: string
           status?: string
+          tier?: string
           updated_at?: string
           user_id: string
         }
@@ -522,6 +524,7 @@ export type Database = {
           last_device_id?: string | null
           mode?: string
           status?: string
+          tier?: string
           updated_at?: string
           user_id?: string
         }
