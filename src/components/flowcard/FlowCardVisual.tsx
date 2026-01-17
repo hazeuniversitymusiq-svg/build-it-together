@@ -163,17 +163,14 @@ export function FlowCardVisual({
           />
           
           {/* Content */}
-          <div className="relative h-full flex flex-col justify-between p-6">
-            {/* Header */}
+          <div className="relative h-full flex flex-col justify-between p-5">
+            {/* Header - Logo centered, status top-right */}
             <div className="flex items-start justify-between">
-              <div>
-                <img 
-                  src={flowCardLogo} 
-                  alt="Flow Card" 
-                  className="h-20 w-auto object-contain brightness-0 invert drop-shadow-lg"
-                />
-                <p className="text-white/70 text-sm mt-1">{modeLabels[mode]}</p>
-              </div>
+              <img 
+                src={flowCardLogo} 
+                alt="Flow Card" 
+                className="h-12 w-auto object-contain brightness-0 invert drop-shadow-md"
+              />
               
               {/* Status indicator with pulse */}
               <motion.div 
@@ -189,66 +186,61 @@ export function FlowCardVisual({
               </motion.div>
             </div>
             
-            {/* Chip & NFC */}
-            <div className="flex items-center gap-4">
-              {/* Chip with subtle animation */}
-              <motion.div 
-                className="w-12 h-9 rounded-md bg-gradient-to-br from-yellow-200/80 to-yellow-400/80 shadow-sm overflow-hidden relative"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="w-full h-full rounded-md border border-yellow-600/30 grid grid-cols-3 gap-0.5 p-1">
-                  {[...Array(6)].map((_, i) => (
-                    <motion.div 
-                      key={i} 
-                      className="bg-yellow-600/30 rounded-sm"
-                      initial={{ opacity: 0.3 }}
-                      animate={{ opacity: [0.3, 0.6, 0.3] }}
-                      transition={{ duration: 2, delay: i * 0.1, repeat: Infinity }}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-              
-              {/* NFC indicator with wave animation */}
-              <motion.div
-                animate={isActive ? { opacity: [0.5, 1, 0.5] } : { opacity: 0.3 }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="relative"
-              >
-                <Wifi size={24} className="text-white/80 rotate-90" />
-                {isActive && (
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-white/30"
-                    animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  />
-                )}
-              </motion.div>
+            {/* Middle - Chip & NFC on left, Mode on right */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Chip */}
+                <motion.div 
+                  className="w-11 h-8 rounded-md bg-gradient-to-br from-yellow-200/90 to-yellow-400/90 shadow-sm overflow-hidden"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <div className="w-full h-full rounded-md border border-yellow-600/30 grid grid-cols-3 gap-0.5 p-1">
+                    {[...Array(6)].map((_, i) => (
+                      <motion.div 
+                        key={i} 
+                        className="bg-yellow-600/40 rounded-sm"
+                        initial={{ opacity: 0.4 }}
+                        animate={{ opacity: [0.4, 0.7, 0.4] }}
+                        transition={{ duration: 2, delay: i * 0.1, repeat: Infinity }}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+                
+                {/* NFC */}
+                <motion.div
+                  animate={isActive ? { opacity: [0.6, 1, 0.6] } : { opacity: 0.3 }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <Wifi size={22} className="text-white/90 rotate-90" />
+                </motion.div>
+              </div>
+
+              {/* Mode label */}
+              <span className="text-white/60 text-sm font-medium">{modeLabels[mode]}</span>
             </div>
             
-            {/* Footer */}
+            {/* Footer - Card number left, Brand & Biometric right */}
             <div className="flex items-end justify-between">
-              {/* Card number */}
-              <div className="text-white/90 font-mono tracking-[0.15em] text-base">
+              <div className="text-white/90 font-mono tracking-[0.12em] text-sm">
                 {isRevealed && cardNumber 
                   ? formatCardNumber(cardNumber)
                   : maskCardNumber(cardNumber || `0000${lastFourDigits}`)
                 }
               </div>
               
-              {/* Brand & Biometric */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {cardBrand === 'visa' && (
-                  <span className="text-white font-bold text-lg italic tracking-tight">VISA</span>
+                  <span className="text-white font-bold text-xl italic tracking-tight">VISA</span>
                 )}
                 {cardBrand === 'mastercard' && (
                   <div className="flex -space-x-2">
-                    <div className="w-5 h-5 rounded-full bg-red-500/80" />
-                    <div className="w-5 h-5 rounded-full bg-yellow-500/80" />
+                    <div className="w-6 h-6 rounded-full bg-red-500/90" />
+                    <div className="w-6 h-6 rounded-full bg-yellow-500/90" />
                   </div>
                 )}
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                  <Fingerprint size={18} className="text-white/80" />
+                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                  <Fingerprint size={20} className="text-white/80" />
                 </div>
               </div>
             </div>
