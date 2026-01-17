@@ -170,7 +170,7 @@ export function FlowCardVisual({
                 <img 
                   src={flowCardLogo} 
                   alt="Flow Card" 
-                  className="h-14 w-auto object-contain brightness-0 invert drop-shadow-lg"
+                  className="h-20 w-auto object-contain brightness-0 invert drop-shadow-lg"
                 />
                 <p className="text-white/70 text-sm mt-1">{modeLabels[mode]}</p>
               </div>
