@@ -48,6 +48,7 @@ import FundingSourcePicker from "@/components/scanner/FundingSourcePicker";
 import MerchantHistory from "@/components/scanner/MerchantHistory";
 import { parseQRToIntent, createIntentFromParsedQR, type ParsedQRIntent } from "@/lib/qr";
 import SmartRailRecommendation from "@/components/scanner/SmartRailRecommendation";
+import ScanPayDemo from "@/components/demo/ScanPayDemo";
 
 // Test QR codes for simulation
 const TEST_QR_CODES = {
@@ -504,6 +505,16 @@ const ScanPage = () => {
                   <Badge variant="secondary" className="glass-card border-0 px-3 py-1">GrabPay</Badge>
                   <Badge variant="secondary" className="glass-card border-0 px-3 py-1">Boost</Badge>
                 </div>
+              </motion.div>
+
+              {/* Interactive Demo */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mt-8 w-full"
+              >
+                <ScanPayDemo />
               </motion.div>
 
               {/* Test Mode Buttons */}
