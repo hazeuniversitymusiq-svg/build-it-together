@@ -452,67 +452,64 @@ const ScanPage = () => {
               </div>
             </motion.div>
           ) : (
-            /* Initial State - Scan Button */
+            /* Initial State - Auto-open scanner, show demo */
             <motion.div
               key="initial"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex-1 flex flex-col items-center justify-center"
+              className="flex-1 flex flex-col items-center"
             >
-              {/* Large Scan Button */}
-              <DemoHighlight
-                id="scan-button"
-                title="QR Scanner"
-                description="Scan any merchant QR code to pay instantly. Supports DuitNow, Touch'n'Go, GrabPay, and Boost."
-                onTryIt={() => simulateTestScan('merchant')}
-              >
+              {/* Quick Action Buttons */}
+              <div className="flex gap-3 w-full mb-6">
+                <DemoHighlight
+                  id="scan-button"
+                  title="QR Scanner"
+                  description="Scan any merchant QR code to pay instantly. Supports DuitNow, Touch'n'Go, GrabPay, and Boost."
+                  onTryIt={() => simulateTestScan('merchant')}
+                >
+                  <motion.button
+                    onClick={() => setIsScannerOpen(true)}
+                    className="flex-1 py-4 px-4 rounded-2xl aurora-gradient flex items-center justify-center gap-3 shadow-glow-aurora"
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Camera className="w-5 h-5 text-white" />
+                    <span className="font-medium text-white">Scan to Pay</span>
+                  </motion.button>
+                </DemoHighlight>
+                
                 <motion.button
-                  onClick={() => setIsScannerOpen(true)}
-                  className="relative w-52 h-52 rounded-[2.5rem] aurora-gradient-soft glass-card flex flex-col items-center justify-center gap-4 shadow-float-lg"
-                  whileHover={{ scale: 1.02 }}
+                  onClick={() => setIsMyCodeOpen(true)}
+                  className="flex-1 py-4 px-4 rounded-2xl glass-card flex items-center justify-center gap-3"
                   whileTap={{ scale: 0.98 }}
                 >
-                  {/* Aurora glow ring */}
-                  <div className="absolute inset-0 rounded-[2.5rem] aurora-border opacity-50" />
-                  
-                  {/* Icon */}
-                  <motion.div 
-                    className="w-20 h-20 rounded-2xl aurora-gradient flex items-center justify-center shadow-glow-aurora"
-                    animate={{ scale: [1, 1.03, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    <Camera className="w-9 h-9 text-white" />
-                  </motion.div>
-                  
-                  <span className="text-lg font-medium text-foreground">
-                    Open Scanner
-                  </span>
+                  <QrCode className="w-5 h-5 text-foreground" />
+                  <span className="font-medium text-foreground">My Code</span>
                 </motion.button>
-              </DemoHighlight>
+              </div>
 
               {/* Supported formats */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="mt-10 text-center"
+                transition={{ delay: 0.2 }}
+                className="text-center mb-6"
               >
-                <p className="text-sm text-muted-foreground mb-3">Supports</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">DuitNow</Badge>
-                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">Touch'n'Go</Badge>
-                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">GrabPay</Badge>
-                  <Badge variant="secondary" className="glass-card border-0 px-3 py-1">Boost</Badge>
+                <p className="text-xs text-muted-foreground mb-2">Supports</p>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  <Badge variant="secondary" className="glass-card border-0 px-2 py-0.5 text-xs">DuitNow</Badge>
+                  <Badge variant="secondary" className="glass-card border-0 px-2 py-0.5 text-xs">TnG</Badge>
+                  <Badge variant="secondary" className="glass-card border-0 px-2 py-0.5 text-xs">GrabPay</Badge>
+                  <Badge variant="secondary" className="glass-card border-0 px-2 py-0.5 text-xs">Boost</Badge>
                 </div>
               </motion.div>
 
-              {/* Interactive Demo */}
+              {/* Interactive Demo - Showcasing Full Flow */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mt-8 w-full"
+                transition={{ delay: 0.3 }}
+                className="w-full"
               >
                 <ScanPayDemo />
               </motion.div>
@@ -522,10 +519,10 @@ const ScanPage = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="mt-8 space-y-2"
+                  transition={{ delay: 0.4 }}
+                  className="mt-6 space-y-2"
                 >
-                  <p className="text-xs text-muted-foreground text-center mb-3">Test Mode</p>
+                  <p className="text-xs text-muted-foreground text-center mb-2">Test Mode</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     <Button
                       variant="outline"
@@ -534,7 +531,7 @@ const ScanPage = () => {
                       className="glass-card border-0 text-xs"
                     >
                       <QrCode className="w-3 h-3 mr-1.5" />
-                      DuitNow (RM12.50)
+                      DuitNow
                     </Button>
                     <Button
                       variant="outline"
@@ -543,7 +540,7 @@ const ScanPage = () => {
                       className="glass-card border-0 text-xs"
                     >
                       <QrCode className="w-3 h-3 mr-1.5" />
-                      FLOW URL
+                      FLOW
                     </Button>
                     <Button
                       variant="outline"
@@ -552,7 +549,7 @@ const ScanPage = () => {
                       className="glass-card border-0 text-xs"
                     >
                       <QrCode className="w-3 h-3 mr-1.5" />
-                      Static (No Amount)
+                      Static
                     </Button>
                   </div>
                 </motion.div>
@@ -562,15 +559,11 @@ const ScanPage = () => {
         </AnimatePresence>
       </div>
 
-      {/* QR Scanner Modal */}
+      {/* QR Scanner Modal - Now with Send/Receive built-in */}
       <QRScanner
         isOpen={isScannerOpen}
         onScan={handleScan}
         onClose={() => setIsScannerOpen(false)}
-        onMyCodePress={() => {
-          setIsScannerOpen(false);
-          setIsMyCodeOpen(true);
-        }}
       />
 
       {/* My Payment Code Modal */}
