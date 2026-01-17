@@ -1,12 +1,11 @@
 /**
  * Apple Intelligence-Style Onboarding Flow
  * 
- * Full-screen immersive onboarding with floating app constellation,
- * fluid animations, and liquid glass effects inspired by Apple's
- * iCloud/Apple Intelligence initialization screens.
+ * Honest onboarding: Welcome → Select Apps → Connect (real DB writes) → Ready
+ * No fake "discovering" animations - users select their apps directly.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -14,45 +13,39 @@ import {
   ChevronRight,
   Fingerprint,
   Shield,
-  Zap
+  Zap,
+  Wallet,
+  Landmark,
+  CreditCard,
+  Receipt,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import { FloatingAppsOrbit } from './FloatingAppsOrbit';
 import { FlowLogo } from '@/components/brand/FlowLogo';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-interface OnboardingPhase {
-  id: string;
-  title: string;
-  subtitle: string;
-  gradient: string;
+// App configuration
+interface AppOption {
+  name: string;
+  displayName: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  type: 'wallet' | 'bank' | 'bnpl' | 'biller';
+  defaultBalance: number;
+  recommended?: boolean;
 }
 
-const PHASES: OnboardingPhase[] = [
-  {
-    id: 'welcome',
-    title: 'Welcome to FLOW',
-    subtitle: 'Your unified payment intelligence layer',
-    gradient: 'from-aurora-blue via-aurora-purple to-aurora-pink',
-  },
-  {
-    id: 'discover',
-    title: 'Discovering Your Apps',
-    subtitle: 'Finding your wallets, banks, and payment apps',
-    gradient: 'from-aurora-teal to-aurora-blue',
-  },
-  {
-    id: 'connect',
-    title: 'Connecting Everything',
-    subtitle: 'Linking your payment sources to FLOW',
-    gradient: 'from-aurora-purple to-aurora-pink',
-  },
-  {
-    id: 'ready',
-    title: 'You\'re All Set',
-    subtitle: 'One tap. Best rail. Every time.',
-    gradient: 'from-aurora-teal via-aurora-blue to-aurora-purple',
-  },
+const APP_OPTIONS: AppOption[] = [
+  { name: 'TouchNGo', displayName: "Touch 'n Go", description: "Malaysia's #1 e-wallet", icon: Wallet, color: '#0066CC', type: 'wallet', defaultBalance: 85.50, recommended: true },
+  { name: 'GrabPay', displayName: 'GrabPay', description: 'Merchant payments', icon: Wallet, color: '#00B14F', type: 'wallet', defaultBalance: 42.00, recommended: true },
+  { name: 'Boost', displayName: 'Boost', description: 'Cashback rewards', icon: Wallet, color: '#FF6B00', type: 'wallet', defaultBalance: 25.00 },
+  { name: 'Maybank', displayName: 'Maybank', description: 'Bank transfers', icon: Landmark, color: '#FFCC00', type: 'bank', defaultBalance: 1250.00, recommended: true },
+  { name: 'Atome', displayName: 'Atome', description: 'Split payments, 0% interest', icon: CreditCard, color: '#14B8A6', type: 'bnpl', defaultBalance: 1500.00, recommended: true },
+  { name: 'SPayLater', displayName: 'SPayLater', description: 'Shopee Pay Later', icon: CreditCard, color: '#F97316', type: 'bnpl', defaultBalance: 1000.00 },
 ];
 
 const FEATURES = [
@@ -61,91 +54,130 @@ const FEATURES = [
   { icon: Fingerprint, text: 'Biometric protection' },
 ];
 
+type Phase = 'welcome' | 'select' | 'connecting' | 'ready';
+
 export function AppleOnboardingFlow() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const { hasCompleted, completeOnboarding, isLoading } = useOnboarding();
   
-  const [currentPhase, setCurrentPhase] = useState(0);
-  const [orbitPhase, setOrbitPhase] = useState<'idle' | 'detecting' | 'syncing' | 'complete'>('idle');
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  
-  const phase = PHASES[currentPhase];
+  const [phase, setPhase] = useState<Phase>('welcome');
+  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectedCount, setConnectedCount] = useState(0);
 
-  // Auto-advance through phases with elegant timing
+  // Pre-select recommended apps
   useEffect(() => {
-    // Update orbit phase based on current phase
-    if (currentPhase === 0) {
-      setOrbitPhase('idle');
-    } else if (currentPhase === 1) {
-      setOrbitPhase('detecting');
-    } else if (currentPhase === 2) {
-      setOrbitPhase('syncing');
-    } else if (currentPhase === 3) {
-      setOrbitPhase('complete');
+    const recommended = APP_OPTIONS.filter(app => app.recommended).map(app => app.name);
+    setSelectedApps(new Set(recommended));
+  }, []);
+
+  const toggleApp = useCallback((name: string) => {
+    setSelectedApps(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }, []);
+
+  const connectApps = useCallback(async () => {
+    if (selectedApps.size === 0) {
+      toast({ title: "Please select at least one app", variant: "destructive" });
+      return;
     }
 
-    // Auto-advance timers for each phase
-    let timer: NodeJS.Timeout | null = null;
-    
-    if (currentPhase === 0) {
-      // Welcome phase - 3 seconds
-      timer = setTimeout(() => {
-        if (!isTransitioning) {
-          setIsTransitioning(true);
-          setTimeout(() => {
-            setCurrentPhase(1);
-            setIsTransitioning(false);
-          }, 300);
-        }
-      }, 3000);
-    } else if (currentPhase === 1) {
-      // Detecting phase - 2.5 seconds
-      timer = setTimeout(() => {
-        if (!isTransitioning) {
-          setIsTransitioning(true);
-          setTimeout(() => {
-            setCurrentPhase(2);
-            setIsTransitioning(false);
-          }, 300);
-        }
-      }, 2500);
-    } else if (currentPhase === 2) {
-      // Syncing phase - 2 seconds
-      timer = setTimeout(() => {
-        if (!isTransitioning) {
-          setIsTransitioning(true);
-          setTimeout(() => {
-            setCurrentPhase(3);
-            setIsTransitioning(false);
-          }, 300);
-        }
-      }, 2000);
-    }
-    
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [currentPhase, isTransitioning]);
+    setPhase('connecting');
+    setIsConnecting(true);
+    setConnectedCount(0);
 
-  const handleNext = () => {
-    if (isTransitioning) return;
+    const { data: { user } } = await supabase.auth.getUser();
     
-    if (currentPhase < PHASES.length - 1) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentPhase(prev => prev + 1);
-        setIsTransitioning(false);
-      }, 300);
+    // If no user, we'll create connectors after they sign up
+    // For now, just simulate the connection and complete onboarding
+    if (!user) {
+      // Store selection in localStorage for post-auth setup
+      localStorage.setItem('flow_pending_apps', JSON.stringify([...selectedApps]));
+      
+      // Animate through the "connecting" visuals
+      for (let i = 0; i < selectedApps.size; i++) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setConnectedCount(i + 1);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setIsConnecting(false);
+      setPhase('ready');
+      return;
     }
-  };
 
-  const handleSyncComplete = () => {
-    // Move to ready phase after sync animation completes
-    if (currentPhase === 2) {
-      setCurrentPhase(3);
+    // Real DB writes for authenticated users
+    let priority = 1;
+    const appsToConnect = [...selectedApps];
+    
+    for (const appName of appsToConnect) {
+      const app = APP_OPTIONS.find(a => a.name === appName);
+      if (!app) continue;
+
+      const connectorType = app.type === 'biller' ? 'biller' : app.type;
+      
+      // Create connector
+      const capabilities: Record<string, boolean> = {};
+      if (app.type === 'wallet') {
+        capabilities.can_pay_qr = true;
+        capabilities.can_p2p = true;
+        capabilities.can_receive = true;
+        capabilities.can_topup = true;
+      } else if (app.type === 'bank') {
+        capabilities.can_pay = true;
+        capabilities.can_transfer = true;
+        capabilities.can_fund_topup = true;
+      } else if (app.type === 'bnpl') {
+        capabilities.can_pay_qr = true;
+        capabilities.can_pay = true;
+        capabilities.can_installment = true;
+      }
+
+      await supabase.from('connectors').upsert({
+        user_id: user.id,
+        name: appName as any,
+        type: connectorType,
+        status: 'available',
+        mode: 'Prototype',
+        capabilities,
+      }, { onConflict: 'user_id,name' });
+
+      // Create funding source for wallets, banks, BNPL
+      if (app.type !== 'biller') {
+        const sourceType = app.type === 'wallet' ? 'wallet' : app.type === 'bank' ? 'bank' : 'bnpl';
+        
+        await supabase.from('funding_sources').upsert({
+          user_id: user.id,
+          name: appName,
+          type: sourceType,
+          balance: app.defaultBalance,
+          currency: 'MYR',
+          priority: app.type === 'bnpl' ? priority + 10 : priority,
+          linked_status: 'linked',
+          available: true,
+          max_auto_topup_amount: app.type === 'wallet' ? 200 : app.type === 'bank' ? 500 : 0,
+          require_extra_confirm_amount: app.type === 'wallet' ? 300 : app.type === 'bank' ? 1000 : 200,
+        }, { onConflict: 'user_id,name' });
+        priority++;
+      }
+
+      setConnectedCount(prev => prev + 1);
+      await new Promise(resolve => setTimeout(resolve, 200)); // Visual feedback delay
     }
-  };
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setIsConnecting(false);
+    setPhase('ready');
+  }, [selectedApps, toast]);
 
   const handleGetStarted = () => {
     completeOnboarding();
@@ -189,21 +221,14 @@ export function AppleOnboardingFlow() {
           transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full bg-aurora-blue/15 blur-[100px]"
         />
-        <motion.div
-          animate={{
-            opacity: [0.1, 0.2, 0.1],
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-aurora-teal/10 blur-[80px]"
-        />
       </div>
 
       {/* Skip button */}
-      {currentPhase < 3 && (
+      {phase !== 'ready' && phase !== 'connecting' && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
+          transition={{ delay: 0.5 }}
           className="absolute top-4 right-4 z-20 safe-area-top"
         >
           <Button
@@ -218,69 +243,254 @@ export function AppleOnboardingFlow() {
       )}
 
       {/* Main content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 safe-area-top safe-area-bottom">
-        {/* Flow Logo */}
-        {currentPhase === 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.6 }}
-            className="mb-8"
-          >
-            <FlowLogo variant="full" size="md" animate />
-          </motion.div>
-        )}
-        
-        {/* Floating Apps Constellation */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
-          className="mb-8"
-        >
-          <FloatingAppsOrbit 
-            phase={orbitPhase} 
-            onSyncComplete={handleSyncComplete}
-          />
-        </motion.div>
-
-        {/* Phase content */}
+      <div className="relative z-10 h-full flex flex-col safe-area-top safe-area-bottom">
         <AnimatePresence mode="wait">
-          <motion.div
-            key={phase.id}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-            className="text-center max-w-sm"
-          >
-            {/* Title */}
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-3xl font-bold text-foreground mb-3 tracking-tight"
+          {/* WELCOME PHASE */}
+          {phase === 'welcome' && (
+            <motion.div
+              key="welcome"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex-1 flex flex-col items-center justify-center px-8"
             >
-              {phase.title}
-            </motion.h1>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6 }}
+                className="mb-8"
+              >
+                <FlowLogo variant="full" size="lg" animate />
+              </motion.div>
 
-            {/* Subtitle */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-muted-foreground text-lg"
-            >
-              {phase.subtitle}
-            </motion.p>
+              <motion.h1
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl font-bold text-foreground mb-3 tracking-tight text-center"
+              >
+                Welcome to FLOW
+              </motion.h1>
 
-            {/* Features (only on ready phase) */}
-            {currentPhase === 3 && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-muted-foreground text-lg text-center max-w-xs"
+              >
+                Your unified payment intelligence layer
+              </motion.p>
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.6 }}
+                className="mt-12 w-full max-w-xs"
+              >
+                <Button
+                  onClick={() => setPhase('select')}
+                  className="w-full h-14 rounded-2xl aurora-gradient text-white text-base font-medium shadow-glow-aurora"
+                >
+                  Set Up FLOW
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* SELECT APPS PHASE */}
+          {phase === 'select' && (
+            <motion.div
+              key="select"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              className="flex-1 flex flex-col"
+            >
+              {/* Header */}
+              <div className="px-6 pt-16 pb-4">
+                <motion.h1
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-2xl font-bold text-foreground tracking-tight"
+                >
+                  Select Your Apps
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-muted-foreground mt-1"
+                >
+                  Choose the payment apps you use
+                </motion.p>
+              </div>
+
+              {/* App Grid */}
+              <div className="flex-1 overflow-y-auto px-4 pb-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {APP_OPTIONS.map((app, index) => (
+                    <motion.button
+                      key={app.name}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 + index * 0.05 }}
+                      onClick={() => toggleApp(app.name)}
+                      className={`relative p-4 rounded-2xl text-left transition-all ${
+                        selectedApps.has(app.name)
+                          ? 'bg-primary/10 ring-2 ring-primary'
+                          : 'bg-card hover:bg-muted/50'
+                      }`}
+                    >
+                      {/* Selection indicator */}
+                      {selectedApps.has(app.name) && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+                        >
+                          <Check className="w-3 h-3 text-primary-foreground" />
+                        </motion.div>
+                      )}
+
+                      {/* Recommended badge */}
+                      {app.recommended && !selectedApps.has(app.name) && (
+                        <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full bg-aurora-blue/10 text-aurora-blue font-medium">
+                          Popular
+                        </span>
+                      )}
+
+                      {/* Icon */}
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+                        style={{ backgroundColor: `${app.color}20` }}
+                      >
+                        <app.icon className="w-6 h-6" style={{ color: app.color }} />
+                      </div>
+
+                      {/* Info */}
+                      <p className="font-medium text-foreground text-sm">{app.displayName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{app.description}</p>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-8 pt-4 space-y-3">
+                <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-2">
+                  <Shield className="w-3.5 h-3.5" />
+                  FLOW never moves money without your confirmation
+                </p>
+                
+                <Button
+                  onClick={connectApps}
+                  disabled={selectedApps.size === 0}
+                  className="w-full h-14 rounded-2xl aurora-gradient text-white text-base font-medium shadow-glow-aurora disabled:opacity-50 disabled:shadow-none"
+                >
+                  Connect {selectedApps.size} App{selectedApps.size !== 1 ? 's' : ''}
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* CONNECTING PHASE */}
+          {phase === 'connecting' && (
+            <motion.div
+              key="connecting"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex flex-col items-center justify-center px-8"
+            >
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                className="mb-8"
+              >
+                <div className="w-24 h-24 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
+                  <Loader2 className="w-10 h-10 text-white animate-spin" />
+                </div>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-2xl font-bold text-foreground mb-2 text-center"
+              >
+                Setting Up FLOW
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-muted-foreground text-center"
+              >
+                Connecting {connectedCount} of {selectedApps.size} apps...
+              </motion.p>
+
+              {/* Progress bar */}
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: '100%' }}
+                transition={{ delay: 0.2 }}
+                className="mt-8 w-full max-w-xs h-2 bg-muted rounded-full overflow-hidden"
+              >
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(connectedCount / selectedApps.size) * 100}%` }}
+                  className="h-full aurora-gradient rounded-full"
+                  transition={{ duration: 0.3 }}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* READY PHASE */}
+          {phase === 'ready' && (
+            <motion.div
+              key="ready"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex-1 flex flex-col items-center justify-center px-8"
+            >
+              {/* Success animation */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                className="mb-8"
+              >
+                <div className="w-24 h-24 rounded-full aurora-gradient flex items-center justify-center shadow-glow-aurora">
+                  <Check className="w-12 h-12 text-white" />
+                </div>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-3xl font-bold text-foreground mb-3 tracking-tight text-center"
+              >
+                You're All Set
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-muted-foreground text-lg text-center"
+              >
+                One tap. Best rail. Every time.
+              </motion.p>
+
+              {/* Features */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
                 className="mt-8 space-y-3"
               >
                 {FEATURES.map((feature, index) => (
@@ -288,7 +498,7 @@ export function AppleOnboardingFlow() {
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 + index * 0.1 }}
+                    transition={{ delay: 0.5 + index * 0.1 }}
                     className="flex items-center justify-center gap-3 text-sm text-muted-foreground"
                   >
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -298,8 +508,33 @@ export function AppleOnboardingFlow() {
                   </motion.div>
                 ))}
               </motion.div>
-            )}
-          </motion.div>
+
+              {/* Connected apps count */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="mt-6 text-sm text-muted-foreground"
+              >
+                {selectedApps.size} payment app{selectedApps.size !== 1 ? 's' : ''} connected
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="mt-8 w-full max-w-xs"
+              >
+                <Button
+                  onClick={handleGetStarted}
+                  className="w-full h-14 rounded-2xl aurora-gradient text-white text-base font-medium shadow-glow-aurora"
+                >
+                  Get Started
+                  <Sparkles className="w-5 h-5 ml-2" />
+                </Button>
+              </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Progress indicators */}
@@ -307,68 +542,24 @@ export function AppleOnboardingFlow() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-12 flex gap-2"
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2"
         >
-          {PHASES.map((_, i) => (
-            <motion.div
-              key={i}
-              animate={{
-                width: i === currentPhase ? 24 : 8,
-                backgroundColor: i <= currentPhase 
-                  ? 'hsl(var(--primary))' 
-                  : 'hsl(var(--muted))',
-              }}
-              transition={{ duration: 0.3 }}
-              className="h-2 rounded-full"
-            />
-          ))}
-        </motion.div>
-
-        {/* Action button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-8 w-full max-w-xs"
-        >
-          {currentPhase === 3 ? (
-            <Button
-              onClick={handleGetStarted}
-              className="w-full h-14 rounded-2xl aurora-gradient text-white text-base font-medium shadow-glow-aurora"
-            >
-              Get Started
-              <Sparkles className="w-5 h-5 ml-2" />
-            </Button>
-          ) : currentPhase === 0 ? (
-            <Button
-              onClick={handleNext}
-              className="w-full h-14 rounded-2xl aurora-gradient text-white text-base font-medium shadow-glow-aurora"
-            >
-              Begin Setup
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
-          ) : currentPhase === 1 ? (
-            <Button
-              onClick={handleNext}
-              variant="ghost"
-              className="w-full h-14 rounded-2xl text-base font-medium"
-            >
-              <motion.span
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                Scanning...
-              </motion.span>
-            </Button>
-          ) : (
-            <div className="h-14 flex items-center justify-center">
+          {['welcome', 'select', 'connecting', 'ready'].map((p, i) => {
+            const phaseIndex = ['welcome', 'select', 'connecting', 'ready'].indexOf(phase);
+            return (
               <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
+                key={p}
+                animate={{
+                  width: p === phase ? 24 : 8,
+                  backgroundColor: i <= phaseIndex
+                    ? 'hsl(var(--primary))'
+                    : 'hsl(var(--muted))',
+                }}
+                transition={{ duration: 0.3 }}
+                className="h-2 rounded-full"
               />
-            </div>
-          )}
+            );
+          })}
         </motion.div>
       </div>
 
