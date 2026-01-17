@@ -237,6 +237,69 @@ const ActivityPage = () => {
     loadLogs();
   }, [loadLogs]);
 
+  // Real-time subscription for instant updates
+  useEffect(() => {
+    const setupRealtimeSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const channel = supabase
+        .channel('transaction_logs_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'transaction_logs',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // Add new transaction to the top of the list
+            const newLog = payload.new as TransactionLog;
+            setLogs((prevLogs) => {
+              // Check if we're showing demo data
+              if (isShowingDemoData) {
+                // Replace demo data with real data
+                setIsShowingDemoData(false);
+                return [newLog];
+              }
+              // Avoid duplicates
+              if (prevLogs.some(log => log.id === newLog.id)) {
+                return prevLogs;
+              }
+              return [newLog, ...prevLogs];
+            });
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'transaction_logs',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            // Update existing transaction
+            const updatedLog = payload.new as TransactionLog;
+            setLogs((prevLogs) =>
+              prevLogs.map(log => log.id === updatedLog.id ? updatedLog : log)
+            );
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    const cleanup = setupRealtimeSubscription();
+    return () => {
+      cleanup.then(unsub => unsub?.());
+    };
+  }, [isShowingDemoData]);
+
   const filteredLogs = logs.filter(log => {
     if (typeFilter !== "all") {
       if (typeFilter === "payments" && log.intent_type !== "PayMerchant") return false;
