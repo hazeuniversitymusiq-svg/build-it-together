@@ -16,11 +16,11 @@ interface FlowLogoProps {
 }
 
 const sizeMap = {
-  xs: { icon: 20, full: 60 },
-  sm: { icon: 32, full: 80 },
-  md: { icon: 48, full: 120 },
-  lg: { icon: 64, full: 160 },
-  xl: { icon: 96, full: 240 },
+  xs: { icon: 24, full: 80 },
+  sm: { icon: 40, full: 100 },
+  md: { icon: 56, full: 140 },
+  lg: { icon: 72, full: 180 },
+  xl: { icon: 112, full: 280 },
 };
 
 export const FlowLogo = ({ 
