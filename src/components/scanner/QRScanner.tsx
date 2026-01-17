@@ -19,6 +19,13 @@ import flowIcon from '@/assets/flow-icon.png';
 
 type ScannerMode = 'scan' | 'receive' | 'send';
 
+// Test QR codes for demo/prototype mode
+const TEST_QR_CODES = {
+  merchant: "00020101021226580011com.duitnow0127DUITNOW://PAY?ref=TEST00015204599953031585802MY5913MAMAK CORNER6012KUALA LUMPUR540512.506304ABCD",
+  flow: "flow://pay/Kedai%20Kopi/8.50/INV-2024-001",
+  static: "00020101021126580011com.duitnow0127DUITNOW://PAY?ref=TEST00025204599953031585802MY5910NASI LEMAK6012KUALA LUMPUR6304EFGH",
+};
+
 interface QRScannerProps {
   onScan: (data: string) => void;
   onClose: () => void;
@@ -429,6 +436,46 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
 
             <motion.div className="absolute bottom-0 left-0 right-0 p-6 safe-area-bottom">
               <p className="text-white/50 text-sm text-center mb-4">Position QR code within the frame</p>
+              
+              {/* Test Mode Buttons for Prototype */}
+              <div className="mt-2">
+                <p className="text-white/40 text-xs text-center mb-2">Test Mode</p>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onScan(TEST_QR_CODES.merchant);
+                    }}
+                    className="glass-dark border-white/10 text-white text-xs px-3 py-1.5 h-auto"
+                  >
+                    <QrCode className="w-3 h-3 mr-1.5" />
+                    DuitNow
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onScan(TEST_QR_CODES.flow);
+                    }}
+                    className="glass-dark border-white/10 text-white text-xs px-3 py-1.5 h-auto"
+                  >
+                    <QrCode className="w-3 h-3 mr-1.5" />
+                    FLOW
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onScan(TEST_QR_CODES.static);
+                    }}
+                    className="glass-dark border-white/10 text-white text-xs px-3 py-1.5 h-auto"
+                  >
+                    <QrCode className="w-3 h-3 mr-1.5" />
+                    Static
+                  </Button>
+                </div>
+              </div>
             </motion.div>
           </>
         )}
