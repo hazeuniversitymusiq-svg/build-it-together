@@ -1,15 +1,10 @@
 /**
  * Quick Connect Flow Component
  * 
- * Seamless one-tap connection experience that delivers on FLOW's promise:
- * "Connect to your existing wallets, banks, and bill apps"
+ * Honest connection flow with user-controlled app selection:
+ * Select Apps → Connecting (real DB writes) → Complete
  * 
- * Features:
- * - Auto-detection of installed apps
- * - One-tap connect all
- * - Visual progress feedback with real-time status
- * - Success checkmarks and animations
- * - Smart defaults
+ * No fake "detecting" animations - users choose their apps.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -26,7 +21,6 @@ import {
   Loader2,
   Sparkles,
   ShieldCheck,
-  RefreshCw,
   CircleCheck,
   Circle,
   AlertCircle,
@@ -64,7 +58,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   biller: 'Bills & Utilities',
 };
 
-// Individual app row with connection status
+// Smart defaults - popular apps pre-selected
+const POPULAR_APPS = ['TouchNGo', 'GrabPay', 'Maybank', 'DuitNow', 'Atome'];
+
+// Individual app row with connection status (for connecting phase)
 function AppConnectionRow({ 
   app, 
   status,
@@ -193,31 +190,36 @@ function AppConnectionRow({
   );
 }
 
-// Compact pill for the ready phase
-function AppPill({ 
+// Selectable app pill for the select phase
+function SelectableAppPill({ 
   app, 
-  isConnected 
+  isSelected,
+  onToggle,
+  isPopular,
 }: { 
   app: AppDefinition; 
-  isConnected: boolean;
+  isSelected: boolean;
+  onToggle: () => void;
+  isPopular?: boolean;
 }) {
-  const Icon = CATEGORY_ICONS[app.category] || Wallet;
-  
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      onClick={onToggle}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       className={`
         flex items-center gap-2 px-3 py-2 rounded-full text-sm
-        transition-all duration-300 cursor-default
-        ${isConnected 
-          ? 'bg-success/10 text-success border border-success/20' 
-          : 'bg-muted/50 border border-muted-foreground/10 hover:bg-muted/70'
+        transition-all duration-200 relative
+        ${isSelected 
+          ? 'bg-success/10 text-success border border-success/30' 
+          : 'bg-muted/50 text-foreground border border-muted-foreground/10 hover:bg-muted/70'
         }
       `}
     >
-      {isConnected ? (
+      {isSelected ? (
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -226,10 +228,13 @@ function AppPill({
           <Check className="w-4 h-4" />
         </motion.div>
       ) : (
-        <Icon className="w-4 h-4 text-muted-foreground" />
+        <Circle className="w-4 h-4 text-muted-foreground/50" />
       )}
-      <span className={isConnected ? 'font-medium' : ''}>{app.displayName}</span>
-    </motion.div>
+      <span className={isSelected ? 'font-medium' : ''}>{app.displayName}</span>
+      {isPopular && !isSelected && (
+        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-aurora-blue" />
+      )}
+    </motion.button>
   );
 }
 
@@ -243,35 +248,42 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
     detectedApps,
     connectedApps,
     quickConnect,
-    totalConnected,
     totalBalance,
   } = useConnectionEngine();
 
-  const [phase, setPhase] = useState<'detecting' | 'ready' | 'connecting' | 'complete'>('detecting');
+  // Start directly on 'select' phase - no fake detecting
+  const [phase, setPhase] = useState<'select' | 'connecting' | 'complete'>('select');
+  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
   const [appStates, setAppStates] = useState<Map<string, AppConnectionState>>(new Map());
   const [progress, setProgress] = useState(0);
   const [successCount, setSuccessCount] = useState(0);
-  const [errorCount, setErrorCount] = useState(0);
 
-  // Initialize app states when detected apps change
+  // Initialize selected apps with smart defaults when apps are loaded
   useEffect(() => {
-    if (detectedApps.length > 0) {
+    if (detectedApps.length > 0 && selectedApps.size === 0) {
+      const defaults = new Set<string>();
+      detectedApps.forEach(app => {
+        // Pre-select popular apps
+        if (POPULAR_APPS.includes(app.name)) {
+          defaults.add(app.name);
+        }
+      });
+      // If no popular apps found, select first 4
+      if (defaults.size === 0) {
+        detectedApps.slice(0, 4).forEach(app => defaults.add(app.name));
+      }
+      setSelectedApps(defaults);
+      
+      // Initialize app states
       const initialStates = new Map<string, AppConnectionState>();
       detectedApps.forEach(app => {
         initialStates.set(app.name, { status: 'pending' });
       });
       setAppStates(initialStates);
     }
-  }, [detectedApps]);
+  }, [detectedApps, selectedApps.size]);
 
-  // Update phase based on loading state
-  useEffect(() => {
-    if (!isLoading && phase === 'detecting') {
-      setPhase('ready');
-    }
-  }, [isLoading, phase]);
-
-  // Check for already connected apps
+  // Mark already connected apps
   useEffect(() => {
     if (connectedApps.length > 0) {
       setAppStates(prev => {
@@ -286,6 +298,19 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
     }
   }, [connectedApps]);
 
+  const toggleApp = useCallback((appName: string) => {
+    haptics.selection();
+    setSelectedApps(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(appName)) {
+        newSet.delete(appName);
+      } else {
+        newSet.add(appName);
+      }
+      return newSet;
+    });
+  }, [haptics]);
+
   const updateAppStatus = useCallback((appName: string, status: AppStatus, message?: string) => {
     setAppStates(prev => {
       const newStates = new Map(prev);
@@ -295,19 +320,27 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
   }, []);
 
   const handleQuickConnect = async () => {
+    if (selectedApps.size === 0) {
+      toast({
+        title: 'Select Apps',
+        description: 'Please select at least one app to connect.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setPhase('connecting');
     haptics.impact();
     setProgress(0);
     setSuccessCount(0);
-    setErrorCount(0);
 
-    const totalApps = detectedApps.length;
+    const appsToConnect = detectedApps.filter(app => selectedApps.has(app.name));
+    const totalApps = appsToConnect.length;
     let currentSuccess = 0;
-    let currentError = 0;
 
-    // Animate through each app with staggered connection
-    for (let i = 0; i < detectedApps.length; i++) {
-      const app = detectedApps[i];
+    // Animate through each selected app with staggered connection
+    for (let i = 0; i < appsToConnect.length; i++) {
+      const app = appsToConnect[i];
       
       // Set to connecting
       updateAppStatus(app.name, 'connecting');
@@ -326,19 +359,20 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
     // Update individual app statuses based on results
     if (result.results && result.results.length > 0) {
       result.results.forEach((appResult) => {
-        if (appResult.isConnected) {
-          updateAppStatus(appResult.appName, 'success');
-          currentSuccess++;
-          haptics.selection();
-        } else {
-          updateAppStatus(appResult.appName, 'error', appResult.error);
-          currentError++;
+        if (selectedApps.has(appResult.appName)) {
+          if (appResult.isConnected) {
+            updateAppStatus(appResult.appName, 'success');
+            currentSuccess++;
+            haptics.selection();
+          } else {
+            updateAppStatus(appResult.appName, 'error', appResult.error);
+          }
         }
       });
     } else {
-      // Fallback: mark all as success if quickConnect succeeded
+      // Fallback: mark selected as success if quickConnect succeeded
       if (result.success) {
-        detectedApps.forEach(app => {
+        appsToConnect.forEach(app => {
           updateAppStatus(app.name, 'success');
           currentSuccess++;
         });
@@ -346,7 +380,6 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
     }
 
     setSuccessCount(currentSuccess || result.synced);
-    setErrorCount(currentError || result.failed);
     setProgress(100);
 
     // Short delay before completing
@@ -357,7 +390,7 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
       setPhase('complete');
       toast({
         title: 'Apps Connected!',
-        description: `${result.synced} apps linked to FLOW`,
+        description: `${currentSuccess || result.synced} apps linked to FLOW`,
       });
 
       // Navigate after a short delay
@@ -372,7 +405,7 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
         description: `Could not connect apps. Please try again.`,
         variant: 'destructive',
       });
-      setPhase('ready');
+      setPhase('select');
     }
   };
 
@@ -388,7 +421,8 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
     return acc;
   }, {} as Record<string, AppDefinition[]>);
 
-  const connectedAppNames = new Set(connectedApps.map(a => a.appName));
+  // Get apps to display during connecting phase
+  const appsToConnect = detectedApps.filter(app => selectedApps.has(app.name));
 
   return (
     <div className="min-h-screen bg-background flex flex-col safe-area-top safe-area-bottom relative overflow-hidden">
@@ -413,31 +447,10 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
       {/* Main content */}
       <div className="flex-1 flex flex-col justify-center px-6 relative z-10">
         <AnimatePresence mode="wait">
-          {/* Detecting phase */}
-          {phase === 'detecting' && (
+          {/* Select phase - User chooses apps */}
+          {phase === 'select' && (
             <motion.div
-              key="detecting"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                className="w-20 h-20 mx-auto mb-6 rounded-full aurora-gradient flex items-center justify-center"
-              >
-                <RefreshCw className="w-10 h-10 text-white" />
-              </motion.div>
-              <h2 className="text-2xl font-semibold mb-2">Detecting Your Apps</h2>
-              <p className="text-muted-foreground">Finding wallets, banks, and payment apps...</p>
-            </motion.div>
-          )}
-
-          {/* Ready phase */}
-          {phase === 'ready' && (
-            <motion.div
-              key="ready"
+              key="select"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -452,37 +465,46 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                   <Sparkles className="w-10 h-10 text-white" />
                 </motion.div>
                 <h1 className="text-2xl font-bold mb-2">
-                  Found {detectedApps.length} Apps
+                  Select Your Apps
                 </h1>
                 <p className="text-muted-foreground">
-                  Connect them all to FLOW with one tap
+                  Tap to select the apps you use
                 </p>
               </div>
 
-              {/* Detected apps by category */}
-              <div className="space-y-4 max-h-[40vh] overflow-y-auto">
-                {Object.entries(groupedApps).map(([category, apps], catIndex) => (
-                  <motion.div
-                    key={category}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: catIndex * 0.1 }}
-                  >
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                      {CATEGORY_LABELS[category] || category}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {apps.map(app => (
-                        <AppPill
-                          key={app.name}
-                          app={app}
-                          isConnected={connectedAppNames.has(app.name)}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              {/* Loading state */}
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                /* Selectable apps by category */
+                <div className="space-y-4 max-h-[40vh] overflow-y-auto">
+                  {Object.entries(groupedApps).map(([category, apps], catIndex) => (
+                    <motion.div
+                      key={category}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: catIndex * 0.1 }}
+                    >
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+                        {CATEGORY_LABELS[category] || category}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {apps.map(app => (
+                          <SelectableAppPill
+                            key={app.name}
+                            app={app}
+                            isSelected={selectedApps.has(app.name)}
+                            onToggle={() => toggleApp(app.name)}
+                            isPopular={POPULAR_APPS.includes(app.name)}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -521,14 +543,14 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                   <Progress value={progress} className="h-2" />
                   <div className="flex justify-between mt-2 text-xs text-muted-foreground">
                     <span>{Math.round(progress)}%</span>
-                    <span>{successCount} of {detectedApps.length} connected</span>
+                    <span>{successCount} of {appsToConnect.length} connected</span>
                   </div>
                 </div>
               </div>
 
               {/* App list with status */}
               <div className="flex-1 overflow-y-auto space-y-2 pb-4">
-                {detectedApps.map((app, index) => (
+                {appsToConnect.map((app, index) => (
                   <AppConnectionRow
                     key={app.name}
                     app={app}
@@ -610,7 +632,7 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                 transition={{ delay: 0.5 }}
                 className="mt-6 flex flex-wrap justify-center gap-2"
               >
-                {detectedApps.slice(0, 5).map((app, i) => (
+                {appsToConnect.slice(0, 5).map((app, i) => (
                   <motion.div
                     key={app.name}
                     initial={{ scale: 0 }}
@@ -622,14 +644,14 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                     <span>{app.displayName}</span>
                   </motion.div>
                 ))}
-                {detectedApps.length > 5 && (
+                {appsToConnect.length > 5 && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 1.1 }}
                     className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-sm"
                   >
-                    +{detectedApps.length - 5} more
+                    +{appsToConnect.length - 5} more
                   </motion.div>
                 )}
               </motion.div>
@@ -650,7 +672,7 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
 
       {/* Footer */}
       <div className="px-6 pb-8 relative z-10">
-        {phase === 'ready' && (
+        {phase === 'select' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -666,14 +688,14 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
             {/* Connect button */}
             <Button
               onClick={handleQuickConnect}
-              disabled={isConnecting || detectedApps.length === 0}
+              disabled={isConnecting || selectedApps.size === 0 || isLoading}
               className="w-full h-14 text-base font-medium rounded-2xl aurora-gradient text-white shadow-glow-aurora"
             >
               {isConnecting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  Connect All {detectedApps.length} Apps
+                  Connect {selectedApps.size} App{selectedApps.size !== 1 ? 's' : ''}
                   <ChevronRight className="w-5 h-5 ml-2" />
                 </>
               )}
