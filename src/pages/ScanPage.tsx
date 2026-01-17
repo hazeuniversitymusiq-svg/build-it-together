@@ -234,7 +234,7 @@ const ScanPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background flex flex-col px-6 safe-area-top safe-area-bottom pb-36">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

@@ -293,7 +293,7 @@ export function ScanPayDemo() {
   };
 
   return (
-    <div className="glass-card rounded-3xl p-5 shadow-float-lg">
+    <div className="glass-card rounded-2xl p-4 shadow-float">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -317,37 +317,28 @@ export function ScanPayDemo() {
         {step === 'idle' && (
           <motion.div
             key="idle"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="flex flex-col items-center py-8"
+            exit={{ opacity: 0, y: -10 }}
+            className="flex flex-col items-center py-4"
           >
             <motion.button
               onClick={startDemo}
-              className="relative w-28 h-28 rounded-full bg-gradient-to-br from-aurora-purple via-aurora-blue to-aurora-pink flex items-center justify-center shadow-glow cursor-pointer"
+              className="relative w-20 h-20 rounded-full bg-gradient-to-br from-aurora-purple via-aurora-blue to-aurora-pink flex items-center justify-center shadow-glow cursor-pointer"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               {/* Pulse effect */}
               <motion.div
                 className="absolute inset-0 rounded-full border-2 border-aurora-blue/50"
-                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
-              <QrCode size={40} className="text-white" />
+              <QrCode size={28} className="text-white" />
             </motion.button>
             
-            <p className="mt-4 font-semibold text-foreground">Tap to Start Demo</p>
-            <p className="text-sm text-muted-foreground">Experience the full scan-to-pay flow</p>
-            
-            {/* Feature highlights */}
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              {['Smart Routing', 'Auto Top-Up', '5-Factor Scoring'].map((feature) => (
-                <Badge key={feature} variant="outline" className="text-xs">
-                  {feature}
-                </Badge>
-              ))}
-            </div>
+            <p className="mt-3 font-medium text-foreground text-sm">Tap to Start Demo</p>
+            <p className="text-xs text-muted-foreground">Experience full scan-to-pay flow</p>
           </motion.div>
         )}
 
@@ -358,21 +349,19 @@ export function ScanPayDemo() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center py-8"
+            className="flex flex-col items-center py-4"
           >
             <motion.div
-              className="relative w-24 h-24 rounded-2xl bg-muted/50 flex items-center justify-center overflow-hidden"
+              className="relative w-16 h-16 rounded-xl bg-muted/50 flex items-center justify-center overflow-hidden"
             >
-              {/* Scan line animation */}
               <motion.div
-                className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-aurora-blue to-transparent"
-                animate={{ y: [-48, 48, -48] }}
+                className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-aurora-blue to-transparent"
+                animate={{ y: [-32, 32, -32] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
               />
-              <QrCode size={48} className="text-muted-foreground" />
+              <QrCode size={32} className="text-muted-foreground" />
             </motion.div>
-            <p className="mt-4 font-semibold text-foreground">Scanning QR Code...</p>
-            <p className="text-sm text-muted-foreground">Detecting merchant payment code</p>
+            <p className="mt-3 font-medium text-foreground text-sm">Scanning...</p>
           </motion.div>
         )}
 
@@ -383,36 +372,25 @@ export function ScanPayDemo() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="py-4"
+            className="py-3"
           >
-            <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="flex items-center justify-center gap-2 mb-2">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ type: 'spring', damping: 10 }}
-                className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center"
+                className="w-6 h-6 rounded-full bg-success/20 flex items-center justify-center"
               >
-                <Check size={20} className="text-success" />
+                <Check size={14} className="text-success" />
               </motion.div>
-              <span className="text-sm font-medium text-success">QR Code Recognized</span>
+              <span className="text-xs font-medium text-success">QR Recognized</span>
             </div>
 
-            <div className="glass rounded-2xl p-4 text-center">
-              <div className="text-3xl mb-2">{merchant.icon}</div>
-              <h4 className="font-semibold text-foreground">{merchant.name}</h4>
-              <p className="text-xs text-muted-foreground">{merchant.category}</p>
-              <p className="text-2xl font-bold text-foreground mt-2">
+            <div className="glass rounded-xl p-3 text-center">
+              <div className="text-xl mb-1">{merchant.icon}</div>
+              <h4 className="font-medium text-foreground text-sm">{merchant.name}</h4>
+              <p className="text-lg font-bold text-foreground">
                 RM {merchant.amount.toFixed(2)}
               </p>
-              
-              {/* Accepted rails */}
-              <div className="flex flex-wrap justify-center gap-1 mt-3">
-                {merchant.acceptedRails.slice(0, 4).map((rail) => (
-                  <Badge key={rail} variant="secondary" className="text-xs">
-                    {rail}
-                  </Badge>
-                ))}
-              </div>
             </div>
           </motion.div>
         )}
@@ -424,52 +402,23 @@ export function ScanPayDemo() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="py-6"
+            className="py-3"
           >
-            <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center gap-2 mb-2">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                className="w-8 h-8 rounded-full bg-aurora-purple/20 flex items-center justify-center"
+                className="w-6 h-6 rounded-full bg-aurora-purple/20 flex items-center justify-center"
               >
-                <Sparkles size={16} className="text-aurora-purple" />
+                <Sparkles size={12} className="text-aurora-purple" />
               </motion.div>
-              <span className="font-semibold text-foreground">FLOW Intelligence Active</span>
+              <span className="text-sm font-medium text-foreground">Smart Scoring</span>
             </div>
 
-            {/* Progress */}
-            <div className="space-y-2 mb-4">
-              <Progress value={scoringProgress} className="h-2" />
-              <p className="text-xs text-muted-foreground text-center">
-                {currentScoringFactor}
-              </p>
-            </div>
-
-            {/* Scoring factors visualization */}
-            <div className="grid grid-cols-5 gap-1">
-              {[
-                { icon: Store, label: 'Compat', weight: 35, active: scoringProgress >= 35 },
-                { icon: Wallet, label: 'Balance', weight: 30, active: scoringProgress >= 65 },
-                { icon: TrendingUp, label: 'Priority', weight: 15, active: scoringProgress >= 80 },
-                { icon: Clock, label: 'History', weight: 10, active: scoringProgress >= 90 },
-                { icon: Activity, label: 'Health', weight: 10, active: scoringProgress >= 100 },
-              ].map((factor, i) => (
-                <motion.div
-                  key={factor.label}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className={cn(
-                    "flex flex-col items-center p-2 rounded-lg transition-colors",
-                    factor.active ? "bg-success/10" : "bg-muted/30"
-                  )}
-                >
-                  <factor.icon size={14} className={factor.active ? "text-success" : "text-muted-foreground"} />
-                  <span className="text-[10px] text-muted-foreground mt-1">{factor.label}</span>
-                  <span className="text-[10px] font-medium">{factor.weight}%</span>
-                </motion.div>
-              ))}
-            </div>
+            <Progress value={scoringProgress} className="h-1.5 mb-2" />
+            <p className="text-[10px] text-muted-foreground text-center">
+              {currentScoringFactor}
+            </p>
           </motion.div>
         )}
 
@@ -477,64 +426,48 @@ export function ScanPayDemo() {
         {step === 'scored' && (
           <motion.div
             key="scored"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="py-4"
+            exit={{ opacity: 0, y: -10 }}
+            className="py-2"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <Zap size={16} className="text-aurora-blue" />
-              <span className="text-sm font-medium text-foreground">Smart Recommendation</span>
+            <div className="flex items-center gap-2 mb-2">
+              <Zap size={14} className="text-aurora-blue" />
+              <span className="text-xs font-medium text-foreground">Best Payment Method</span>
             </div>
 
-            <div className="space-y-2">
-              {scoredRails.slice(0, 3).map((rail, i) => {
+            <div className="space-y-1.5">
+              {scoredRails.slice(0, 2).map((rail, i) => {
                 const Icon = getRailIcon(rail.type);
                 return (
                   <motion.div
                     key={rail.name}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.15 }}
+                    transition={{ delay: i * 0.1 }}
                     onClick={() => setSelectedRail(rail)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
+                      "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all",
                       rail.isRecommended 
                         ? "bg-success/10 border border-success/30" 
-                        : selectedRail?.name === rail.name
-                          ? "bg-aurora-blue/10 border border-aurora-blue/30"
-                          : "bg-muted/30 hover:bg-muted/50"
+                        : "bg-muted/30"
                     )}
                   >
                     <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center",
+                      "w-8 h-8 rounded-lg flex items-center justify-center",
                       rail.isRecommended ? "bg-success/20" : "bg-muted"
                     )}>
-                      <Icon size={20} className={rail.isRecommended ? "text-success" : "text-muted-foreground"} />
+                      <Icon size={16} className={rail.isRecommended ? "text-success" : "text-muted-foreground"} />
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground text-sm">{rail.name}</span>
-                        {rail.isRecommended && (
-                          <Badge className="bg-success/20 text-success text-[10px] px-1.5">
-                            Best Match
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Balance: RM {rail.balance.toFixed(2)}
-                        {rail.needsTopUp && (
-                          <span className="text-warning ml-1">• Needs top-up</span>
-                        )}
-                      </p>
+                      <span className="font-medium text-foreground text-xs">{rail.name}</span>
+                      {rail.needsTopUp && (
+                        <span className="text-[10px] text-warning ml-1">+top-up</span>
+                      )}
                     </div>
 
-                    {/* Score */}
-                    <div className="text-right">
-                      <p className="font-semibold text-foreground">{rail.totalScore}</p>
-                      <p className="text-[10px] text-muted-foreground">score</p>
-                    </div>
+                    <span className="text-xs font-semibold text-foreground">{rail.totalScore}</span>
                   </motion.div>
                 );
               })}
@@ -546,37 +479,20 @@ export function ScanPayDemo() {
         {step === 'topup_check' && selectedRail?.needsTopUp && (
           <motion.div
             key="topup"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="py-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="py-2"
           >
-            <div className="glass rounded-2xl p-4 border border-aurora-blue/30">
-              <div className="flex items-center gap-2 mb-3">
-                <ArrowUpRight size={18} className="text-aurora-blue" />
-                <span className="font-semibold text-foreground">Auto Top-Up Detected</span>
-              </div>
-              
-              <p className="text-sm text-muted-foreground mb-3">
-                Your {selectedRail.name} balance is insufficient. FLOW will automatically top up from your linked bank.
-              </p>
-
-              <div className="flex items-center justify-between p-3 bg-aurora-blue/10 rounded-xl">
+            <div className="glass rounded-xl p-3 border border-aurora-blue/30">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Building2 size={16} className="text-aurora-blue" />
-                  <span className="text-sm">Maybank</span>
+                  <ArrowUpRight size={14} className="text-aurora-blue" />
+                  <span className="text-xs font-medium text-foreground">Auto Top-Up</span>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-foreground">
-                    +RM {selectedRail.topUpAmount?.toFixed(2)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">Auto top-up</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center gap-1 mt-3 text-xs text-muted-foreground">
-                <Shield size={12} />
-                <span>Secured by FLOW</span>
+                <span className="text-xs font-semibold text-aurora-blue">
+                  +RM {selectedRail.topUpAmount?.toFixed(2)}
+                </span>
               </div>
             </div>
           </motion.div>
@@ -586,57 +502,43 @@ export function ScanPayDemo() {
         {step === 'confirm' && merchant && selectedRail && (
           <motion.div
             key="confirm"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="py-4"
+            exit={{ opacity: 0, y: -10 }}
+            className="py-2"
           >
-            {/* Summary */}
-            <div className="glass rounded-2xl p-4 mb-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="glass rounded-xl p-3 mb-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{merchant.icon}</span>
-                  <div>
-                    <p className="font-medium text-foreground">{merchant.name}</p>
-                    <p className="text-xs text-muted-foreground">{merchant.category}</p>
-                  </div>
+                  <span className="text-lg">{merchant.icon}</span>
+                  <span className="font-medium text-foreground text-sm">{merchant.name}</span>
                 </div>
-                <p className="text-xl font-bold text-foreground">
+                <span className="text-base font-bold text-foreground">
                   RM {merchant.amount.toFixed(2)}
-                </p>
+                </span>
               </div>
 
-              <div className="border-t border-border/50 pt-3">
-                <p className="text-xs text-muted-foreground mb-2">Paying with</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const Icon = getRailIcon(selectedRail.type);
-                      return <Icon size={16} className="text-success" />;
-                    })()}
-                    <span className="font-medium text-foreground">{selectedRail.name}</span>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    Score: {selectedRail.totalScore}
-                  </Badge>
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+                <div className="flex items-center gap-1.5">
+                  {(() => {
+                    const Icon = getRailIcon(selectedRail.type);
+                    return <Icon size={12} className="text-success" />;
+                  })()}
+                  <span className="text-xs text-muted-foreground">{selectedRail.name}</span>
                 </div>
-
                 {selectedRail.needsTopUp && (
-                  <div className="flex items-center gap-2 mt-2 text-xs text-aurora-blue">
-                    <ArrowUpRight size={12} />
-                    <span>+RM {selectedRail.topUpAmount?.toFixed(2)} auto top-up from bank</span>
-                  </div>
+                  <span className="text-[10px] text-aurora-blue">+top-up</span>
                 )}
               </div>
             </div>
 
-            {/* Confirm Button */}
             <Button
               onClick={confirmPayment}
-              className="w-full h-12 rounded-xl aurora-gradient text-white font-medium"
+              size="sm"
+              className="w-full h-9 rounded-lg aurora-gradient text-white text-sm"
             >
               Confirm Payment
-              <ChevronRight size={18} className="ml-2" />
+              <ChevronRight size={14} className="ml-1" />
             </Button>
           </motion.div>
         )}
@@ -648,15 +550,14 @@ export function ScanPayDemo() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center py-8"
+            className="flex flex-col items-center py-4"
           >
             <motion.div
-              className="w-16 h-16 rounded-full border-4 border-aurora-purple/30 border-t-aurora-purple"
+              className="w-10 h-10 rounded-full border-3 border-aurora-purple/30 border-t-aurora-purple"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
             />
-            <p className="mt-4 font-semibold text-foreground">Processing Payment...</p>
-            <p className="text-sm text-muted-foreground">Executing transaction securely</p>
+            <p className="mt-2 text-sm font-medium text-foreground">Processing...</p>
           </motion.div>
         )}
 
@@ -664,60 +565,45 @@ export function ScanPayDemo() {
         {step === 'success' && merchant && selectedRail && (
           <motion.div
             key="success"
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
-            className="py-6"
+            className="py-3"
           >
             <div className="flex flex-col items-center">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ type: 'spring', damping: 10 }}
-                className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mb-3"
+                className="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center mb-2"
               >
-                <BadgeCheck size={32} className="text-success" />
+                <BadgeCheck size={24} className="text-success" />
               </motion.div>
               
-              <p className="text-lg font-bold text-foreground">Payment Complete!</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="font-bold text-foreground">Payment Complete!</p>
+              <p className="text-xs text-muted-foreground">
                 RM {merchant.amount.toFixed(2)} to {merchant.name}
               </p>
             </div>
 
-            {/* Receipt */}
-            <div className="glass rounded-2xl p-4 mt-4 space-y-2 text-sm">
+            <div className="glass rounded-lg p-2 mt-3 space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Source</span>
                 <span className="font-medium">{selectedRail.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Method</span>
-                <span className="font-medium">FLOW Smart Routing</span>
-              </div>
-              {selectedRail.needsTopUp && (
-                <div className="flex justify-between text-aurora-blue">
-                  <span>Auto Top-Up</span>
-                  <span>+RM {selectedRail.topUpAmount?.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Reference</span>
-                <span className="font-mono text-xs">{transactionId}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Status</span>
-                <span className="text-success font-medium">Approved</span>
+                <span className="text-muted-foreground">Ref</span>
+                <span className="font-mono text-[10px]">{transactionId}</span>
               </div>
             </div>
 
             <Button
               variant="outline"
+              size="sm"
               onClick={resetDemo}
-              className="w-full mt-4 h-10 rounded-xl"
+              className="w-full mt-3 h-8 rounded-lg text-xs"
             >
-              <RefreshCw size={16} className="mr-2" />
-              Run Demo Again
+              <RefreshCw size={12} className="mr-1" />
+              Run Again
             </Button>
           </motion.div>
         )}
@@ -725,21 +611,20 @@ export function ScanPayDemo() {
 
       {/* Step indicator */}
       {step !== 'idle' && step !== 'success' && (
-        <div className="flex justify-center gap-1.5 mt-4">
-          {['scanning', 'parsed', 'scoring', 'scored', 'confirm'].map((s, i) => {
+        <div className="flex justify-center gap-1 mt-3">
+          {['scanning', 'parsed', 'scoring', 'scored', 'confirm'].map((s) => {
             const steps = ['scanning', 'parsed', 'scoring', 'scored', 'topup_check', 'confirm'];
             const currentIndex = steps.indexOf(step);
             const thisIndex = ['scanning', 'parsed', 'scoring', 'scored', 'confirm'].indexOf(s);
             const isActive = thisIndex <= currentIndex;
             
             return (
-              <motion.div
+              <div
                 key={s}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
+                  "w-1.5 h-1.5 rounded-full transition-colors",
                   isActive ? "bg-aurora-blue" : "bg-muted"
                 )}
-                animate={{ scale: step === s ? 1.2 : 1 }}
               />
             );
           })}
