@@ -121,7 +121,7 @@ const ContactSendHistory = ({ contactId, contactName, contactPhone }: ContactSen
     >
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full glass-subtle rounded-2xl p-3 flex items-center justify-between transition-all hover:bg-white/60 dark:hover:bg-white/10"
+        className="w-full glass-subtle rounded-2xl p-3 flex items-center justify-between transition-all hover:bg-black/5 dark:hover:bg-white/10"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-aurora-purple/10 flex items-center justify-center">
@@ -161,7 +161,7 @@ const ContactSendHistory = ({ contactId, contactName, contactPhone }: ContactSen
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    tx.status === 'success' ? 'bg-success/10' : 'bg-muted'
+                    tx.status === 'success' ? 'bg-success/10' : 'bg-white/20 dark:bg-white/10'
                   }`}>
                     {tx.status === 'success' ? (
                       <ArrowUpRight className="w-4 h-4 text-success" />

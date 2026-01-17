@@ -164,10 +164,10 @@ const BillReminderSurface = forwardRef<HTMLDivElement, BillReminderSurfaceProps>
         animate={{ opacity: 1, y: 0 }}
         className={className}
       >
-        <div className="p-4 rounded-2xl bg-white dark:bg-gray-900/50 border border-border/40 shadow-sm">
+        <div className="p-4 rounded-2xl glass-card border border-border/40 shadow-sm">
           <div className="flex items-start gap-3">
             {/* Minimal Biller Icon */}
-            <div className={`w-10 h-10 rounded-xl ${billerColors[urgentBill.billerName] || "bg-gray-100"} flex items-center justify-center text-white`}>
+            <div className={`w-10 h-10 rounded-xl ${billerColors[urgentBill.billerName] || "bg-muted dark:bg-white/10"} flex items-center justify-center text-white`}>
               {billerIcons[urgentBill.billerName] || <Zap className="w-4 h-4" />}
             </div>
 

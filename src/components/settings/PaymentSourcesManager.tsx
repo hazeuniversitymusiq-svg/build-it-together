@@ -278,7 +278,7 @@ const PaymentSourcesManager = () => {
                         className={`p-2 rounded-xl transition-colors ${
                           source.isLinked 
                             ? "bg-success/10 text-success hover:bg-success/20" 
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            : "bg-white/20 dark:bg-white/10 text-muted-foreground hover:bg-white/30 dark:hover:bg-white/15"
                         }`}
                       >
                         {source.isLinked ? (

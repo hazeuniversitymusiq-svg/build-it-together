@@ -188,6 +188,11 @@
     -webkit-backdrop-filter: blur(12px);
   }
   
+  .dark .glass-subtle {
+    background: hsla(0, 0%, 100%, 0.08);
+    border: 1px solid hsla(0, 0%, 100%, 0.06);
+  }
+  
   .glass-dark {
     background: hsla(0, 0%, 0%, 0.6);
     backdrop-filter: blur(24px);

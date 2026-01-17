@@ -38,7 +38,7 @@ export function KillSwitch() {
 
   if (isLoading) {
     return (
-      <div className="p-4 rounded-2xl bg-secondary animate-pulse">
+      <div className="p-4 rounded-2xl glass-subtle animate-pulse">
         <div className="h-12" />
       </div>
     );
@@ -52,7 +52,7 @@ export function KillSwitch() {
         className={`p-4 rounded-2xl ${
           isPaused 
             ? "bg-destructive/10 border border-destructive/20" 
-            : "bg-secondary"
+            : "glass-subtle"
         }`}
       >
         <div className="flex items-center justify-between">

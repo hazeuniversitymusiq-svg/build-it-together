@@ -167,7 +167,7 @@ const FrequentContacts = ({ onSelect, selectedId }: FrequentContactsProps) => {
             className={`flex-shrink-0 flex flex-col items-center p-3 rounded-2xl transition-all min-w-[80px] ${
               selectedId === contact.id
                 ? 'aurora-gradient-soft aurora-border shadow-glow-blue'
-                : 'glass-card hover:bg-white/60 dark:hover:bg-white/10'
+                : 'glass-card hover:bg-black/5 dark:hover:bg-white/10'
             }`}
           >
             <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-medium mb-2 ${
