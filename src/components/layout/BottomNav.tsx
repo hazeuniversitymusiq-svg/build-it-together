@@ -9,14 +9,13 @@
  */
 
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Home, User, Scan, CreditCard, Sparkles } from "lucide-react";
-import { useDemo } from "@/contexts/DemoContext";
+import { motion } from "framer-motion";
+import { Home, User, Scan, CreditCard, Clock } from "lucide-react";
 
-// Nav items configuration
-const baseNavItems = [
+// Nav items configuration - 5 balanced items
+const navItems = [
   { path: "/home", icon: Home, label: "Home" },
-  { path: "demo-toggle", icon: Sparkles, label: "Demo", isDemo: true },
+  { path: "/activity", icon: Clock, label: "Activity" },
   { path: "/scan", icon: Scan, label: "Scan", primary: true },
   { path: "/flow-card", icon: CreditCard, label: "Card" },
   { path: "/settings", icon: User, label: "Me" },
@@ -25,42 +24,14 @@ const baseNavItems = [
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { 
-    isDemoMode, 
-    toggleDemoMode, 
-  } = useDemo();
 
-  const navItems = baseNavItems;
-
-  const handleNavClick = (item: typeof baseNavItems[0]) => {
-    if (item.isDemo) {
-      toggleDemoMode();
-    } else {
-      navigate(item.path);
-    }
+  const handleNavClick = (path: string) => {
+    navigate(path);
   };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
       <div className="max-w-md mx-auto px-5 pb-5 safe-area-bottom">
-
-        {/* Demo Mode Active Indicator */}
-        <AnimatePresence>
-          {isDemoMode && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="mb-3 pointer-events-auto"
-            >
-              <div className="py-2.5 px-4 bg-white/70 dark:bg-black/40 backdrop-blur-2xl rounded-2xl border border-aurora-purple/20 shadow-lg flex items-center justify-center gap-2 text-sm font-medium text-aurora-purple">
-                <Sparkles size={14} className="animate-pulse" />
-                <span>Demo Mode — Tap highlights to explore</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Apple Intelligence-style floating glass pill */}
         <motion.div 
           initial={{ y: 30, opacity: 0 }}
@@ -72,7 +43,7 @@ const BottomNav = () => {
           <div className="relative pt-8">
             {/* Glass container */}
             <div 
-              className={`
+              className="
                 relative
                 bg-white/80 dark:bg-gray-900/70
                 backdrop-blur-3xl
@@ -81,25 +52,21 @@ const BottomNav = () => {
                 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12),0_4px_16px_-4px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)]
                 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4),0_4px_16px_-4px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]
                 transition-all duration-300
-                ${isDemoMode ? 'ring-1 ring-aurora-purple/30' : ''}
-              `}
+              "
             >
               {/* Inner highlight for glass effect */}
               <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent rounded-t-[28px]" />
               
               <div className="flex items-center justify-around px-3 py-3">
                 {navItems.map((item) => {
-                  const isActive = item.isDemo 
-                    ? isDemoMode 
-                    : (location.pathname === item.path || (item.path === "/home" && location.pathname === "/"));
+                  const isActive = location.pathname === item.path || (item.path === "/home" && location.pathname === "/");
                   const Icon = item.icon;
                   const isPrimary = item.primary;
-                  const isDemo = item.isDemo;
 
                   return (
                     <motion.button
                       key={item.path}
-                      onClick={() => handleNavClick(item)}
+                      onClick={() => handleNavClick(item.path)}
                       whileTap={{ scale: 0.92 }}
                       className={`relative flex flex-col items-center justify-center transition-all duration-300 ${
                         isPrimary ? "px-2" : "py-1 px-4 min-w-[60px]"
@@ -170,24 +137,13 @@ const BottomNav = () => {
                             transition={{ duration: 0.2, ease: "easeOut" }}
                             className="relative mb-1"
                           >
-                            {/* Demo mode pulsing ring */}
-                            {isDemo && isDemoMode && (
-                              <motion.div
-                                className="absolute inset-0 -m-3 rounded-full bg-aurora-purple/15"
-                                animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                              />
-                            )}
-                            
                             <Icon
                               size={26}
                               strokeWidth={isActive ? 2.2 : 1.5}
-                              fill={isActive && !isDemo ? "currentColor" : "none"}
+                              fill={isActive ? "currentColor" : "none"}
                               className={`transition-all duration-200 ${
                                 isActive 
-                                  ? isDemo 
-                                    ? "text-aurora-purple"
-                                    : "text-blue-500" 
+                                  ? "text-blue-500" 
                                   : "text-gray-400 dark:text-gray-500"
                               }`}
                             />
@@ -197,9 +153,7 @@ const BottomNav = () => {
                           <span
                             className={`text-[11px] font-medium transition-all duration-200 ${
                               isActive 
-                                ? isDemo 
-                                  ? "text-aurora-purple" 
-                                  : "text-blue-500" 
+                                ? "text-blue-500" 
                                 : "text-gray-400 dark:text-gray-500"
                             }`}
                           >
