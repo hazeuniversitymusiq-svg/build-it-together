@@ -4,16 +4,21 @@
  * The brain of FLOW - determines HOW to pay.
  * Pure rules, no ML.
  * 
+ * FLOW CARD PRIORITY CHAIN:
+ * 1. PRIMARY: Debit Card / DuitNow (instant bank debit, no balance needed)
+ * 2. SECONDARY: E-Wallets (TnG, GrabPay, Boost - uses existing balance)
+ * 3. BACKUP: Bank Transfer (fallback / auto top-up for wallets)
+ * 
  * Resolution order:
- * 1. Check wallet first (user's declared priority)
- * 2. If insufficient → prefer DEFAULT CARD for direct payment
- * 3. If no default card → calculate top-up from next source
- * 4. If unavailable → fallback to next rail
- * 5. Apply guardrails at each step
+ * 1. Try primary sources first (debit card/duitnow)
+ * 2. If unavailable → try secondary (wallets with sufficient balance)
+ * 3. If insufficient → auto top-up wallet from backup (bank)
+ * 4. Apply guardrails at each step
  */
 
 import type {
   FundingSource,
+  FundingPriorityGroup,
   PaymentRequest,
   PaymentResolution,
   ResolutionStep,
@@ -28,6 +33,80 @@ export interface ResolverContext {
   config?: GuardrailConfig;
   userState: UserPaymentState;
   fallbackPreference?: FallbackPreference;
+  useFlowCardPriority?: boolean; // Enable Flow Card priority chain
+}
+
+/**
+ * Determine priority group for a funding source type
+ */
+function getPriorityGroup(type: FundingSource['type']): FundingPriorityGroup {
+  switch (type) {
+    case 'debit_card':
+    case 'duitnow':
+      return 'primary';
+    case 'wallet':
+      return 'secondary';
+    case 'bank':
+      return 'backup';
+    case 'credit_card':
+    case 'card':
+      return 'secondary'; // Credit cards as secondary (after debit)
+    default:
+      return 'secondary';
+  }
+}
+
+/**
+ * Sort sources by Flow Card priority chain
+ */
+function sortByFlowCardPriority(sources: FundingSource[]): FundingSource[] {
+  const groupOrder: Record<FundingPriorityGroup, number> = {
+    primary: 1,
+    secondary: 2,
+    backup: 3,
+  };
+
+  return [...sources].sort((a, b) => {
+    const aGroup = a.priorityGroup || getPriorityGroup(a.type);
+    const bGroup = b.priorityGroup || getPriorityGroup(b.type);
+    
+    // First sort by priority group
+    const groupDiff = groupOrder[aGroup] - groupOrder[bGroup];
+    if (groupDiff !== 0) return groupDiff;
+    
+    // Then by user-defined priority within group
+    return a.priority - b.priority;
+  });
+}
+
+/**
+ * Find primary sources (Debit Card / DuitNow)
+ */
+function findPrimarySources(sources: FundingSource[]): FundingSource[] {
+  return sources.filter(s => {
+    const group = s.priorityGroup || getPriorityGroup(s.type);
+    return group === 'primary' && s.isLinked && s.isAvailable;
+  });
+}
+
+/**
+ * Find secondary sources (Wallets)
+ */
+function findSecondarySources(sources: FundingSource[]): FundingSource[] {
+  return sources.filter(s => {
+    const group = s.priorityGroup || getPriorityGroup(s.type);
+    return group === 'secondary' && s.isLinked && s.isAvailable;
+  });
+}
+
+/**
+ * Find backup sources (Banks for auto top-up)
+ */
+function findBackupSources(sources: FundingSource[]): FundingSource[] {
+  return sources.filter(s => {
+    const group = s.priorityGroup || getPriorityGroup(s.type);
+    return group === 'backup' && s.isLinked && s.isAvailable;
+  });
 }
 
 /**
@@ -35,16 +114,25 @@ export interface ResolverContext {
  * Cards have priority 1 when set as default
  */
 function findDefaultCard(sources: FundingSource[]): FundingSource | null {
-  // Look for cards with priority 1 (default card marker)
+  // Look for debit cards first (primary group)
+  const debitCard = sources.find(
+    s => s.type === 'debit_card' && s.isLinked && s.isAvailable && s.priority === 1
+  );
+  
+  if (debitCard) return debitCard;
+  
+  // Then any card with priority 1
   const defaultCard = sources.find(
-    s => s.type === 'card' && s.isLinked && s.isAvailable && s.priority === 1
+    s => (s.type === 'card' || s.type === 'debit_card' || s.type === 'credit_card') 
+      && s.isLinked && s.isAvailable && s.priority === 1
   );
   
   if (defaultCard) return defaultCard;
   
   // Fallback: any available card sorted by priority
   const anyCard = sources
-    .filter(s => s.type === 'card' && s.isLinked && s.isAvailable)
+    .filter(s => (s.type === 'card' || s.type === 'debit_card' || s.type === 'credit_card') 
+      && s.isLinked && s.isAvailable)
     .sort((a, b) => a.priority - b.priority)[0];
   
   return anyCard || null;
@@ -52,13 +140,24 @@ function findDefaultCard(sources: FundingSource[]): FundingSource | null {
 
 /**
  * Main resolution function - determines how to fulfill a payment
+ * 
+ * For Flow Card payments (useFlowCardPriority = true):
+ * 1. PRIMARY: Try Debit Card / DuitNow first (instant bank debit)
+ * 2. SECONDARY: Try E-Wallets if primary unavailable
+ * 3. BACKUP: Auto top-up wallet from Bank if insufficient
  */
 export function resolvePayment(
   request: PaymentRequest,
   context: ResolverContext
 ): PaymentResolution {
   const { amount } = request;
-  const { sources, config = DEFAULT_GUARDRAILS, userState, fallbackPreference = 'use_card' } = context;
+  const { 
+    sources, 
+    config = DEFAULT_GUARDRAILS, 
+    userState, 
+    fallbackPreference = 'use_card',
+    useFlowCardPriority = false 
+  } = context;
 
   // Step 1: Check guardrails first
   const guardrailCheck = checkGuardrails(request, userState, config);
@@ -73,10 +172,10 @@ export function resolvePayment(
     };
   }
 
-  // Step 2: Get available sources sorted by user's priority
-  const availableSources = sources
-    .filter(s => s.isLinked && s.isAvailable)
-    .sort((a, b) => a.priority - b.priority);
+  // Step 2: Get available sources - use Flow Card priority if enabled
+  const availableSources = useFlowCardPriority
+    ? sortByFlowCardPriority(sources.filter(s => s.isLinked && s.isAvailable))
+    : sources.filter(s => s.isLinked && s.isAvailable).sort((a, b) => a.priority - b.priority);
 
   if (availableSources.length === 0) {
     return {
@@ -88,15 +187,143 @@ export function resolvePayment(
     };
   }
 
-  // Step 3: Try to resolve with primary source (usually wallet)
+  // Step 3: Flow Card Priority Chain Resolution
+  if (useFlowCardPriority) {
+    const resolution = resolveWithFlowCardPriority(amount, availableSources, config);
+    return {
+      ...resolution,
+      requiresConfirmation: guardrailCheck.requiresConfirmation || resolution.requiresConfirmation,
+      confirmationReason: guardrailCheck.reason || resolution.confirmationReason,
+    };
+  }
+
+  // Step 4: Standard resolution (fallback)
   const primarySource = availableSources[0];
   const resolution = tryResolveWithSource(primarySource, amount, availableSources, config, fallbackPreference);
 
-  // Step 4: Apply confirmation requirements
+  // Step 5: Apply confirmation requirements
   return {
     ...resolution,
     requiresConfirmation: guardrailCheck.requiresConfirmation || resolution.requiresConfirmation,
     confirmationReason: guardrailCheck.reason || resolution.confirmationReason,
+  };
+}
+
+/**
+ * Flow Card Priority Chain Resolution
+ * 1. PRIMARY: Debit Card / DuitNow (instant bank debit)
+ * 2. SECONDARY: E-Wallets with sufficient balance
+ * 3. BACKUP: Auto top-up wallet from Bank
+ */
+function resolveWithFlowCardPriority(
+  amount: number,
+  sources: FundingSource[],
+  config: GuardrailConfig
+): PaymentResolution {
+  const primarySources = findPrimarySources(sources);
+  const secondarySources = findSecondarySources(sources);
+  const backupSources = findBackupSources(sources);
+
+  // Step 1: Try PRIMARY sources (Debit Card / DuitNow)
+  // These don't require balance check - direct bank debit
+  if (primarySources.length > 0) {
+    const bestPrimary = primarySources.sort((a, b) => a.priority - b.priority)[0];
+    return {
+      action: 'USE_SINGLE_SOURCE',
+      steps: [{
+        action: 'charge',
+        sourceId: bestPrimary.id,
+        sourceType: bestPrimary.type,
+        amount,
+        description: `Pay with ${bestPrimary.name}`,
+      }],
+      requiresConfirmation: amount > config.requireConfirmationAbove,
+      confirmationReason: amount > config.requireConfirmationAbove 
+        ? `Payment of RM${amount.toFixed(2)} requires confirmation`
+        : undefined,
+      totalAmount: amount,
+    };
+  }
+
+  // Step 2: Try SECONDARY sources (Wallets) with sufficient balance
+  const walletWithBalance = secondarySources
+    .filter(s => s.balance >= amount)
+    .sort((a, b) => a.priority - b.priority)[0];
+
+  if (walletWithBalance) {
+    return {
+      action: 'USE_SINGLE_SOURCE',
+      steps: [{
+        action: 'charge',
+        sourceId: walletWithBalance.id,
+        sourceType: walletWithBalance.type,
+        amount,
+        description: `Pay with ${walletWithBalance.name}`,
+      }],
+      requiresConfirmation: false,
+      totalAmount: amount,
+    };
+  }
+
+  // Step 3: Try SECONDARY + BACKUP (Wallet + Auto top-up from Bank)
+  const primaryWallet = secondarySources.sort((a, b) => a.priority - b.priority)[0];
+  const bankForTopUp = backupSources.sort((a, b) => a.priority - b.priority)[0];
+
+  if (primaryWallet && bankForTopUp) {
+    const shortfall = amount - primaryWallet.balance;
+    const autoCheck = canAutoTopUp(shortfall, config);
+
+    const steps: ResolutionStep[] = [
+      {
+        action: 'top_up',
+        sourceId: bankForTopUp.id,
+        sourceType: bankForTopUp.type,
+        amount: shortfall,
+        description: `Top up from ${bankForTopUp.name}`,
+      },
+      {
+        action: 'charge',
+        sourceId: primaryWallet.id,
+        sourceType: primaryWallet.type,
+        amount,
+        description: `Pay with ${primaryWallet.name}`,
+      },
+    ];
+
+    return {
+      action: 'TOP_UP_WALLET',
+      steps,
+      requiresConfirmation: !autoCheck.allowed,
+      confirmationReason: autoCheck.reason,
+      totalAmount: amount,
+    };
+  }
+
+  // Step 4: Fallback - any source that can cover it
+  for (const source of sources) {
+    if (source.balance >= amount) {
+      return {
+        action: 'USE_FALLBACK',
+        steps: [{
+          action: 'charge',
+          sourceId: source.id,
+          sourceType: source.type,
+          amount,
+          description: `Pay with ${source.name}`,
+        }],
+        requiresConfirmation: false,
+        totalAmount: amount,
+      };
+    }
+  }
+
+  // No source can cover it
+  return {
+    action: 'INSUFFICIENT_FUNDS',
+    steps: [],
+    requiresConfirmation: false,
+    blockedReason: 'Insufficient funds. Link a debit card or top up your wallet.',
+    totalAmount: amount,
   };
 }
 

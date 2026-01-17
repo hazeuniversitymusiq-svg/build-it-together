@@ -41,7 +41,7 @@ interface OrchestrationContextValue {
   updateFallbackPreference: (pref: FallbackPreference) => Promise<{ success: boolean; error: string | null }>;
   
   // Resolution
-  resolvePaymentRequest: (request: PaymentRequest) => PaymentResolution;
+  resolvePaymentRequest: (request: PaymentRequest, useFlowCardPriority?: boolean) => PaymentResolution;
   
   // State tracking
   userState: UserPaymentState;
@@ -74,14 +74,24 @@ function saveToStorage(key: string, value: unknown): void {
   }
 }
 
-// Convert RealFundingSource to orchestration FundingSource
+// Convert RealFundingSource to orchestration FundingSource with priority groups
 function toOrchestrationSource(source: RealFundingSource): FundingSource {
   // Map funding_source_type to FundingRailType
-  const typeMap: Record<string, 'wallet' | 'bank' | 'card'> = {
+  const typeMap: Record<string, FundingSource['type']> = {
     wallet: 'wallet',
     bank: 'bank',
-    debit_card: 'card',
-    credit_card: 'card',
+    debit_card: 'debit_card',
+    credit_card: 'credit_card',
+    card: 'card',
+    duitnow: 'duitnow',
+  };
+
+  // Determine priority group based on type
+  const getPriorityGroup = (type: string): 'primary' | 'secondary' | 'backup' => {
+    if (type === 'debit_card' || type === 'duitnow') return 'primary';
+    if (type === 'wallet' || type === 'credit_card' || type === 'card') return 'secondary';
+    if (type === 'bank') return 'backup';
+    return 'secondary';
   };
 
   return {
@@ -92,6 +102,7 @@ function toOrchestrationSource(source: RealFundingSource): FundingSource {
     isLinked: source.isLinked,
     isAvailable: source.isAvailable,
     priority: source.priority,
+    priorityGroup: getPriorityGroup(source.type),
   };
 }
 
@@ -170,13 +181,17 @@ export function OrchestrationProvider({ children }: { children: React.ReactNode 
     setGuardrails(prev => ({ ...prev, ...config }));
   }, []);
 
-  const resolvePaymentRequest = useCallback((request: PaymentRequest): PaymentResolution => {
+  const resolvePaymentRequest = useCallback((
+    request: PaymentRequest, 
+    useFlowCardPriority: boolean = false
+  ): PaymentResolution => {
     const currentState = getOrResetDailyState(userState);
     return resolvePayment(request, {
       sources,
       config: guardrails,
       userState: currentState,
       fallbackPreference,
+      useFlowCardPriority,
     });
   }, [sources, guardrails, userState, fallbackPreference]);
 
