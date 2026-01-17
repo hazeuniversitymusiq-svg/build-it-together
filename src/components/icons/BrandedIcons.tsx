@@ -308,6 +308,105 @@ export function CardIcon({ className, size = 24 }: BrandedIconProps) {
   );
 }
 
+// TNB (Tenaga Nasional) - Yellow/Orange theme
+export function TNBIcon({ className, size = 24 }: BrandedIconProps) {
+  return (
+    <svg 
+      viewBox="0 0 40 40" 
+      width={size} 
+      height={size} 
+      className={cn("shrink-0", className)}
+    >
+      <defs>
+        <linearGradient id="tnb-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F59E0B" />
+          <stop offset="100%" stopColor="#D97706" />
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="10" fill="url(#tnb-gradient)" />
+      {/* Lightning bolt for electricity */}
+      <path 
+        d="M22 6 L14 20 L19 20 L16 34 L28 16 L22 16 Z" 
+        fill="white"
+      />
+    </svg>
+  );
+}
+
+// Maxis - Green theme
+export function MaxisIcon({ className, size = 24 }: BrandedIconProps) {
+  return (
+    <svg 
+      viewBox="0 0 40 40" 
+      width={size} 
+      height={size} 
+      className={cn("shrink-0", className)}
+    >
+      <defs>
+        <linearGradient id="maxis-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#22C55E" />
+          <stop offset="100%" stopColor="#16A34A" />
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="10" fill="url(#maxis-gradient)" />
+      {/* Signal bars */}
+      <rect x="10" y="26" width="4" height="6" rx="1" fill="white" />
+      <rect x="16" y="22" width="4" height="10" rx="1" fill="white" />
+      <rect x="22" y="16" width="4" height="16" rx="1" fill="white" />
+      <rect x="28" y="10" width="4" height="22" rx="1" fill="white" />
+    </svg>
+  );
+}
+
+// Unifi - Blue theme
+export function UnifiIcon({ className, size = 24 }: BrandedIconProps) {
+  return (
+    <svg 
+      viewBox="0 0 40 40" 
+      width={size} 
+      height={size} 
+      className={cn("shrink-0", className)}
+    >
+      <defs>
+        <linearGradient id="unifi-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#2563EB" />
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="10" fill="url(#unifi-gradient)" />
+      {/* WiFi signal */}
+      <path d="M20 28 a2 2 0 1 0 0.01 0" fill="white" />
+      <path d="M14 24 Q20 18 26 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M10 20 Q20 10 30 20" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Generic Biller icon
+export function GenericBillerIcon({ className, size = 24 }: BrandedIconProps) {
+  return (
+    <svg 
+      viewBox="0 0 40 40" 
+      width={size} 
+      height={size} 
+      className={cn("shrink-0", className)}
+    >
+      <defs>
+        <linearGradient id="biller-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#A855F7" />
+          <stop offset="100%" stopColor="#9333EA" />
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="10" fill="url(#biller-gradient)" />
+      {/* Receipt icon */}
+      <path d="M12 8 L28 8 L28 32 L24 28 L20 32 L16 28 L12 32 Z" fill="white" />
+      <rect x="15" y="13" width="10" height="2" rx="1" fill="url(#biller-gradient)" />
+      <rect x="15" y="18" width="7" height="2" rx="1" fill="url(#biller-gradient)" />
+      <rect x="15" y="23" width="8" height="2" rx="1" fill="url(#biller-gradient)" />
+    </svg>
+  );
+}
+
 // Map source names to branded icons
 export function getBrandedIcon(name: string, type: string = 'wallet'): React.FC<BrandedIconProps> {
   const normalizedName = name.toLowerCase().replace(/\s+/g, '');
@@ -343,12 +442,26 @@ export function getBrandedIcon(name: string, type: string = 'wallet'): React.FC<
     return PublicBankIcon;
   }
   
+  // Billers
+  if (normalizedName.includes('tnb') || normalizedName.includes('tenaga')) {
+    return TNBIcon;
+  }
+  if (normalizedName.includes('maxis')) {
+    return MaxisIcon;
+  }
+  if (normalizedName.includes('unifi')) {
+    return UnifiIcon;
+  }
+  
   // Type-based fallbacks
   if (type === 'bank') {
     return GenericBankIcon;
   }
   if (type === 'card' || type === 'credit_card' || type === 'debit_card') {
     return CardIcon;
+  }
+  if (type === 'biller') {
+    return GenericBillerIcon;
   }
   
   return GenericWalletIcon;

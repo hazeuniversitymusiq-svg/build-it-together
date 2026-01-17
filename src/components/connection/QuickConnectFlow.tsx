@@ -11,10 +11,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  Wallet,
-  Building2,
-  CreditCard,
-  Receipt,
   Zap,
   Check,
   ChevronRight,
@@ -30,6 +26,7 @@ import { Progress } from '@/components/ui/progress';
 import { useConnectionEngine } from '@/hooks/useConnectionEngine';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
+import { getBrandedIcon } from '@/components/icons/BrandedIcons';
 import type { AppDefinition } from '@/lib/connection/connection-engine';
 
 interface QuickConnectFlowProps {
@@ -43,13 +40,6 @@ interface AppConnectionState {
   status: AppStatus;
   message?: string;
 }
-
-const CATEGORY_ICONS: Record<string, React.ElementType> = {
-  wallet: Wallet,
-  bank: Building2,
-  bnpl: CreditCard,
-  biller: Receipt,
-};
 
 const CATEGORY_LABELS: Record<string, string> = {
   wallet: 'E-Wallets',
@@ -71,7 +61,7 @@ function AppConnectionRow({
   status: AppStatus;
   index: number;
 }) {
-  const Icon = CATEGORY_ICONS[app.category] || Wallet;
+  const BrandIcon = getBrandedIcon(app.name, app.category);
   
   return (
     <motion.div
@@ -91,26 +81,9 @@ function AppConnectionRow({
         }
       `}
     >
-      {/* App icon */}
-      <div className={`
-        w-10 h-10 rounded-xl flex items-center justify-center
-        transition-all duration-300
-        ${status === 'success' 
-          ? 'bg-success/10' 
-          : status === 'connecting'
-            ? 'bg-primary/10'
-            : 'bg-muted/50'
-        }
-      `}>
-        <Icon className={`
-          w-5 h-5 transition-colors duration-300
-          ${status === 'success' 
-            ? 'text-success' 
-            : status === 'connecting'
-              ? 'text-primary'
-              : 'text-muted-foreground'
-          }
-        `} />
+      {/* App branded icon */}
+      <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center">
+        <BrandIcon size={40} />
       </div>
 
       {/* App name */}
@@ -202,6 +175,8 @@ function SelectableAppPill({
   onToggle: () => void;
   isPopular?: boolean;
 }) {
+  const BrandIcon = getBrandedIcon(app.name, app.category);
+  
   return (
     <motion.button
       type="button"
@@ -211,28 +186,40 @@ function SelectableAppPill({
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       className={`
-        flex items-center gap-2 px-3 py-2 rounded-full text-sm
+        flex items-center gap-2 px-2 py-1.5 rounded-xl text-sm
         transition-all duration-200 relative
         ${isSelected 
-          ? 'bg-success/10 text-success border border-success/30' 
-          : 'bg-muted/50 text-foreground border border-muted-foreground/10 hover:bg-muted/70'
+          ? 'bg-success/10 ring-2 ring-success/30' 
+          : 'bg-muted/50 ring-1 ring-muted-foreground/10 hover:bg-muted/70'
         }
       `}
     >
+      {/* Brand icon */}
+      <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+        <BrandIcon size={32} />
+      </div>
+      
+      <span className={`font-medium ${isSelected ? 'text-success' : 'text-foreground'}`}>
+        {app.displayName}
+      </span>
+      
+      {/* Selection indicator */}
       {isSelected ? (
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 500 }}
+          className="ml-1"
         >
-          <Check className="w-4 h-4" />
+          <Check className="w-4 h-4 text-success" />
         </motion.div>
       ) : (
-        <Circle className="w-4 h-4 text-muted-foreground/50" />
+        <Circle className="w-4 h-4 text-muted-foreground/30 ml-1" />
       )}
-      <span className={isSelected ? 'font-medium' : ''}>{app.displayName}</span>
+      
+      {/* Popular indicator */}
       {isPopular && !isSelected && (
-        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-aurora-blue" />
+        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-aurora-blue ring-2 ring-background" />
       )}
     </motion.button>
   );
