@@ -3,10 +3,14 @@
  * 
  * React hook wrapper for the Connection Intelligence Engine.
  * Provides seamless app connection functionality to UI components.
+ * 
+ * IMPORTANT: Uses useFundingSources for balance calculation to ensure
+ * consistency across the entire app (Home, Onboarding, etc.)
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
+import { useFundingSources } from './useFundingSources';
 import { 
   ConnectionEngine, 
   createConnectionEngine,
@@ -64,6 +68,10 @@ export function useConnectionEngine(): UseConnectionEngineReturn {
   const { user } = useAuth();
   const [engine, setEngine] = useState<ConnectionEngine | null>(null);
   
+  // Use the SINGLE SOURCE OF TRUTH for balances - useFundingSources
+  // This ensures consistency across Home, Onboarding, FlowCard, etc.
+  const { totalBalance: fundingSourcesBalance, refetch: refetchBalances } = useFundingSources();
+  
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -104,12 +112,15 @@ export function useConnectionEngine(): UseConnectionEngineReturn {
       setDetectedApps(detected);
       setConnectionStatuses(statuses);
       setRecommendedApps(recommended);
+      
+      // Also refetch funding sources to keep balances in sync
+      refetchBalances();
     } catch (error) {
       console.error('Failed to load connection data:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [engine]);
+  }, [engine, refetchBalances]);
 
   // Derived data
   const connectedApps = useMemo(() => 
@@ -131,10 +142,9 @@ export function useConnectionEngine(): UseConnectionEngineReturn {
 
   const totalConnected = connectedApps.length;
   
-  const totalBalance = useMemo(() => 
-    connectedApps.reduce((sum, app) => sum + (app.balance || 0), 0),
-    [connectedApps]
-  );
+  // Use funding sources balance as the SINGLE SOURCE OF TRUTH
+  // This ensures the same balance is shown in onboarding as on home page
+  const totalBalance = fundingSourcesBalance;
 
   // Actions
   const detectApps = useCallback(async () => {
