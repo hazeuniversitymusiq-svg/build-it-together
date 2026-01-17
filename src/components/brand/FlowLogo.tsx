@@ -64,6 +64,7 @@ export const FlowLogo = ({
         style={{ 
           width: logoSize, 
           height: logoSize,
+          filter: "saturate(1.4) contrast(1.1)",
         }}
         initial={animate ? { opacity: 0, scale: 0.9 } : false}
         animate={animate ? { opacity: 1, scale: 1 } : false}
@@ -192,12 +193,13 @@ export const FlowLogoMark = ({
         style={{ 
           width: size, 
           height: size,
+          filter: "saturate(1.4) contrast(1.1)",
         }}
         animate={animate ? {
           filter: [
-            "drop-shadow(0 0 0px rgba(34,197,94,0))",
-            "drop-shadow(0 0 8px rgba(34,197,94,0.4))",
-            "drop-shadow(0 0 0px rgba(34,197,94,0))",
+            "saturate(1.4) contrast(1.1) drop-shadow(0 0 0px rgba(34,197,94,0))",
+            "saturate(1.4) contrast(1.1) drop-shadow(0 0 8px rgba(34,197,94,0.4))",
+            "saturate(1.4) contrast(1.1) drop-shadow(0 0 0px rgba(34,197,94,0))",
           ],
         } : undefined}
         transition={{
@@ -269,6 +271,7 @@ export const FlowLoadingLogo = ({
         style={{ 
           width: size, 
           height: size,
+          filter: "saturate(1.4) contrast(1.1)",
         }}
         animate={{
           opacity: [0.8, 1, 0.8],
