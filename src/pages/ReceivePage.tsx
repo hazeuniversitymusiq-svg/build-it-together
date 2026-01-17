@@ -169,19 +169,59 @@ const ReceivePage = () => {
     setAmount(preset.toString());
   }, []);
 
-  const runPrototypeSimulation = useCallback(() => {
+  const runPrototypeSimulation = useCallback(async () => {
     if (simulationCompletedRef.current) return;
     simulationCompletedRef.current = true;
 
     const payerName = SIMULATED_PAYERS[Math.floor(Math.random() * SIMULATED_PAYERS.length)];
     const payerApp = SIMULATED_PAYER_APPS[Math.floor(Math.random() * SIMULATED_PAYER_APPS.length)];
     const receivedAmount = amount ? parseFloat(amount) : 20;
+    const transactionId = `TXN-${Date.now().toString(36).toUpperCase()}`;
+
+    // Get current user for database operations
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // === LOG TRANSACTION TO ACTIVITY FEED ===
+      await supabase.from('transaction_logs').insert({
+        user_id: user.id,
+        intent_id: `receive-${transactionId}`,
+        intent_type: 'RequestMoney',
+        amount: receivedAmount,
+        currency: 'MYR',
+        status: 'success',
+        trigger: 'request',
+        rail_used: payerApp,
+        recipient_name: payerName,
+        recipient_id: `payer-${Date.now()}`,
+        reference: transactionId,
+        note: `Received via DuitNow QR`,
+      });
+
+      // === UPDATE WALLET BALANCE (add received amount) ===
+      if (destinationWallet) {
+        const { data: fundingSource } = await supabase
+          .from('funding_sources')
+          .select('id, balance')
+          .eq('id', destinationWallet)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (fundingSource) {
+          const newBalance = fundingSource.balance + receivedAmount;
+          await supabase
+            .from('funding_sources')
+            .update({ balance: newBalance })
+            .eq('id', fundingSource.id);
+        }
+      }
+    }
 
     setReceivedData({
       payerName,
       payerApp,
       amount: receivedAmount,
-      transactionId: `TXN-${Date.now().toString(36).toUpperCase()}`,
+      transactionId,
       timestamp: new Date(),
     });
 
@@ -199,7 +239,7 @@ const ReceivePage = () => {
       title: "Payment received! 🎉",
       description: `RM ${receivedAmount.toFixed(2)} from ${payerName} via ${payerApp}`,
     });
-  }, [amount, toast, hapticSuccess]);
+  }, [amount, toast, hapticSuccess, destinationWallet]);
 
   const handleShowQR = useCallback(() => {
     // Reset any previous simulation loops
