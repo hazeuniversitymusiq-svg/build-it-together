@@ -8,10 +8,11 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, Fingerprint, Shield, Pause, Eye, EyeOff, Copy, Check, Sparkles } from 'lucide-react';
+import { Wifi, Fingerprint, Shield, Pause, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PulsingDot, ShimmerEffect } from '@/components/ui/micro-animations';
+import { PulsingDot } from '@/components/ui/micro-animations';
 import type { FlowCardStatus, FlowCardMode } from '@/hooks/useFlowCard';
+import flowCardLogo from '@/assets/flowcard-logo.png';
 
 interface FlowCardVisualProps {
   status: FlowCardStatus;
@@ -100,11 +101,12 @@ export function FlowCardVisual({
         {/* Content */}
         <div className="relative h-full flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <Wifi size={16} className="text-white" />
-            </div>
+            <img 
+              src={flowCardLogo} 
+              alt="Flow Card" 
+              className="h-8 w-auto object-contain brightness-0 invert"
+            />
             <div>
-              <p className="text-white font-semibold text-sm">Flow Card</p>
               <p className="text-white/70 text-xs">{modeLabels[mode]}</p>
             </div>
           </div>
@@ -165,8 +167,12 @@ export function FlowCardVisual({
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-white font-bold text-xl tracking-tight">Flow Card</h3>
-                <p className="text-white/70 text-sm">{modeLabels[mode]}</p>
+                <img 
+                  src={flowCardLogo} 
+                  alt="Flow Card" 
+                  className="h-10 w-auto object-contain brightness-0 invert"
+                />
+                <p className="text-white/70 text-sm mt-1">{modeLabels[mode]}</p>
               </div>
               
               {/* Status indicator with pulse */}
