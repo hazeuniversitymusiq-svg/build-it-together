@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Pause, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -19,11 +19,6 @@ import { TapToPayDemo } from '@/components/flowcard/TapToPayDemo';
 import { useToast } from '@/hooks/use-toast';
 import { useDemo } from '@/contexts/DemoContext';
 import { DemoHighlight } from '@/components/demo/DemoHighlight';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 
 export default function FlowCardPage() {
   const navigate = useNavigate();
@@ -48,7 +43,6 @@ export default function FlowCardPage() {
 
   const [showCreateFlow, setShowCreateFlow] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [showCardDetails, setShowCardDetails] = useState(false);
 
   // Register demo action for this page
   useEffect(() => {
@@ -185,53 +179,24 @@ export default function FlowCardPage() {
           </Button>
         </div>
 
-        {/* Collapsible Card Visual with Credentials */}
-        <Collapsible open={showCardDetails} onOpenChange={setShowCardDetails}>
-          <CollapsibleTrigger asChild>
-            <button className="w-full">
-              <DemoHighlight
-                id="flow-card-visual"
-                title="Your Flow Card"
-                description="This is your virtual payment card. Tap to pay at any terminal."
-              >
-                <FlowCardVisual
-                  status={profile?.status || 'not_created'}
-                  mode={profile?.mode || 'in_app'}
-                  lastFourDigits={profile?.card_last_four || undefined}
-                  cardNumber={profile?.card_number}
-                  cardCvv={profile?.card_cvv}
-                  cardExpiry={profile?.card_expiry}
-                  cardBrand={profile?.card_brand}
-                  showCredentials={false}
-                  isCompact={false}
-                />
-              </DemoHighlight>
-              <div className="flex items-center justify-center gap-1 mt-2 text-sm text-muted-foreground">
-                {showCardDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                <span>{showCardDetails ? 'Hide' : 'Show'} Card Details</span>
-              </div>
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-4"
-            >
-              <FlowCardVisual
-                status={profile?.status || 'not_created'}
-                mode={profile?.mode || 'in_app'}
-                lastFourDigits={profile?.card_last_four || undefined}
-                cardNumber={profile?.card_number}
-                cardCvv={profile?.card_cvv}
-                cardExpiry={profile?.card_expiry}
-                cardBrand={profile?.card_brand}
-                showCredentials={true}
-                isCompact={true}
-              />
-            </motion.div>
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Card Visual with Credentials */}
+        <DemoHighlight
+          id="flow-card-visual"
+          title="Your Flow Card"
+          description="This is your virtual payment card. Tap to pay at any terminal."
+        >
+          <FlowCardVisual
+            status={profile?.status || 'not_created'}
+            mode={profile?.mode || 'in_app'}
+            lastFourDigits={profile?.card_last_four || undefined}
+            cardNumber={profile?.card_number}
+            cardCvv={profile?.card_cvv}
+            cardExpiry={profile?.card_expiry}
+            cardBrand={profile?.card_brand}
+            showCredentials={true}
+            isCompact={false}
+          />
+        </DemoHighlight>
 
         {/* Generate Credentials Button (for legacy cards without credentials) */}
         {hasCard && !hasCredentials && isCardActive && (
