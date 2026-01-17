@@ -27,6 +27,7 @@ import { useConnectionEngine } from '@/hooks/useConnectionEngine';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
 import { getBrandedIcon } from '@/components/icons/BrandedIcons';
+import { DemoCredentialScreen } from '@/components/connection/DemoCredentialScreens';
 import type { AppDefinition } from '@/lib/connection/connection-engine';
 
 interface QuickConnectFlowProps {
@@ -239,11 +240,12 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
   } = useConnectionEngine();
 
   // Start directly on 'select' phase - no fake detecting
-  const [phase, setPhase] = useState<'select' | 'connecting' | 'complete'>('select');
+  const [phase, setPhase] = useState<'select' | 'credentials' | 'connecting' | 'complete'>('select');
   const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
   const [appStates, setAppStates] = useState<Map<string, AppConnectionState>>(new Map());
   const [progress, setProgress] = useState(0);
   const [successCount, setSuccessCount] = useState(0);
+  const [currentCredentialAppIndex, setCurrentCredentialAppIndex] = useState(0);
 
   // Initialize selected apps with smart defaults when apps are loaded
   useEffect(() => {
@@ -354,8 +356,30 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
       return;
     }
 
-    setPhase('connecting');
+    // Start with credential collection phase
+    setCurrentCredentialAppIndex(0);
+    setPhase('credentials');
     haptics.impact();
+  };
+
+  // Handle credential completion for each app
+  const handleCredentialComplete = useCallback(() => {
+    const appsArray = detectedApps.filter(app => selectedApps.has(app.name));
+    const nextIndex = currentCredentialAppIndex + 1;
+    
+    if (nextIndex < appsArray.length) {
+      // Move to next app's credentials
+      setCurrentCredentialAppIndex(nextIndex);
+      haptics.selection();
+    } else {
+      // All credentials collected, proceed to actual connection
+      proceedToConnection();
+    }
+  }, [currentCredentialAppIndex, detectedApps, selectedApps, haptics]);
+
+  // Proceed to actual connection phase after credentials
+  const proceedToConnection = async () => {
+    setPhase('connecting');
     setProgress(0);
     setSuccessCount(0);
 
@@ -536,6 +560,46 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                     );
                   })}
                 </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Credentials phase - show demo credential screens */}
+          {phase === 'credentials' && (
+            <motion.div
+              key="credentials"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center"
+            >
+              {/* Progress indicator */}
+              <div className="text-center mb-6">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Connecting app {currentCredentialAppIndex + 1} of {appsToConnect.length}
+                </p>
+                <div className="flex gap-1.5 justify-center">
+                  {appsToConnect.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        idx < currentCredentialAppIndex 
+                          ? 'bg-success' 
+                          : idx === currentCredentialAppIndex 
+                            ? 'bg-primary' 
+                            : 'bg-muted'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Current app credential screen */}
+              {appsToConnect[currentCredentialAppIndex] && (
+                <DemoCredentialScreen
+                  app={appsToConnect[currentCredentialAppIndex]}
+                  onComplete={handleCredentialComplete}
+                />
               )}
             </motion.div>
           )}
