@@ -83,6 +83,7 @@ const ActivityPage = () => {
   const [logs, setLogs] = useState<TransactionLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isShowingDemoData, setIsShowingDemoData] = useState(false);
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showFilters, setShowFilters] = useState(false);
@@ -219,11 +220,13 @@ const ActivityPage = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    // Use demo data if no real transactions exist
+    // Use real data first, fall back to demo data if empty
     if (!error && data && data.length > 0) {
       setLogs(data);
+      setIsShowingDemoData(false);
     } else {
       setLogs(getDemoTransactions());
+      setIsShowingDemoData(true);
     }
 
     setIsLoading(false);
@@ -362,14 +365,21 @@ const ActivityPage = () => {
         </AnimatePresence>
       </div>
 
-      {/* Transaction Count */}
+      {/* Transaction Count & Demo Indicator */}
       <div className="px-6 pb-4">
-        <p className="text-sm text-muted-foreground">
-          {filteredLogs.length} transaction{filteredLogs.length !== 1 ? "s" : ""}
-          {(typeFilter !== "all" || statusFilter !== "all") && (
-            <span className="text-xs ml-1">(filtered)</span>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {filteredLogs.length} transaction{filteredLogs.length !== 1 ? "s" : ""}
+            {(typeFilter !== "all" || statusFilter !== "all") && (
+              <span className="text-xs ml-1">(filtered)</span>
+            )}
+          </p>
+          {isShowingDemoData && (
+            <span className="text-xs px-2 py-1 rounded-full bg-aurora-purple/10 text-aurora-purple font-medium">
+              Sample Data
+            </span>
           )}
-        </p>
+        </div>
       </div>
 
       {/* Transaction List */}
