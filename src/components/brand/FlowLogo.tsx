@@ -36,7 +36,7 @@ export const FlowLogo = ({
   return (
     <motion.div
       className={`relative inline-flex items-center justify-center ${className}`}
-      style={{ width: logoSize, height: logoSize }}
+      style={{ width: logoSize }}
     >
       {/* Animated flowing glow behind the logo */}
       {animate && (
@@ -57,14 +57,14 @@ export const FlowLogo = ({
         />
       )}
       
-      {/* Logo image */}
+      {/* Logo image - maintain natural aspect ratio */}
       <motion.img
         src={flowLogoNew}
         alt="FLOW"
         className="relative z-10 object-contain"
         style={{ 
           width: logoSize, 
-          height: logoSize,
+          height: "auto",
           filter: "saturate(1.6) contrast(1.1)",
         }}
         initial={animate ? { opacity: 0, scale: 0.9 } : false}

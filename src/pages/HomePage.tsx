@@ -89,7 +89,7 @@ const HomePage = () => {
         transition={{ duration: 0.5 }}
         className="pt-4 pb-2"
       >
-        <div className="flex items-center justify-between h-[36px]">
+        <div className="flex items-center justify-between">
           <FlowLogo variant="full" size="home" animate={false} />
           
           {/* Liquid Glass Status Pill */}
