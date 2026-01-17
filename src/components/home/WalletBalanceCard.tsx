@@ -11,11 +11,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, RefreshCw, ChevronDown, X, ChevronRight } from 'lucide-react';
+import { Plus, RefreshCw, ChevronRight, Zap } from 'lucide-react';
 import { useFundingSources } from '@/hooks/useFundingSources';
 import { cn } from '@/lib/utils';
 import { getBrandedIcon } from '@/components/icons/BrandedIcons';
 import { PulsingDot, SyncSpinner, ShimmerEffect } from '@/components/ui/micro-animations';
+
+const LOW_BALANCE_THRESHOLD = 20;
 
 interface WalletBalanceCardProps {
   className?: string;
@@ -25,15 +27,14 @@ interface WalletBalanceCardProps {
 export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCardProps) {
   const navigate = useNavigate();
   const { sources, totalBalance, loading, refetch } = useFundingSources();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [warningDismissed, setWarningDismissed] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastBalance, setLastBalance] = useState(totalBalance);
 
   const linkedWallets = sources.filter(s => s.isLinked && s.type === 'wallet');
   const linkedBanks = sources.filter(s => s.isLinked && s.type === 'bank');
   const allSources = [...linkedWallets, ...linkedBanks];
-  const hasLowBalance = linkedWallets.some(w => w.balance < 20);
+  const lowBalanceWallets = linkedWallets.filter(w => w.balance < LOW_BALANCE_THRESHOLD);
+  const hasLowBalance = lowBalanceWallets.length > 0;
   const balanceIncreased = totalBalance > lastBalance;
 
   const handleRefresh = async () => {
@@ -177,36 +178,41 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
           <ChevronRight className="w-4 h-4" />
         </div>
       </button>
-      {/* Minimal Low Balance Warning - just text, no background */}
-      <AnimatePresence>
-        {hasLowBalance && !warningDismissed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="border-t border-border/20"
-          >
-            <div className="px-4 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <p className="text-xs text-muted-foreground">
-                  Low balance — auto top-up enabled
-                </p>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setWarningDismissed(true);
-                }}
-                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          </motion.div>
+
+      {/* Auto Top-Up Status - Integrated into card */}
+      <button
+        onClick={() => navigate('/apps')}
+        className={cn(
+          "w-full px-4 py-3 flex items-center justify-between border-t transition-colors",
+          hasLowBalance 
+            ? "bg-success/5 border-success/20 hover:bg-success/10" 
+            : "border-border/20 hover:bg-muted/20"
         )}
-      </AnimatePresence>
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-9 h-9 rounded-xl flex items-center justify-center",
+            hasLowBalance ? "bg-success/10" : "bg-muted/50"
+          )}>
+            <Zap className={cn(
+              "w-4.5 h-4.5",
+              hasLowBalance ? "text-success" : "text-muted-foreground"
+            )} />
+          </div>
+          <div className="text-left">
+            <p className={cn(
+              "text-sm font-medium",
+              hasLowBalance ? "text-success" : "text-foreground"
+            )}>
+              {hasLowBalance ? "Auto top-up active" : "Auto top-up ready"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Threshold: RM {LOW_BALANCE_THRESHOLD}
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      </button>
     </motion.div>
   );
 }
