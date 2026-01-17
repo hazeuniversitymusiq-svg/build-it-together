@@ -434,7 +434,8 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
               </motion.div>
             )}
 
-            <motion.div className="absolute bottom-0 left-0 right-0 p-6 safe-area-bottom">
+            {/* Test Mode Buttons - Always visible at bottom */}
+            <motion.div className="absolute bottom-0 left-0 right-0 p-6 safe-area-bottom z-20">
               <p className="text-white/50 text-sm text-center mb-4">Position QR code within the frame</p>
               
               {/* Test Mode Buttons for Prototype */}
