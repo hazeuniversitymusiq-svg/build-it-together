@@ -7,12 +7,13 @@
 import { forwardRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
-import { Loader2, Check, ArrowRight, Wallet, CreditCard, ShieldCheck } from "lucide-react";
+import { Loader2, Check, ArrowRight, Wallet, CreditCard, ShieldCheck, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIntent } from "@/lib/core/resolve-engine";
 import type { ResolutionPlan, ResolutionStep } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useTestMode, getConfirmRoute } from "@/hooks/useTestMode";
+import { Button } from "@/components/ui/button";
 
 const stepIcons: Record<string, React.ReactNode> = {
   TOP_UP: <Wallet className="w-5 h-5" />,
@@ -150,8 +151,17 @@ const ResolvePage = forwardRef<HTMLDivElement>((_, ref) => {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="pt-4 pb-2"
+        className="pt-4 pb-2 flex items-center gap-3"
       >
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/scan")}
+          aria-label="Back to scan"
+          className="rounded-full"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">
           Resolving
         </h1>
