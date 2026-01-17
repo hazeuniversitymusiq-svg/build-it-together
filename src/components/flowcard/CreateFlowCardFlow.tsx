@@ -19,13 +19,15 @@ import {
   Landmark,
   AlertCircle,
   Sparkles,
-  ArrowUpCircle
+  ArrowUpCircle,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowCard } from '@/hooks/useFlowCard';
 import { useFlowCardEligibility, FlowCardTier } from '@/hooks/useFlowCardEligibility';
 import { useOrchestration } from '@/contexts/OrchestrationContext';
 import { FlowCardVisual } from './FlowCardVisual';
+import DebitCardLinkingFlow from './DebitCardLinkingFlow';
 import { useNavigate } from 'react-router-dom';
 
 interface CreateFlowCardFlowProps {
@@ -37,8 +39,9 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
+  const [showDebitCardFlow, setShowDebitCardFlow] = useState(false);
   const { createFlowCard, deviceId } = useFlowCard();
-  const { sources } = useOrchestration();
+  const { sources, refetchSources } = useOrchestration();
   const eligibility = useFlowCardEligibility();
 
   const linkedSources = sources.filter(s => s.isLinked);
@@ -135,14 +138,34 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
             )}
 
             {/* Step 3: Funding Sources */}
-            {currentStep === 3 && (
+            {currentStep === 3 && !showDebitCardFlow && (
               <FundingSourcesStep 
                 debitCards={debitCards}
                 wallets={wallets}
                 banks={banks}
                 tier={eligibility.tier}
                 onLinkBank={handleLinkBank}
+                onLinkDebitCard={() => setShowDebitCardFlow(true)}
               />
+            )}
+
+            {/* Debit Card Linking Sub-flow */}
+            {currentStep === 3 && showDebitCardFlow && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="flex-1"
+              >
+                <DebitCardLinkingFlow
+                  onComplete={() => {
+                    setShowDebitCardFlow(false);
+                    refetchSources?.();
+                  }}
+                  onSkip={() => setShowDebitCardFlow(false)}
+                  showSkip
+                />
+              </motion.div>
             )}
 
             {/* Step 4: Complete */}
@@ -152,41 +175,43 @@ export function CreateFlowCardFlow({ onComplete, onCancel }: CreateFlowCardFlowP
           </motion.div>
         </AnimatePresence>
 
-        {/* Actions */}
-        <div className="mt-auto pt-6 space-y-3">
-          <Button
-            onClick={handleNext}
-            disabled={isCreating || (currentStep === 0 && !eligibility.canActivate)}
-            className="w-full h-14 rounded-2xl aurora-gradient text-white font-semibold text-lg shadow-glow-blue disabled:opacity-50"
-          >
-            {isCreating ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-              />
-            ) : currentStep === steps.length - 1 ? (
-              'Done'
-            ) : currentStep === 0 && !eligibility.canActivate ? (
-              'Requirements Not Met'
-            ) : (
-              <>
-                Continue
-                <ArrowRight size={20} className="ml-2" />
-              </>
-            )}
-          </Button>
-          
-          {currentStep < steps.length - 1 && (
+        {/* Actions - Hide when in debit card sub-flow */}
+        {!showDebitCardFlow && (
+          <div className="mt-auto pt-6 space-y-3">
             <Button
-              variant="ghost"
-              onClick={handleBack}
-              className="w-full h-12"
+              onClick={handleNext}
+              disabled={isCreating || (currentStep === 0 && !eligibility.canActivate)}
+              className="w-full h-14 rounded-2xl aurora-gradient text-white font-semibold text-lg shadow-glow-blue disabled:opacity-50"
             >
-              {currentStep === 0 ? 'Cancel' : 'Back'}
+              {isCreating ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                />
+              ) : currentStep === steps.length - 1 ? (
+                'Done'
+              ) : currentStep === 0 && !eligibility.canActivate ? (
+                'Requirements Not Met'
+              ) : (
+                <>
+                  Continue
+                  <ArrowRight size={20} className="ml-2" />
+                </>
+              )}
             </Button>
-          )}
-        </div>
+            
+            {currentStep < steps.length - 1 && (
+              <Button
+                variant="ghost"
+                onClick={handleBack}
+                className="w-full h-12"
+              >
+                {currentStep === 0 ? 'Cancel' : 'Back'}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -447,13 +472,15 @@ function FundingSourcesStep({
   wallets, 
   banks, 
   tier,
-  onLinkBank 
+  onLinkBank,
+  onLinkDebitCard
 }: { 
   debitCards: { id: string; name: string; type: string; balance: number }[];
   wallets: { id: string; name: string; type: string; balance: number }[];
   banks: { id: string; name: string; type: string; balance: number }[];
   tier: FlowCardTier;
   onLinkBank: () => void;
+  onLinkDebitCard: () => void;
 }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -501,9 +528,19 @@ function FundingSourcesStep({
               </motion.div>
             ))
           ) : (
-            <div className="glass-card rounded-xl p-3 text-center border border-dashed border-muted-foreground/30">
-              <p className="text-muted-foreground text-xs">No debit card linked yet</p>
-            </div>
+            <button
+              onClick={onLinkDebitCard}
+              className="w-full glass-card rounded-xl p-4 flex items-center gap-3 border border-dashed border-aurora-blue/30 hover:border-aurora-blue/50 hover:bg-aurora-blue/5 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-full bg-aurora-blue/10 flex items-center justify-center">
+                <Plus size={20} className="text-aurora-blue" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-medium text-sm">Link Debit Card</p>
+                <p className="text-xs text-muted-foreground">Set as primary payment source</p>
+              </div>
+              <ArrowRight size={16} className="text-aurora-blue" />
+            </button>
           )}
         </div>
 
