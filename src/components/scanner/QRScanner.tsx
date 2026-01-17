@@ -319,7 +319,7 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="absolute top-0 left-0 right-0 z-10 safe-area-top"
+          className="absolute top-0 left-0 right-0 z-30 safe-area-top"
         >
           <div className="flex items-center justify-between p-4">
             <Button
@@ -364,7 +364,7 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="absolute top-20 left-4 right-4 z-10"
+          className="absolute top-20 left-4 right-4 z-30"
         >
           <div className="flex glass-dark rounded-2xl p-1">
             <button
@@ -440,13 +440,20 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
             </div>
 
             {isInitializing && (
-              <motion.div className="absolute inset-0 flex items-center justify-center glass-dark">
+              <motion.div className="absolute inset-0 flex items-center justify-center glass-dark z-20">
                 <div className="text-center">
                   <div className="relative w-16 h-16 mx-auto mb-4">
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }} className="absolute inset-0 rounded-full aurora-gradient opacity-30" />
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="absolute inset-1 rounded-full border-2 border-transparent border-t-white" />
                   </div>
-                  <p className="text-white/80 font-medium">Starting camera...</p>
+                  <p className="text-white/80 font-medium mb-4">Starting camera...</p>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleClose} 
+                    className="text-white border-white/20 hover:bg-white/10"
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </motion.div>
             )}
