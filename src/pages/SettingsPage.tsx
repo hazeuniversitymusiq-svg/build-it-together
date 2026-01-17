@@ -97,7 +97,7 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background safe-area-top safe-area-bottom pb-28">
+    <div className="min-h-screen bg-background safe-area-top safe-area-bottom pb-32">
       {/* Header */}
       <header className="px-6 pt-4 pb-6">
         <p className="text-muted-foreground text-sm mb-1">Account</p>
@@ -475,7 +475,7 @@ const SettingsPage = () => {
       </section>
 
       {/* Sign Out & Replay Onboarding */}
-      <div className="px-6 pb-8 space-y-3">
+      <div className="px-6 pb-6 space-y-3">
         <motion.button 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
