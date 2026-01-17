@@ -45,6 +45,7 @@ import FlowCardPage from "./pages/FlowCardPage";
 import FlowCardActivityPage from "./pages/FlowCardActivityPage";
 import { AppleOnboardingFlow } from "./components/onboarding/AppleOnboardingFlow";
 import QuickConnectPage from "./pages/QuickConnectPage";
+import AppsPage from "./pages/AppsPage";
 import NotFound from "./pages/NotFound";
 
 const Router = Capacitor.isNativePlatform() ? HashRouter : BrowserRouter;
@@ -136,6 +137,7 @@ const AnimatedRoutes = () => {
         {/* Main App Routes (With Bottom Nav) */}
         <Route element={<AppLayout />}>
           <Route path="/home" element={<PageTransition><HomePage /></PageTransition>} />
+          <Route path="/apps" element={<PageTransition><AppsPage /></PageTransition>} />
           <Route path="/send" element={<PageTransition><SendPage /></PageTransition>} />
           <Route path="/scan" element={<PageTransition><ScanPage /></PageTransition>} />
           <Route path="/bills" element={<PageTransition><BillsPage /></PageTransition>} />
