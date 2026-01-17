@@ -517,25 +517,10 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: catIndex * 0.1 }}
                       >
-                        {/* Category header with toggle */}
-                        <div className="flex items-center justify-between mb-2 px-1">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {CATEGORY_LABELS[category] || category}
-                            <span className="ml-1.5 text-primary/70">
-                              ({selectedCount}/{apps.length})
-                            </span>
-                          </p>
-                          <button
-                            onClick={() => toggleCategory(apps)}
-                            className={`text-xs font-medium transition-colors ${
-                              categoryFullySelected 
-                                ? 'text-muted-foreground hover:text-foreground' 
-                                : 'text-primary hover:text-primary/80'
-                            }`}
-                          >
-                            {categoryFullySelected ? 'Deselect' : 'Select All'}
-                          </button>
-                        </div>
+                        {/* Category header */}
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+                          {CATEGORY_LABELS[category] || category}
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {apps.map(app => (
                             <SelectableAppPill
