@@ -87,6 +87,18 @@ const ActivityPage = () => {
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [newTransactionIds, setNewTransactionIds] = useState<Set<string>>(new Set());
+
+  // Clear "new" highlight after 3 seconds
+  useEffect(() => {
+    if (newTransactionIds.size === 0) return;
+    
+    const timeout = setTimeout(() => {
+      setNewTransactionIds(new Set());
+    }, 3000);
+    
+    return () => clearTimeout(timeout);
+  }, [newTransactionIds]);
 
   // Demo transactions for prototype mode
   const getDemoTransactions = useCallback((): TransactionLog[] => {
@@ -269,6 +281,8 @@ const ActivityPage = () => {
               }
               return [newLog, ...prevLogs];
             });
+            // Mark as new for animation
+            setNewTransactionIds(prev => new Set([...prev, newLog.id]));
           }
         )
         .on(
@@ -285,6 +299,8 @@ const ActivityPage = () => {
             setLogs((prevLogs) =>
               prevLogs.map(log => log.id === updatedLog.id ? updatedLog : log)
             );
+            // Also highlight updated transactions
+            setNewTransactionIds(prev => new Set([...prev, updatedLog.id]));
           }
         )
         .subscribe();
@@ -451,20 +467,58 @@ const ActivityPage = () => {
           const display = getLogDisplay(log);
           const Icon = display.icon;
           const status = statusConfig[log.status] || statusConfig.success;
+          const isNewTransaction = newTransactionIds.has(log.id);
 
           return (
             <motion.div
               key={log.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
-              className="glass-card rounded-2xl p-4 shadow-float"
+              initial={isNewTransaction ? { opacity: 0, y: -20, scale: 0.95 } : { opacity: 0, y: 10 }}
+              animate={{ 
+                opacity: 1, 
+                y: 0, 
+                scale: 1,
+              }}
+              transition={{ 
+                delay: isNewTransaction ? 0 : index * 0.03,
+                type: isNewTransaction ? "spring" : "tween",
+                stiffness: 300,
+                damping: 25
+              }}
+              className={`glass-card rounded-2xl p-4 shadow-float relative overflow-hidden ${
+                isNewTransaction ? 'ring-2 ring-success/50' : ''
+              }`}
             >
+              {/* New Transaction Glow Effect */}
+              {isNewTransaction && (
+                <motion.div
+                  initial={{ opacity: 0.8 }}
+                  animate={{ opacity: 0 }}
+                  transition={{ duration: 2, ease: "easeOut" }}
+                  className="absolute inset-0 bg-gradient-to-r from-success/20 via-success/10 to-transparent pointer-events-none"
+                />
+              )}
+              
+              {/* New Badge */}
+              {isNewTransaction && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-success text-success-foreground text-xs font-semibold"
+                >
+                  New
+                </motion.div>
+              )}
+
               {/* Top Row */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl aurora-gradient-soft flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-aurora-blue" />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    isNewTransaction 
+                      ? 'bg-success/20' 
+                      : 'aurora-gradient-soft'
+                  }`}>
+                    <Icon className={`w-6 h-6 ${isNewTransaction ? 'text-success' : 'text-aurora-blue'}`} />
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{display.name}</p>
