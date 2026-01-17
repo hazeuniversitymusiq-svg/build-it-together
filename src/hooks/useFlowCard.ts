@@ -18,6 +18,8 @@ export type ProvisioningStatus = 'not_available' | 'ready' | 'pending' | 'verifi
 export type CardEventType = 'simulate_authorisation' | 'simulate_settlement' | 'online_checkout' | 'terminal_tap';
 export type CardEventStatus = 'received' | 'evaluating' | 'approved' | 'declined';
 
+export type FlowCardTier = 'lite' | 'full';
+
 export interface FlowCardProfile {
   id: string;
   user_id: string;
@@ -30,6 +32,7 @@ export interface FlowCardProfile {
   card_expiry: string | null;
   card_last_four: string | null;
   card_brand: 'visa' | 'mastercard' | null;
+  tier: FlowCardTier;
   created_at: string;
   updated_at: string;
 }
@@ -181,8 +184,8 @@ export function useFlowCard() {
     init();
   }, [fetchProfile, fetchProvisioning, fetchEvents]);
 
-  // Create Flow Card
-  const createFlowCard = useCallback(async (): Promise<boolean> => {
+  // Create Flow Card with tier support
+  const createFlowCard = useCallback(async (tier: 'lite' | 'full' = 'lite'): Promise<boolean> => {
     if (!user?.id) {
       setError('User not authenticated');
       return false;
@@ -197,7 +200,7 @@ export function useFlowCard() {
       const cardExpiry = generateExpiry();
       const cardLastFour = cardNumber.slice(-4);
 
-      // Create profile with credentials
+      // Create profile with credentials and tier
       const { data: profileData, error: profileError } = await supabase
         .from('flow_card_profiles')
         .insert({
@@ -211,6 +214,7 @@ export function useFlowCard() {
           card_expiry: cardExpiry,
           card_last_four: cardLastFour,
           card_brand: 'visa',
+          tier: tier,
         })
         .select()
         .single();
