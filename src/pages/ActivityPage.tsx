@@ -8,7 +8,6 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
-  ChevronLeft,
   ArrowUpRight, 
   ArrowDownLeft, 
   Store, 
@@ -88,6 +87,123 @@ const ActivityPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Demo transactions for prototype mode
+  const getDemoTransactions = useCallback((): TransactionLog[] => {
+    const now = new Date();
+    const userId = 'demo-user';
+    
+    return [
+      {
+        id: 'demo-1',
+        user_id: userId,
+        intent_id: 'intent-1',
+        intent_type: 'PayMerchant',
+        amount: 12.50,
+        currency: 'MYR',
+        status: 'success',
+        merchant_id: 'm-1',
+        merchant_name: 'Ah Seng Mamak',
+        recipient_id: null,
+        recipient_name: null,
+        rail_used: 'TouchNGo',
+        reference: 'TXN-ASM-001',
+        note: null,
+        trigger: 'qr_scan',
+        created_at: new Date(now.getTime() - 1000 * 60 * 30).toISOString(), // 30 mins ago
+      },
+      {
+        id: 'demo-2',
+        user_id: userId,
+        intent_id: 'intent-2',
+        intent_type: 'SendMoney',
+        amount: 50.00,
+        currency: 'MYR',
+        status: 'success',
+        merchant_id: null,
+        merchant_name: null,
+        recipient_id: 'c-1',
+        recipient_name: 'Sarah',
+        rail_used: 'DuitNow',
+        reference: 'TXN-P2P-002',
+        note: 'Lunch money 🍜',
+        trigger: 'contact',
+        created_at: new Date(now.getTime() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+      },
+      {
+        id: 'demo-3',
+        user_id: userId,
+        intent_id: 'intent-3',
+        intent_type: 'PayBill',
+        amount: 88.00,
+        currency: 'MYR',
+        status: 'success',
+        merchant_id: 'b-1',
+        merchant_name: 'Unifi',
+        recipient_id: null,
+        recipient_name: null,
+        rail_used: 'Maybank',
+        reference: 'BILL-UNI-003',
+        note: null,
+        trigger: 'bill_reminder',
+        created_at: new Date(now.getTime() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+      },
+      {
+        id: 'demo-4',
+        user_id: userId,
+        intent_id: 'intent-4',
+        intent_type: 'RequestMoney',
+        amount: 25.00,
+        currency: 'MYR',
+        status: 'success',
+        merchant_id: null,
+        merchant_name: null,
+        recipient_id: 'c-2',
+        recipient_name: 'Ahmad',
+        rail_used: 'TouchNGo',
+        reference: 'REQ-004',
+        note: 'Movie tickets',
+        trigger: 'request',
+        created_at: new Date(now.getTime() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
+      },
+      {
+        id: 'demo-5',
+        user_id: userId,
+        intent_id: 'intent-5',
+        intent_type: 'PayMerchant',
+        amount: 156.80,
+        currency: 'MYR',
+        status: 'success',
+        merchant_id: 'm-2',
+        merchant_name: 'Pharmacy',
+        recipient_id: null,
+        recipient_name: null,
+        rail_used: 'GrabPay',
+        reference: 'TXN-PHR-005',
+        note: null,
+        trigger: 'qr_scan',
+        created_at: new Date(now.getTime() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
+      },
+      {
+        id: 'demo-6',
+        user_id: userId,
+        intent_id: 'intent-6',
+        intent_type: 'PayBill',
+        amount: 45.00,
+        currency: 'MYR',
+        status: 'pending',
+        merchant_id: 'b-2',
+        merchant_name: 'Maxis',
+        recipient_id: null,
+        recipient_name: null,
+        rail_used: null,
+        reference: 'BILL-MAX-006',
+        note: null,
+        trigger: 'scheduled',
+        created_at: new Date(now.getTime() - 1000 * 60 * 60 * 96).toISOString(), // 4 days ago
+      },
+    ];
+  }, []);
+
   const loadLogs = useCallback(async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
     
@@ -103,13 +219,16 @@ const ActivityPage = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
+    // Use demo data if no real transactions exist
+    if (!error && data && data.length > 0) {
       setLogs(data);
+    } else {
+      setLogs(getDemoTransactions());
     }
 
     setIsLoading(false);
     setIsRefreshing(false);
-  }, [navigate]);
+  }, [navigate, getDemoTransactions]);
 
   useEffect(() => {
     loadLogs();
@@ -166,17 +285,9 @@ const ActivityPage = () => {
       {/* Header */}
       <div className="px-6 pt-4 pb-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate("/home")}
-              className="w-10 h-10 rounded-full glass-card flex items-center justify-center shadow-float"
-            >
-              <ChevronLeft className="w-5 h-5 text-foreground" />
-            </button>
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-              Activity
-            </h1>
-          </div>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            Activity
+          </h1>
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowFilters(!showFilters)}
