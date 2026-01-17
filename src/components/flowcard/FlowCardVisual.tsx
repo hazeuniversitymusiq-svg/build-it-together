@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, Fingerprint, Shield, Pause, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Wifi, Fingerprint, Shield, Pause, Eye, EyeOff, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PulsingDot } from '@/components/ui/micro-animations';
 import type { FlowCardStatus, FlowCardMode } from '@/hooks/useFlowCard';
@@ -60,6 +60,7 @@ export function FlowCardVisual({
 }: FlowCardVisualProps) {
   const { toast } = useToast();
   const [isRevealed, setIsRevealed] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   
   const config = statusConfig[status];
@@ -253,100 +254,115 @@ export function FlowCardVisual({
         )}
       </motion.div>
 
-      {/* Credential Details Panel */}
+      {/* Credential Details Panel - Collapsible */}
       {showCredentials && hasCredentials && isActive && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass rounded-xl p-4 space-y-3"
+          className="glass rounded-xl overflow-hidden"
         >
-          {/* Reveal Toggle */}
-          <div className="flex items-center justify-between">
+          {/* Collapsible Header */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+          >
             <span className="text-sm font-medium text-foreground">Card Details</span>
-            <button
-              onClick={() => setIsRevealed(!isRevealed)}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
-              <span>{isRevealed ? 'Hide' : 'Reveal'}</span>
-            </button>
-          </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </div>
+          </button>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={isRevealed ? 'revealed' : 'hidden'}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-2"
-            >
-              {/* Card Number */}
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div>
-                  <p className="text-xs text-muted-foreground">Card Number</p>
-                  <p className="font-mono text-sm">
-                    {isRevealed ? formatCardNumber(cardNumber!) : maskCardNumber(cardNumber!)}
+          {/* Collapsible Content */}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-4 pb-4 space-y-3">
+                  {/* Reveal Toggle */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setIsRevealed(!isRevealed)}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                      <span>{isRevealed ? 'Hide' : 'Reveal'}</span>
+                    </button>
+                  </div>
+
+                  {/* Card Number */}
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Card Number</p>
+                      <p className="font-mono text-sm">
+                        {isRevealed ? formatCardNumber(cardNumber!) : maskCardNumber(cardNumber!)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(cardNumber!, 'Card Number')}
+                      className="p-2 hover:bg-muted rounded-md transition-colors"
+                    >
+                      {copiedField === 'Card Number' ? (
+                        <Check size={16} className="text-success" />
+                      ) : (
+                        <Copy size={16} className="text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Expiry & CVV */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Expiry</p>
+                        <p className="font-mono text-sm">
+                          {isRevealed ? cardExpiry : '••/••'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(cardExpiry!, 'Expiry')}
+                        className="p-2 hover:bg-muted rounded-md transition-colors"
+                      >
+                        {copiedField === 'Expiry' ? (
+                          <Check size={16} className="text-success" />
+                        ) : (
+                          <Copy size={16} className="text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div>
+                        <p className="text-xs text-muted-foreground">CVV</p>
+                        <p className="font-mono text-sm">
+                          {isRevealed ? cardCvv : '•••'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(cardCvv!, 'CVV')}
+                        className="p-2 hover:bg-muted rounded-md transition-colors"
+                      >
+                        {copiedField === 'CVV' ? (
+                          <Check size={16} className="text-success" />
+                        ) : (
+                          <Copy size={16} className="text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Usage note */}
+                  <p className="text-xs text-muted-foreground text-center pt-1">
+                    For Apple Pay / Google Pay enrollment
                   </p>
                 </div>
-                <button
-                  onClick={() => copyToClipboard(cardNumber!, 'Card Number')}
-                  className="p-2 hover:bg-muted rounded-md transition-colors"
-                >
-                  {copiedField === 'Card Number' ? (
-                    <Check size={16} className="text-success" />
-                  ) : (
-                    <Copy size={16} className="text-muted-foreground" />
-                  )}
-                </button>
-              </div>
-
-              {/* Expiry & CVV */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Expiry</p>
-                    <p className="font-mono text-sm">
-                      {isRevealed ? cardExpiry : '••/••'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(cardExpiry!, 'Expiry')}
-                    className="p-2 hover:bg-muted rounded-md transition-colors"
-                  >
-                    {copiedField === 'Expiry' ? (
-                      <Check size={16} className="text-success" />
-                    ) : (
-                      <Copy size={16} className="text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="text-xs text-muted-foreground">CVV</p>
-                    <p className="font-mono text-sm">
-                      {isRevealed ? cardCvv : '•••'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(cardCvv!, 'CVV')}
-                    className="p-2 hover:bg-muted rounded-md transition-colors"
-                  >
-                    {copiedField === 'CVV' ? (
-                      <Check size={16} className="text-success" />
-                    ) : (
-                      <Copy size={16} className="text-muted-foreground" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Usage note */}
-              <p className="text-xs text-muted-foreground text-center pt-2">
-                Use these credentials for Apple Pay / Google Pay enrollment
-              </p>
-            </motion.div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </motion.div>
       )}
