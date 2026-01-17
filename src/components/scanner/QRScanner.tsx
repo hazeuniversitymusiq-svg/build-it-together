@@ -42,20 +42,27 @@ const QRScanner = ({ onScan, onClose, isOpen }: QRScannerProps) => {
   const [sendAmount, setSendAmount] = useState('');
   const [copied, setCopied] = useState(false);
 
-  // Load user phone for receive QR
+  // Load user phone for receive QR - fallback to demo number
   useEffect(() => {
     const loadUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('phone')
-          .eq('id', user.id)
-          .single();
-        if (userData?.phone) {
-          setUserPhone(userData.phone);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('phone')
+            .eq('id', user.id)
+            .single();
+          if (userData?.phone) {
+            setUserPhone(userData.phone);
+            return;
+          }
         }
+      } catch (e) {
+        console.log('User phone load error:', e);
       }
+      // Fallback to demo phone for prototype mode
+      setUserPhone('+60 12-345 6789');
     };
     if (isOpen) loadUser();
   }, [isOpen]);
