@@ -497,25 +497,6 @@ export function QuickConnectFlow({ onComplete, showSkip = true }: QuickConnectFl
                 </p>
               </div>
               
-              {/* Global Select All / Deselect All - subtle bar */}
-              {!isLoading && detectedApps.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex items-center justify-between px-1 mb-4"
-                >
-                  <p className="text-xs text-muted-foreground">
-                    {selectedApps.size} of {detectedApps.length} selected
-                  </p>
-                  <button
-                    onClick={allSelected ? deselectAll : selectAll}
-                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    {allSelected ? 'Deselect All' : 'Select All'}
-                  </button>
-                </motion.div>
-              )}
 
               {/* Loading state */}
               {isLoading ? (
