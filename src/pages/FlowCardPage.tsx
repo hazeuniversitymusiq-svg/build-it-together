@@ -183,6 +183,17 @@ export default function FlowCardPage() {
         </div>
       </div>
 
+      {/* Value Proposition */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="px-6 mb-6"
+      >
+        <p className="text-muted-foreground text-sm text-center leading-relaxed">
+          Smart Tap-to-Pay — one card, all your wallets
+        </p>
+      </motion.div>
+
       {/* Card Visual - Hero Element */}
       <div className="px-6">
         <FlowCardVisual
