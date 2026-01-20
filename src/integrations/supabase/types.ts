@@ -333,6 +333,7 @@ export type Database = {
           capabilities: Json
           error_code: string | null
           id: string
+          last_health_check_at: string | null
           last_sync_at: string | null
           last_verified_at: string | null
           mode: Database["public"]["Enums"]["app_mode"]
@@ -346,6 +347,7 @@ export type Database = {
           capabilities?: Json
           error_code?: string | null
           id?: string
+          last_health_check_at?: string | null
           last_sync_at?: string | null
           last_verified_at?: string | null
           mode?: Database["public"]["Enums"]["app_mode"]
@@ -359,6 +361,7 @@ export type Database = {
           capabilities?: Json
           error_code?: string | null
           id?: string
+          last_health_check_at?: string | null
           last_sync_at?: string | null
           last_verified_at?: string | null
           mode?: Database["public"]["Enums"]["app_mode"]
