@@ -12,6 +12,7 @@ import { Send, ArrowDownLeft, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import BillReminderSurface from "@/components/surfaces/BillReminderSurface";
 import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
+import { RealtimeActivityFeed } from "@/components/home/RealtimeActivityFeed";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { useToast } from "@/hooks/use-toast";
 import { FlowLogo } from "@/components/brand/FlowLogo";
@@ -143,8 +144,13 @@ const HomePage = () => {
         />
       </motion.div>
 
+      {/* Real-time Activity Feed */}
+      <RealtimeActivityFeed />
+
       {/* Bill Reminder Surface - Only shows if there are upcoming bills */}
-      <BillReminderSurface />
+      <div className="mt-4">
+        <BillReminderSurface />
+      </div>
     </div>
   );
 };
