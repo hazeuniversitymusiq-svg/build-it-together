@@ -52,6 +52,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DisconnectAppDialog } from '@/components/apps/DisconnectAppDialog';
+import { ReconnectAppDialog } from '@/components/apps/ReconnectAppDialog';
 
 // Constants for intelligence
 const LOW_BALANCE_THRESHOLD = 20;
@@ -418,6 +419,7 @@ export default function AppsPage() {
   const [topUpSource, setTopUpSource] = useState<typeof sources[0] | null>(null);
   const [settingsSource, setSettingsSource] = useState<typeof sources[0] | null>(null);
   const [disconnectSource, setDisconnectSource] = useState<typeof sources[0] | null>(null);
+  const [reconnectSource, setReconnectSource] = useState<typeof sources[0] | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [orderedSources, setOrderedSources] = useState<typeof sources>([]);
 
@@ -431,6 +433,11 @@ export default function AppsPage() {
   // Derived data
   const linkedSources = useMemo(() => 
     orderedSources.filter(s => s.isLinked),
+    [orderedSources]
+  );
+
+  const disconnectedSources = useMemo(() => 
+    orderedSources.filter(s => !s.isLinked),
     [orderedSources]
   );
 
@@ -494,6 +501,15 @@ export default function AppsPage() {
     });
     setDisconnectSource(null);
   }, [disconnectSource, refetch, toast]);
+
+  const handleReconnected = useCallback(() => {
+    refetch();
+    toast({
+      title: "App reconnected",
+      description: `${reconnectSource?.name} has been linked and consent restored`
+    });
+    setReconnectSource(null);
+  }, [reconnectSource, refetch, toast]);
 
   const handleSaveOrder = useCallback(async () => {
     const orderedIds = orderedSources.map(s => s.id);
@@ -718,6 +734,45 @@ export default function AppsPage() {
         </motion.button>
       </div>
 
+      {/* Disconnected Apps Section */}
+      {disconnectedSources.length > 0 && (
+        <div className="px-4 mt-6">
+          <p className="text-sm font-medium text-muted-foreground mb-3">
+            Previously Connected
+          </p>
+          <div className="space-y-3">
+            {disconnectedSources.map((source) => {
+              const IconComponent = getBrandedIcon(source.name, source.type);
+              return (
+                <motion.div
+                  key={source.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass-card rounded-2xl p-4 opacity-60"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center grayscale">
+                      <IconComponent size={36} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground truncate">{source.name}</p>
+                      <p className="text-sm text-muted-foreground">Disconnected</p>
+                    </div>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setReconnectSource(source)}
+                      className="px-4 py-2 rounded-xl bg-primary/10 text-primary font-medium text-sm hover:bg-primary/20 transition-colors"
+                    >
+                      Reconnect
+                    </motion.button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Sheets & Dialogs */}
       <TopUpSheet
         source={topUpSource}
@@ -743,6 +798,17 @@ export default function AppsPage() {
         open={!!disconnectSource}
         onClose={() => setDisconnectSource(null)}
         onDisconnected={handleDisconnected}
+      />
+
+      <ReconnectAppDialog
+        app={reconnectSource ? {
+          id: reconnectSource.id,
+          name: reconnectSource.name,
+          type: reconnectSource.type,
+        } : null}
+        open={!!reconnectSource}
+        onClose={() => setReconnectSource(null)}
+        onReconnected={handleReconnected}
       />
     </div>
   );
