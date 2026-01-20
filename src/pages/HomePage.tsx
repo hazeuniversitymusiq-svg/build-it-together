@@ -15,6 +15,7 @@ import { WalletBalanceCard } from "@/components/home/WalletBalanceCard";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { useToast } from "@/hooks/use-toast";
 import { FlowLogo } from "@/components/brand/FlowLogo";
+import { useStaleBalanceRefresh } from "@/hooks/useStaleBalanceRefresh";
 
 // Apple-style Minimal Quick Action Button
 const QuickAction = ({
@@ -48,7 +49,14 @@ const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   
   useDeepLink();
-
+  
+  // Auto-refresh stale balances in background
+  useStaleBalanceRefresh({
+    pollInterval: 30000, // Check every 30 seconds
+    onRefresh: (count) => {
+      console.log(`[HomePage] Auto-refreshed ${count} stale balances`);
+    },
+  });
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();

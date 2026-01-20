@@ -149,8 +149,8 @@ Deno.serve(async (req) => {
       });
 
       if (balanceResult.success) {
-        // Upsert cached balance
-        await supabase.from('cached_balances').upsert({
+        // Upsert cached balance (using connector_id unique index)
+        const { error: balanceUpsertError } = await supabase.from('cached_balances').upsert({
           connector_id,
           user_id: user.id,
           amount: balanceResult.amount,
@@ -160,6 +160,17 @@ Deno.serve(async (req) => {
           last_updated_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 min expiry
         }, { onConflict: 'connector_id' });
+
+        if (balanceUpsertError) {
+          console.error('Failed to upsert cached balance:', balanceUpsertError);
+        }
+
+        // Also update funding_sources to keep in sync
+        await supabase
+          .from('funding_sources')
+          .update({ balance: balanceResult.amount })
+          .eq('user_id', user.id)
+          .eq('name', connector.name);
 
         return new Response(
           JSON.stringify({
@@ -265,6 +276,13 @@ Deno.serve(async (req) => {
             last_updated_at: new Date().toISOString(),
             expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
           }, { onConflict: 'connector_id' });
+
+          // Also update funding_sources to keep in sync
+          await supabase
+            .from('funding_sources')
+            .update({ balance: balanceResult.amount })
+            .eq('user_id', user.id)
+            .eq('name', connector.name);
         }
 
         results.push({
