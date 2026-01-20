@@ -29,7 +29,8 @@ import {
   ArrowRight,
   Lock,
   Fingerprint,
-  ChevronLeft
+  ChevronLeft,
+  RotateCcw
 } from 'lucide-react';
 import { APP_CATALOG, type AppConfig } from './AutoSyncSelectApps';
 
@@ -124,9 +125,10 @@ interface ConnectionCardProps {
   status: AppConnectionStatus;
   isActive: boolean;
   index: number;
+  onRetry?: () => void;
 }
 
-const ConnectionCard = ({ app, status, isActive, index }: ConnectionCardProps) => {
+const ConnectionCard = ({ app, status, isActive, index, onRetry }: ConnectionCardProps) => {
   const config = STATE_CONFIG[status.state];
   const Icon = config.icon;
   
@@ -140,7 +142,11 @@ const ConnectionCard = ({ app, status, isActive, index }: ConnectionCardProps) =
         transition-all duration-500
         ${isActive 
           ? 'bg-white/10 backdrop-blur-xl ring-1 ring-white/20 shadow-lg scale-[1.02]' 
-          : 'bg-white/5 backdrop-blur-sm'
+          : status.state === 'needs_attention'
+            ? 'bg-red-500/5 backdrop-blur-sm ring-1 ring-red-500/20'
+            : status.state === 'connected'
+              ? 'bg-emerald-500/5 backdrop-blur-sm ring-1 ring-emerald-500/10'
+              : 'bg-white/5 backdrop-blur-sm'
         }
       `}
     >
@@ -164,7 +170,9 @@ const ConnectionCard = ({ app, status, isActive, index }: ConnectionCardProps) =
           style={{ 
             background: status.state === 'connected'
               ? `linear-gradient(135deg, ${app.color}60, ${app.color}30)` 
-              : 'rgba(255,255,255,0.05)',
+              : status.state === 'needs_attention'
+                ? 'rgba(239, 68, 68, 0.1)'
+                : 'rgba(255,255,255,0.05)',
             boxShadow: status.state === 'connected' 
               ? `0 4px 20px ${app.color}40` 
               : 'none'
@@ -190,6 +198,20 @@ const ConnectionCard = ({ app, status, isActive, index }: ConnectionCardProps) =
               />
               <span>{config.label}</span>
             </div>
+            
+            {/* Retry button for failed connections */}
+            {status.state === 'needs_attention' && onRetry && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={onRetry}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                  bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Retry</span>
+              </motion.button>
+            )}
           </div>
           
           {/* Progress message */}
@@ -259,6 +281,7 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
   );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const [retryQueue, setRetryQueue] = useState<string[]>([]);
   const connectionInProgress = useRef(false);
 
   // Get app configs for selected apps
@@ -300,9 +323,34 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
     }
   }, []);
 
+  // Retry a failed connection
+  const retryConnection = useCallback((appId: string) => {
+    setRetryQueue(prev => [...prev, appId]);
+  }, []);
+
+  // Process retry queue
+  useEffect(() => {
+    if (retryQueue.length === 0 || connectionInProgress.current) return;
+    
+    const appIdToRetry = retryQueue[0];
+    connectionInProgress.current = true;
+    
+    // Reset status to waiting
+    setStatuses(prev => {
+      const next = new Map(prev);
+      next.set(appIdToRetry, { appId: appIdToRetry, state: 'waiting' });
+      return next;
+    });
+    
+    connectApp(appIdToRetry).then(() => {
+      connectionInProgress.current = false;
+      setRetryQueue(prev => prev.slice(1));
+    });
+  }, [retryQueue, connectApp]);
+
   // Sequential connection process
   useEffect(() => {
-    if (connectionInProgress.current) return;
+    if (connectionInProgress.current || retryQueue.length > 0) return;
     if (currentIndex >= apps.length) {
       setIsComplete(true);
       return;
@@ -315,7 +363,7 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
       connectionInProgress.current = false;
       setCurrentIndex(prev => prev + 1);
     });
-  }, [currentIndex, apps, connectApp]);
+  }, [currentIndex, apps, connectApp, retryQueue.length]);
 
   // Handle completion
   const handleContinue = useCallback(() => {
@@ -326,7 +374,8 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
   // Calculate progress
   const connectedCount = Array.from(statuses.values()).filter(s => s.state === 'connected').length;
   const failedCount = Array.from(statuses.values()).filter(s => s.state === 'needs_attention').length;
-  const totalProgress = ((connectedCount + failedCount) / apps.length) * 100;
+  const completedCount = connectedCount + failedCount;
+  const totalProgress = (completedCount / apps.length) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-black flex flex-col">
@@ -360,7 +409,7 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
             transition={{ duration: 0.6 }}
           >
             {/* Back button */}
-            {!isComplete && currentIndex === 0 && (
+            {!isComplete && currentIndex === 0 && retryQueue.length === 0 && (
               <button
                 onClick={onBack}
                 className="flex items-center gap-1 text-white/60 hover:text-white mb-4 -ml-1 transition-colors"
@@ -382,25 +431,87 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
             </h1>
             <p className="text-white/50 mt-2 text-base">
               {isComplete 
-                ? `${connectedCount} of ${apps.length} apps linked securely`
-                : 'Establishing secure connections...'
+                ? 'Your apps are securely linked'
+                : 'Building trust & transparency...'
               }
             </p>
           </motion.div>
 
-          {/* Overall Progress */}
+          {/* Progress Overview Card */}
           <motion.div 
-            className="mt-6 h-1 bg-white/10 rounded-full overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+            className="mt-6 p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            <motion.div
-              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500"
-              initial={{ width: '0%' }}
-              animate={{ width: `${totalProgress}%` }}
-              transition={{ duration: 0.5 }}
-            />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                  <motion.div
+                    animate={!isComplete ? { rotate: 360 } : {}}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <Loader2 className={`w-5 h-5 ${isComplete ? 'hidden' : 'text-blue-400'}`} />
+                  </motion.div>
+                  {isComplete && <Check className="w-5 h-5 text-emerald-400" />}
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-lg">
+                    {connectedCount} of {apps.length} Connected
+                  </h3>
+                  <p className="text-white/40 text-xs">
+                    {failedCount > 0 
+                      ? `${failedCount} need${failedCount === 1 ? 's' : ''} attention`
+                      : isComplete 
+                        ? 'All connections secure'
+                        : 'Real-time status updates'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {/* Percentage */}
+              <div className="text-right">
+                <span className="text-2xl font-bold text-white">
+                  {Math.round(totalProgress)}%
+                </span>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                style={{
+                  background: failedCount > 0 
+                    ? 'linear-gradient(to right, #10b981, #10b981 80%, #f59e0b)'
+                    : 'linear-gradient(to right, #3b82f6, #8b5cf6, #10b981)'
+                }}
+                initial={{ width: '0%' }}
+                animate={{ width: `${totalProgress}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              />
+            </div>
+            
+            {/* Status Pills */}
+            <div className="flex gap-3 mt-3">
+              <div className="flex items-center gap-1.5 text-xs">
+                <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="text-white/60">{connectedCount} connected</span>
+              </div>
+              {failedCount > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                  <span className="text-white/60">{failedCount} failed</span>
+                </div>
+              )}
+              {apps.length - completedCount > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <div className="w-2 h-2 rounded-full bg-white/30" />
+                  <span className="text-white/60">{apps.length - completedCount} pending</span>
+                </div>
+              )}
+            </div>
           </motion.div>
         </header>
 
@@ -409,7 +520,8 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
           <div className="space-y-3">
             {apps.map((app, idx) => {
               const status = statuses.get(app.id) || { appId: app.id, state: 'waiting' as ConnectionState };
-              const isActive = idx === currentIndex && !isComplete;
+              const isActive = (idx === currentIndex && !isComplete && retryQueue.length === 0) || 
+                              retryQueue.includes(app.id);
               
               return (
                 <ConnectionCard
@@ -418,6 +530,7 @@ export function AutoSyncConnecting({ selectedApps, onComplete, onBack }: AutoSyn
                   status={status}
                   isActive={isActive}
                   index={idx}
+                  onRetry={status.state === 'needs_attention' ? () => retryConnection(app.id) : undefined}
                 />
               );
             })}
