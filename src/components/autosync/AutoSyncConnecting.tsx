@@ -41,6 +41,7 @@ type ConnectionState =
   | 'waiting' 
   | 'redirecting' 
   | 'authorizing' 
+  | 'verifying'  // New: Waiting for external verification (OTP/biometric)
   | 'connected' 
   | 'needs_attention';
 
@@ -49,12 +50,14 @@ interface AppConnectionStatus {
   state: ConnectionState;
   message?: string;
   progress?: number;
+  requiresVerification?: boolean; // Flag to trigger verification screen
 }
 
 interface AutoSyncConnectingProps {
   selectedApps: string[];
   onComplete: (results: AppConnectionStatus[]) => void;
   onBack: () => void;
+  onVerificationRequired?: (appId: string) => void; // Callback when verification needed
 }
 
 // ============================================
@@ -87,6 +90,13 @@ const STATE_CONFIG: Record<ConnectionState, {
     icon: Fingerprint,
     color: 'text-amber-400',
     bgColor: 'bg-amber-500/10',
+    animate: true,
+  },
+  verifying: {
+    label: 'Verifying...',
+    icon: Lock,
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/10',
     animate: true,
   },
   connected: {
