@@ -6,3 +6,6 @@
 
 export { AutoSyncSelectApps, APP_CATALOG } from './AutoSyncSelectApps';
 export type { AppConfig } from './AutoSyncSelectApps';
+
+export { AutoSyncConnecting } from './AutoSyncConnecting';
+export type { ConnectionState, AppConnectionStatus } from './AutoSyncConnecting';
