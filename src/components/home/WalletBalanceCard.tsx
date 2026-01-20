@@ -1,18 +1,20 @@
 /**
- * Wallet Balance Card - Apple-Style Design
+ * Wallet Balance Card - Apple-Style Design with Real-time Streaming
  * 
  * Clean, minimal design with:
- * - Prominent total balance
+ * - Prominent total balance with live updates
+ * - Real-time streaming indicator
  * - Compact horizontal wallet icon row
  * - Expandable details
  * - Dismissible warnings
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, RefreshCw, ChevronRight, Zap } from 'lucide-react';
+import { Plus, RefreshCw, ChevronRight, Zap, Radio } from 'lucide-react';
 import { useFundingSources } from '@/hooks/useFundingSources';
+import { useRealtimeBalances } from '@/hooks/useRealtimeBalances';
 import { cn } from '@/lib/utils';
 import { getBrandedIcon } from '@/components/icons/BrandedIcons';
 import { PulsingDot, SyncSpinner, ShimmerEffect } from '@/components/ui/micro-animations';
@@ -27,8 +29,10 @@ interface WalletBalanceCardProps {
 export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCardProps) {
   const navigate = useNavigate();
   const { sources, totalBalance, loading, refetch } = useFundingSources();
+  const { isConnected, lastUpdate, recentUpdates } = useRealtimeBalances();
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastBalance, setLastBalance] = useState(totalBalance);
+  const [showUpdateFlash, setShowUpdateFlash] = useState(false);
 
   const linkedWallets = sources.filter(s => s.isLinked && s.type === 'wallet');
   const linkedBanks = sources.filter(s => s.isLinked && s.type === 'bank');
@@ -36,6 +40,15 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
   const lowBalanceWallets = linkedWallets.filter(w => w.balance < LOW_BALANCE_THRESHOLD);
   const hasLowBalance = lowBalanceWallets.length > 0;
   const balanceIncreased = totalBalance > lastBalance;
+
+  // Flash effect when balance updates in real-time
+  useEffect(() => {
+    if (lastUpdate) {
+      setShowUpdateFlash(true);
+      const timer = setTimeout(() => setShowUpdateFlash(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [lastUpdate]);
 
   const handleRefresh = async () => {
     setIsSyncing(true);
@@ -112,7 +125,14 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
             <p className="text-[10px] text-muted-foreground/70 font-semibold uppercase tracking-widest">
               Total Available
             </p>
-            <PulsingDot color="bg-success" size="sm" />
+            {isConnected ? (
+              <div className="flex items-center gap-1">
+                <PulsingDot color="bg-success" size="sm" />
+                <span className="text-[9px] text-success/70 font-medium">LIVE</span>
+              </div>
+            ) : (
+              <PulsingDot color="bg-muted-foreground" size="sm" />
+            )}
           </div>
           <motion.button
             onClick={handleRefresh}
@@ -128,16 +148,44 @@ export function WalletBalanceCard({ className, onLinkWallet }: WalletBalanceCard
           </motion.button>
         </div>
         
-        {/* Clean balance display with subtle dark mode glow */}
-        <motion.p 
-          key={totalBalance}
-          initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight dark:drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]"
-        >
-          RM {totalBalance.toFixed(2)}
-        </motion.p>
+        {/* Clean balance display with real-time flash effect */}
+        <div className="relative">
+          <AnimatePresence>
+            {showUpdateFlash && (
+              <motion.div
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className={cn(
+                  "absolute inset-0 rounded-lg",
+                  lastUpdate?.direction === 'increase' 
+                    ? "bg-success/20 ring-2 ring-success/40" 
+                    : "bg-destructive/20 ring-2 ring-destructive/40"
+                )}
+              />
+            )}
+          </AnimatePresence>
+          <motion.p 
+            key={totalBalance}
+            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="text-[1.75rem] font-semibold text-foreground tracking-tight leading-tight dark:drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] relative z-10"
+          >
+            RM {totalBalance.toFixed(2)}
+          </motion.p>
+          
+          {/* Last update indicator */}
+          {recentUpdates.length > 0 && (
+            <motion.p
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] text-muted-foreground mt-0.5"
+            >
+              Updated {new Date(recentUpdates[0].timestamp).toLocaleTimeString()}
+            </motion.p>
+          )}
+        </div>
       </div>
 
       {/* Compact Wallet Icons Row - Tap to go to Apps page */}
