@@ -58,7 +58,7 @@ export default function AutoSyncFlowPage() {
     setScreen('connecting');
   }, []);
 
-  // Handle Screen 2 completion - save connections and go home
+  // Handle Screen 2 completion - save connections with new data model
   const handleConnectionComplete = useCallback(async (results: AppConnectionStatus[]) => {
     setConnectionResults(results);
     
@@ -83,12 +83,13 @@ export default function AutoSyncFlowPage() {
         identity_status: 'active',
       }, { onConflict: 'id' });
 
-      // Create connector
+      // Build capabilities based on category
       const capabilities: Record<string, boolean> = {};
       if (appConfig.category === 'wallet') {
         capabilities.can_pay_qr = true;
         capabilities.can_p2p = true;
         capabilities.can_receive = true;
+        capabilities.can_topup = true;
       } else if (appConfig.category === 'bank') {
         capabilities.can_transfer = true;
         capabilities.can_fund_topup = true;
@@ -103,15 +104,43 @@ export default function AutoSyncFlowPage() {
         : appConfig.category === 'bnpl' ? 'bnpl'
         : 'biller';
 
-      await supabase.from('connectors').upsert({
+      // Determine auth method based on app
+      const authMethod = appConfig.category === 'bank' ? 'open_banking' : 'oauth';
+
+      // Create/update connector with auth_method and last_verified_at
+      const { data: connectorData } = await supabase.from('connectors').upsert({
         user_id: user.id,
         name: appConfig.name as any,
         type: connectorType,
         status: 'available',
         mode: 'Prototype',
         capabilities,
+        auth_method: authMethod,
         last_sync_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,name' });
+        last_verified_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,name' }).select('id').single();
+
+      const connectorId = connectorData?.id;
+
+      // Create consent record (permissions)
+      if (connectorId) {
+        const scopePermissions = [];
+        if (capabilities.can_pay_qr) scopePermissions.push('payments:read', 'payments:write');
+        if (capabilities.can_p2p) scopePermissions.push('transfers:write');
+        if (capabilities.can_receive) scopePermissions.push('receive:read');
+        if (capabilities.can_transfer) scopePermissions.push('transfers:read', 'transfers:write');
+        if (capabilities.can_fund_topup) scopePermissions.push('topup:write');
+        if (capabilities.can_installment) scopePermissions.push('bnpl:read', 'bnpl:write');
+
+        await supabase.from('consents').upsert({
+          user_id: user.id,
+          connector_id: connectorId,
+          scope: scopePermissions,
+          status: 'active',
+          revocable: true,
+          description: `Access to ${appConfig.displayName} for payments and balance viewing`,
+        }, { onConflict: 'connector_id,user_id' });
+      }
 
       // Create funding source for payment apps
       if (appConfig.category !== 'biller') {
@@ -142,6 +171,31 @@ export default function AutoSyncFlowPage() {
           linked_status: 'linked',
           available: true,
         }, { onConflict: 'user_id,name' });
+
+        // Create initial cached balance with high confidence
+        if (connectorId) {
+          await supabase.from('cached_balances').upsert({
+            connector_id: connectorId,
+            user_id: user.id,
+            amount: defaultBalances[appConfig.name] || 100,
+            currency: 'MYR',
+            confidence_level: 'high',
+            source: 'api',
+            last_updated_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 min
+          }, { onConflict: 'connector_id' });
+        }
+      }
+
+      // Record initial health check (healthy after OAuth success)
+      if (connectorId) {
+        await supabase.from('connector_health').insert({
+          connector_id: connectorId,
+          user_id: user.id,
+          check_type: 'auth',
+          status: 'healthy',
+          latency_ms: Math.floor(Math.random() * 300) + 100,
+        });
       }
     }
 
