@@ -46,6 +46,7 @@ import FlowCardActivityPage from "./pages/FlowCardActivityPage";
 import { AppleOnboardingFlow } from "./components/onboarding/AppleOnboardingFlow";
 import QuickConnectPage from "./pages/QuickConnectPage";
 import AppsPage from "./pages/AppsPage";
+import AutoSyncFlowPage from "./pages/AutoSyncFlowPage";
 import NotFound from "./pages/NotFound";
 
 const Router = Capacitor.isNativePlatform() ? HashRouter : BrowserRouter;
@@ -124,6 +125,7 @@ const AnimatedRoutes = () => {
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/connect" element={<PageTransition><QuickConnectPage /></PageTransition>} />
         <Route path="/auto-sync" element={<PageTransition><AppleSyncPage /></PageTransition>} />
+        <Route path="/sync" element={<PageTransition><AutoSyncFlowPage /></PageTransition>} />
 
         {/* Transaction Flow (No Bottom Nav - focused experience) */}
         <Route path="/resolve/:intentId" element={<PageTransition><ResolvePage /></PageTransition>} />
