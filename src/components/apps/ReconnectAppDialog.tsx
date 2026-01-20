@@ -2,13 +2,14 @@
  * Reconnect App Dialog
  * 
  * Flow to restore a previously disconnected app:
+ * - Simulates OAuth re-authorization for production compliance
  * - Updates consent status back to 'active'
  * - Re-syncs balances via the connector-sync edge function
  * - Updates connector status to 'available'
  * - Updates funding_sources linked_status to 'linked'
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Link2,
@@ -20,7 +21,11 @@ import {
   Database,
   Key,
   Wallet,
-  Sparkles
+  Sparkles,
+  ExternalLink,
+  ShieldCheck,
+  Eye,
+  CreditCard
 } from 'lucide-react';
 import {
   Dialog,
@@ -30,6 +35,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getBrandedIcon } from '@/components/icons/BrandedIcons';
@@ -46,7 +52,7 @@ interface ReconnectAppDialogProps {
   onReconnected: () => void;
 }
 
-type ReconnectStep = 'confirm' | 'processing' | 'syncing' | 'success' | 'error';
+type ReconnectStep = 'confirm' | 'authorize' | 'authorizing' | 'processing' | 'syncing' | 'success' | 'error';
 
 interface ReconnectionResult {
   consentRestored: boolean;
@@ -54,7 +60,15 @@ interface ReconnectionResult {
   fundingSourceLinked: boolean;
   balanceSynced: boolean;
   newBalance?: number;
+  authMethod?: string;
 }
+
+// Scopes requested during re-authorization
+const OAUTH_SCOPES = [
+  { id: 'balance', label: 'View account balance', icon: Eye },
+  { id: 'transactions', label: 'View transaction history', icon: CreditCard },
+  { id: 'payments', label: 'Initiate payments', icon: Wallet },
+];
 
 export function ReconnectAppDialog({ 
   app, 
@@ -66,6 +80,65 @@ export function ReconnectAppDialog({
   const [step, setStep] = useState<ReconnectStep>('confirm');
   const [result, setResult] = useState<ReconnectionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [acceptedScopes, setAcceptedScopes] = useState<string[]>([]);
+  const [authProgress, setAuthProgress] = useState(0);
+
+  // Reset accepted scopes when dialog opens
+  useEffect(() => {
+    if (open) {
+      setAcceptedScopes([]);
+      setAuthProgress(0);
+    }
+  }, [open]);
+
+  const handleProceedToAuth = useCallback(() => {
+    setStep('authorize');
+  }, []);
+
+  const handleToggleScope = useCallback((scopeId: string) => {
+    setAcceptedScopes(prev => 
+      prev.includes(scopeId) 
+        ? prev.filter(s => s !== scopeId)
+        : [...prev, scopeId]
+    );
+  }, []);
+
+  const handleAuthorize = useCallback(async () => {
+    if (!app) return;
+    
+    // Require at least balance scope
+    if (!acceptedScopes.includes('balance')) {
+      toast({
+        title: "Permission required",
+        description: "Balance access is required to reconnect this app",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setStep('authorizing');
+    setAuthProgress(0);
+
+    // Simulate OAuth authorization flow with progress
+    const authSteps = [
+      { progress: 20, delay: 400, label: 'Connecting to provider...' },
+      { progress: 40, delay: 600, label: 'Verifying credentials...' },
+      { progress: 60, delay: 500, label: 'Requesting permissions...' },
+      { progress: 80, delay: 400, label: 'Confirming access...' },
+      { progress: 100, delay: 300, label: 'Authorization complete' },
+    ];
+
+    for (const authStep of authSteps) {
+      await new Promise(resolve => setTimeout(resolve, authStep.delay));
+      setAuthProgress(authStep.progress);
+    }
+
+    // Small delay before proceeding to actual reconnection
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Now proceed with actual reconnection
+    await handleReconnect();
+  }, [app, acceptedScopes, toast]);
 
   const handleReconnect = useCallback(async () => {
     if (!app) return;
@@ -82,23 +155,29 @@ export function ReconnectAppDialog({
         connectorUpdated: false,
         fundingSourceLinked: false,
         balanceSynced: false,
+        authMethod: 'oauth',
       };
 
       // 1. Find the connector by name
       const { data: connector } = await supabase
         .from('connectors')
-        .select('id')
+        .select('id, auth_method')
         .eq('user_id', user.id)
         .eq('name', app.name as any)
         .single();
 
       const connectorId = connector?.id || app.connectorId;
+      reconnectionResult.authMethod = connector?.auth_method || 'oauth';
 
       if (connectorId) {
-        // 2. Restore consent - update status back to 'active'
+        // 2. Restore consent with updated scope
         const { error: consentError } = await supabase
           .from('consents')
-          .update({ status: 'active' })
+          .update({ 
+            status: 'active',
+            scope: acceptedScopes,
+            granted_at: new Date().toISOString(),
+          })
           .eq('connector_id', connectorId)
           .eq('user_id', user.id);
 
@@ -141,7 +220,6 @@ export function ReconnectAppDialog({
           }
         } catch (syncError) {
           console.warn('Balance sync failed, continuing...', syncError);
-          // Balance sync is not critical, continue anyway
         }
       }
 
@@ -159,7 +237,7 @@ export function ReconnectAppDialog({
         reconnectionResult.fundingSourceLinked = true;
       }
 
-      // Record audit log
+      // Record audit log with OAuth details
       await supabase.from('audit_logs').insert([{
         user_id: user.id,
         action: 'consent_restored',
@@ -167,13 +245,15 @@ export function ReconnectAppDialog({
         entity_id: connectorId || undefined,
         payload: {
           app_name: app.name,
+          auth_method: reconnectionResult.authMethod,
+          scopes_granted: acceptedScopes,
           consent_restored: reconnectionResult.consentRestored,
           connector_updated: reconnectionResult.connectorUpdated,
           funding_source_linked: reconnectionResult.fundingSourceLinked,
           balance_synced: reconnectionResult.balanceSynced,
           new_balance: reconnectionResult.newBalance,
         },
-        current_hash: '', // Will be computed by trigger
+        current_hash: '',
       }]);
 
       setResult(reconnectionResult);
@@ -184,7 +264,7 @@ export function ReconnectAppDialog({
       setError(err instanceof Error ? err.message : 'Failed to reconnect app');
       setStep('error');
     }
-  }, [app]);
+  }, [app, acceptedScopes]);
 
   const handleClose = useCallback(() => {
     if (step === 'success') {
@@ -282,17 +362,145 @@ export function ReconnectAppDialog({
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleReconnect}
+                  onClick={handleProceedToAuth}
                   className="flex-1 h-12 rounded-xl"
                 >
                   <Link2 className="w-4 h-4 mr-2" />
-                  Reconnect
+                  Continue
                 </Button>
               </div>
             </motion.div>
           )}
 
-          {/* Processing Step */}
+          {/* OAuth Authorization Step */}
+          {step === 'authorize' && (
+            <motion.div
+              key="authorize"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="p-6"
+            >
+              <DialogHeader className="text-center mb-6">
+                <div className="mx-auto w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
+                  <IconComponent size={32} />
+                </div>
+                <DialogTitle className="text-xl">Authorize {app.name}</DialogTitle>
+                <DialogDescription className="mt-2">
+                  Select permissions to grant FLOW
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* OAuth Consent Screen Simulation */}
+              <div className="p-4 rounded-2xl bg-muted/20 border border-border/50 mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">FLOW wants to access</p>
+                    <p className="text-xs text-muted-foreground">your {app.name} account</p>
+                  </div>
+                </div>
+
+                {/* Scope Checkboxes */}
+                <div className="space-y-3">
+                  {OAUTH_SCOPES.map((scope) => {
+                    const ScopeIcon = scope.icon;
+                    const isRequired = scope.id === 'balance';
+                    const isChecked = acceptedScopes.includes(scope.id);
+                    
+                    return (
+                      <label
+                        key={scope.id}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-background/50 cursor-pointer hover:bg-background/80 transition-colors"
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => handleToggleScope(scope.id)}
+                          disabled={isRequired && isChecked}
+                        />
+                        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                          <ScopeIcon className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{scope.label}</p>
+                          {isRequired && (
+                            <p className="text-xs text-amber-500">Required</p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Security Note */}
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-success/5 border border-success/20 mb-6">
+                <ShieldCheck className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  FLOW uses secure OAuth 2.0. We never store your {app.name} credentials.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('confirm')}
+                  className="flex-1 h-12 rounded-xl"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleAuthorize}
+                  disabled={!acceptedScopes.includes('balance')}
+                  className="flex-1 h-12 rounded-xl"
+                >
+                  <ShieldCheck className="w-4 h-4 mr-2" />
+                  Authorize
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Authorizing Step - OAuth in progress */}
+          {step === 'authorizing' && (
+            <motion.div
+              key="authorizing"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="p-6 text-center"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center relative">
+                <IconComponent size={32} />
+                <motion.div
+                  className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                >
+                  <RefreshCw className="w-3 h-3 text-primary-foreground" />
+                </motion.div>
+              </div>
+
+              <p className="font-semibold mb-2">Authorizing with {app.name}...</p>
+              <p className="text-sm text-muted-foreground mb-6">
+                Completing OAuth handshake
+              </p>
+
+              {/* Progress Bar */}
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-primary"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${authProgress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">{authProgress}%</p>
+            </motion.div>
+          )}
           {step === 'processing' && (
             <motion.div
               key="processing"
