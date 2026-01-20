@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DisconnectAppDialog } from '@/components/apps/DisconnectAppDialog';
 
 // Constants for intelligence
 const LOW_BALANCE_THRESHOLD = 20;
@@ -416,6 +417,7 @@ export default function AppsPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [topUpSource, setTopUpSource] = useState<typeof sources[0] | null>(null);
   const [settingsSource, setSettingsSource] = useState<typeof sources[0] | null>(null);
+  const [disconnectSource, setDisconnectSource] = useState<typeof sources[0] | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [orderedSources, setOrderedSources] = useState<typeof sources>([]);
 
@@ -477,18 +479,21 @@ export default function AppsPage() {
     setSettingsSource(null);
   }, [settingsSource, toast]);
 
-  const handleUnlink = useCallback(async () => {
+  const handleUnlink = useCallback(() => {
     if (!settingsSource) return;
-
-    await updateLinkedStatus(settingsSource.id, false);
-    
-    toast({
-      title: "App unlinked",
-      description: `${settingsSource.name} has been disconnected`
-    });
-    
+    // Open disconnect dialog instead of direct unlink
+    setDisconnectSource(settingsSource);
     setSettingsSource(null);
-  }, [settingsSource, updateLinkedStatus, toast]);
+  }, [settingsSource]);
+
+  const handleDisconnected = useCallback(() => {
+    refetch();
+    toast({
+      title: "App disconnected",
+      description: `${disconnectSource?.name} has been unlinked and consent revoked`
+    });
+    setDisconnectSource(null);
+  }, [disconnectSource, refetch, toast]);
 
   const handleSaveOrder = useCallback(async () => {
     const orderedIds = orderedSources.map(s => s.id);
@@ -727,6 +732,17 @@ export default function AppsPage() {
         onClose={() => setSettingsSource(null)}
         onSave={handleSaveSettings}
         onUnlink={handleUnlink}
+      />
+
+      <DisconnectAppDialog
+        app={disconnectSource ? {
+          id: disconnectSource.id,
+          name: disconnectSource.name,
+          type: disconnectSource.type,
+        } : null}
+        open={!!disconnectSource}
+        onClose={() => setDisconnectSource(null)}
+        onDisconnected={handleDisconnected}
       />
     </div>
   );
