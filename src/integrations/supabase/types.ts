@@ -155,6 +155,53 @@ export type Database = {
           },
         ]
       }
+      cached_balances: {
+        Row: {
+          amount: number
+          confidence_level: Database["public"]["Enums"]["balance_confidence"]
+          connector_id: string
+          created_at: string
+          currency: string
+          expires_at: string | null
+          id: string
+          last_updated_at: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          confidence_level?: Database["public"]["Enums"]["balance_confidence"]
+          connector_id: string
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          last_updated_at?: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          confidence_level?: Database["public"]["Enums"]["balance_confidence"]
+          connector_id?: string
+          created_at?: string
+          currency?: string
+          expires_at?: string | null
+          id?: string
+          last_updated_at?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cached_balances_connector_id_fkey"
+            columns: ["connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_payment_events: {
         Row: {
           amount: number
@@ -239,12 +286,55 @@ export type Database = {
         }
         Relationships: []
       }
+      connector_health: {
+        Row: {
+          check_type: string
+          checked_at: string
+          connector_id: string
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          check_type: string
+          checked_at?: string
+          connector_id: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          check_type?: string
+          checked_at?: string
+          connector_id?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_health_connector_id_fkey"
+            columns: ["connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connectors: {
         Row: {
+          auth_method: Database["public"]["Enums"]["auth_method"] | null
           capabilities: Json
           error_code: string | null
           id: string
           last_sync_at: string | null
+          last_verified_at: string | null
           mode: Database["public"]["Enums"]["app_mode"]
           name: Database["public"]["Enums"]["connector_name"]
           status: Database["public"]["Enums"]["connector_status"]
@@ -252,10 +342,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auth_method?: Database["public"]["Enums"]["auth_method"] | null
           capabilities?: Json
           error_code?: string | null
           id?: string
           last_sync_at?: string | null
+          last_verified_at?: string | null
           mode?: Database["public"]["Enums"]["app_mode"]
           name: Database["public"]["Enums"]["connector_name"]
           status?: Database["public"]["Enums"]["connector_status"]
@@ -263,10 +355,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auth_method?: Database["public"]["Enums"]["auth_method"] | null
           capabilities?: Json
           error_code?: string | null
           id?: string
           last_sync_at?: string | null
+          last_verified_at?: string | null
           mode?: Database["public"]["Enums"]["app_mode"]
           name?: Database["public"]["Enums"]["connector_name"]
           status?: Database["public"]["Enums"]["connector_status"]
@@ -286,24 +380,30 @@ export type Database = {
       consents: {
         Row: {
           connector_id: string
+          description: string | null
           granted_at: string
           id: string
+          revocable: boolean
           scope: Json
           status: Database["public"]["Enums"]["consent_status"]
           user_id: string
         }
         Insert: {
           connector_id: string
+          description?: string | null
           granted_at?: string
           id?: string
+          revocable?: boolean
           scope?: Json
           status?: Database["public"]["Enums"]["consent_status"]
           user_id: string
         }
         Update: {
           connector_id?: string
+          description?: string | null
           granted_at?: string
           id?: string
+          revocable?: boolean
           scope?: Json
           status?: Database["public"]["Enums"]["consent_status"]
           user_id?: string
@@ -1125,6 +1225,8 @@ export type Database = {
     Enums: {
       app_discovery_type: "wallet" | "bank" | "biller"
       app_mode: "Prototype" | "Pilot" | "Production"
+      auth_method: "oauth" | "open_banking" | "deep_link"
+      balance_confidence: "high" | "medium" | "low"
       biller_status: "linked" | "unlinked" | "error"
       connector_name:
         | "TouchNGo"
@@ -1300,6 +1402,8 @@ export const Constants = {
     Enums: {
       app_discovery_type: ["wallet", "bank", "biller"],
       app_mode: ["Prototype", "Pilot", "Production"],
+      auth_method: ["oauth", "open_banking", "deep_link"],
+      balance_confidence: ["high", "medium", "low"],
       biller_status: ["linked", "unlinked", "error"],
       connector_name: [
         "TouchNGo",
