@@ -6,6 +6,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
+// CORS headers - includes Capacitor origins for mobile app support
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
