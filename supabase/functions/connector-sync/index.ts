@@ -68,7 +68,7 @@ const fetchPrototypeBalance = async (connectorName: string): Promise<{
   
   return {
     amount: Math.round(variance * 100) / 100,
-    success: Math.random() > 0.05, // 95% success rate
+    success: true, // Always succeed in Prototype mode
     latencyMs: Date.now() - start,
   };
 };
